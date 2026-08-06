@@ -3,6 +3,7 @@ use gpui::{
     AnyElement, App, Context, Entity, FontWeight, Pixels, Render, ScrollHandle, SharedString,
     Window, div, px,
 };
+
 use spotify::Track;
 use state::{Detail, Playback};
 use ui::ActiveTheme as _;
@@ -12,7 +13,7 @@ use ui::{
 };
 
 use crate::cells;
-use crate::tracks::{TrackField, TrackSource, Tracks};
+use crate::tracks::{PlaybackStatus, TrackField, TrackSource, Tracks, playback_status};
 use workspace::{Searchable, Sidebar};
 
 const FRAME: Pixels = px(1.);
@@ -36,6 +37,7 @@ impl Tracks for DetailTracks {
 pub(crate) struct DetailView {
     detail: Entity<Detail>,
     playback: Entity<Playback>,
+    playback_status: PlaybackStatus,
     sidebar: Entity<Sidebar>,
     width: Pixels,
     scrollbar: Entity<Scrollbar>,
@@ -72,7 +74,13 @@ impl DetailView {
 
         cx.observe(&sidebar, |_, _, cx| cx.notify()).detach();
 
-        cx.observe(&playback, |this, _, cx| {
+        let current_playback = playback_status(&playback, cx);
+        cx.observe(&playback, |this, playback, cx| {
+            let current = playback_status(&playback, cx);
+            if this.playback_status == current {
+                return;
+            }
+            this.playback_status = current;
             this.table.update(cx, |table, cx| table.refresh(cx));
         })
         .detach();
@@ -88,6 +96,7 @@ impl DetailView {
         Self {
             detail,
             playback,
+            playback_status: current_playback,
             sidebar,
             width,
             scrollbar,
@@ -151,7 +160,14 @@ impl DetailView {
         let title = header
             .map(|header| SharedString::from(header.title.clone()))
             .unwrap_or_default();
-        let meta = header.map(|header| SharedString::from(header.meta.clone()));
+        let artist = header.and_then(|header| header.artist.clone());
+        let artist_refs = header
+            .map(|header| header.artist_refs.clone())
+            .unwrap_or_default();
+        let meta = header
+            .map(|header| header.meta.clone())
+            .filter(|meta| !meta.is_empty());
+        let has_artist = artist.is_some();
 
         div()
             .flex()
@@ -183,7 +199,28 @@ impl DetailView {
                             .truncate()
                             .child(title),
                     )
-                    .child(div().text_color(muted).truncate().children(meta)),
+                    .child(
+                        div()
+                            .flex()
+                            .min_w_0()
+                            .text_color(muted)
+                            .truncate()
+                            .when_some(artist, |this, artist| {
+                                this.child(cells::artist_links(
+                                    "detail-artist",
+                                    artist_refs,
+                                    artist,
+                                    muted,
+                                ))
+                            })
+                            .when_some(meta, |this, meta| {
+                                let meta = match has_artist {
+                                    true => format!(" • {meta}"),
+                                    false => meta,
+                                };
+                                this.child(meta)
+                            }),
+                    ),
             )
             .into_any_element()
     }
