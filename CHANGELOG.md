@@ -7,8 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-05
+
 ### Added
 
+- Nix users can manage Sonora through Home Manager. The flake exposes `homeManagerModules.default`
+  with a `programs.sonora` option whose `settings` are merged into `settings.json` on each launch.
 - Sonora speaks Indonesian. Pick Bahasa Indonesia under Settings > General > Language, or leave the
   language on System and it follows an Indonesian desktop on its own.
 - On Linux and FreeBSD, Sonora can switch between server-side and client-side window decorations
@@ -1311,7 +1315,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Initial release: a native Spotify client with playback, an interactive queue, the saved library,
 search, album, playlist, artist and song pages, context menus and adaptive theming.
 
-[unreleased]: https://github.com/nolight132/sonora/compare/v0.30.0...HEAD
+[unreleased]: https://github.com/nolight132/sonora/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/nolight132/sonora/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/nolight132/sonora/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/nolight132/sonora/compare/v0.28.1...v0.29.0
 [0.28.1]: https://github.com/nolight132/sonora/compare/v0.28.0...v0.28.1
