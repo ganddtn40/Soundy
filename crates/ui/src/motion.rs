@@ -291,11 +291,12 @@ impl Stillness {
         }
     }
 
-    pub fn still(self) -> bool {
+    /// Whether motion is reduced: `Some` for a hard choice, `None` when the system decides.
+    pub fn still(self) -> Option<bool> {
         match self {
-            Self::System => system_still(),
-            Self::Always => true,
-            Self::Never => false,
+            Self::System => None,
+            Self::Always => Some(true),
+            Self::Never => Some(false),
         }
     }
 }
@@ -329,7 +330,10 @@ pub fn apply(stillness: Stillness, pace: Pace, cx: &mut App) {
         },
         Ordering::Relaxed,
     );
-    cx.set_reduce_motion(stillness.still());
+    match stillness.still() {
+        Some(still) => cx.set_reduce_motion(still),
+        None => system::settle(cx),
+    }
 }
 
 pub fn animates(cx: &App) -> bool {
@@ -360,13 +364,80 @@ impl Movement {
     }
 }
 
-fn system_still() -> bool {
-    false
+/// The operating system's reduce-motion preference. Every probe answers
+/// through `App::set_reduce_motion`, which repaints on a change, late answer is harmless.
+mod system {
+    use gpui::App;
+
+    /// Reduce Motion under System Settings > Accessibility > Display.
+    #[cfg(target_os = "macos")]
+    pub(super) fn settle(cx: &mut App) {
+        use objc2_app_kit::NSWorkspace;
+
+        let still = NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion();
+        cx.set_reduce_motion(still);
+    }
+
+    /// "Animation effects" under Settings > Accessibility > Visual effects.
+    #[cfg(windows)]
+    pub(super) fn settle(cx: &mut App) {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            SPI_GETCLIENTAREAANIMATION, SystemParametersInfoW,
+        };
+
+        let mut animated: windows_sys::core::BOOL = 1;
+        // SAFETY: SPI_GETCLIENTAREAANIMATION writes one BOOL through pvparam, which is what
+        // `animated` is, and asks nothing else of the caller.
+        let answered = unsafe {
+            SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, (&raw mut animated).cast(), 0)
+        };
+        cx.set_reduce_motion(answered != 0 && animated == 0);
+    }
+
+    /// Reads the standardized XDG reduced-motion preference.
+    ///
+    /// Requires a backend that supports `org.freedesktop.appearance.reduced-motion`;
+    /// older versions may not expose it.
+    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+    pub(super) fn settle(cx: &mut App) {
+        use ashpd::desktop::settings::{ReducedMotion, Settings};
+        use gpui::AppContext as _;
+
+        cx.spawn(async move |cx| {
+            let still = cx
+                .background_spawn(async {
+                    let settings = Settings::new().await.ok()?;
+                    let reduced = settings.reduced_motion().await.ok()?;
+
+                    Some(reduced == ReducedMotion::ReducedMotion)
+                })
+                .await;
+            cx.update(|cx| cx.set_reduce_motion(still.unwrap_or(false)));
+        })
+        .detach();
+    }
+
+    #[cfg(not(any(
+        target_os = "macos",
+        windows,
+        target_os = "linux",
+        target_os = "freebsd"
+    )))]
+    pub(super) fn settle(cx: &mut App) {
+        cx.set_reduce_motion(false);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn system_motion_leaves_the_preference_to_the_platform() {
+        assert_eq!(Stillness::System.still(), None);
+        assert_eq!(Stillness::Always.still(), Some(true));
+        assert_eq!(Stillness::Never.still(), Some(false));
+    }
 
     #[test]
     fn expo_easing_has_css_endpoints_and_shape() {
