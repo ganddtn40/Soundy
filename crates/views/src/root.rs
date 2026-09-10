@@ -174,8 +174,9 @@ impl Root {
         })
         .detach();
 
-        // The system reduce-motion preference has no change event here, so it is re-read each
-        // time the user comes back to the window, which is when they could have flipped it.
+        // Re-read the system preference when the window becomes active instead of keeping a
+        // long-lived portal listener alive. This picks up changes after the user returns from
+        // the desktop accessibility settings.
         cx.observe_window_activation(window, |_, window, cx| {
             if !window.is_window_active() {
                 return;

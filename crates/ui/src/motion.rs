@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use gpui::{
@@ -322,6 +322,7 @@ impl<E: IntoElement + 'static> Motioned for E {
 }
 
 pub fn apply(stillness: Stillness, pace: Pace, cx: &mut App) {
+    let generation = APPLY_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     PACE.store(
         match pace {
             Pace::Slow => 0,
@@ -332,7 +333,7 @@ pub fn apply(stillness: Stillness, pace: Pace, cx: &mut App) {
     );
     match stillness.still() {
         Some(still) => cx.set_reduce_motion(still),
-        None => system::settle(cx),
+        None => system::settle(cx, generation),
     }
 }
 
@@ -364,14 +365,17 @@ impl Movement {
     }
 }
 
-/// The operating system's reduce-motion preference. Every probe answers
-/// through `App::set_reduce_motion`, which repaints on a change, late answer is harmless.
+static APPLY_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+/// The operating system's reduce-motion preference. Every probe answers through
+/// `App::set_reduce_motion`, which repaints on a change. A generation check keeps a late probe
+/// from replacing a newer motion setting.
 mod system {
     use gpui::App;
 
     /// Reduce Motion under System Settings > Accessibility > Display.
     #[cfg(target_os = "macos")]
-    pub(super) fn settle(cx: &mut App) {
+    pub(super) fn settle(cx: &mut App, _generation: u64) {
         use objc2_app_kit::NSWorkspace;
 
         let still = NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion();
@@ -380,7 +384,7 @@ mod system {
 
     /// "Animation effects" under Settings > Accessibility > Visual effects.
     #[cfg(windows)]
-    pub(super) fn settle(cx: &mut App) {
+    pub(super) fn settle(cx: &mut App, _generation: u64) {
         use windows_sys::Win32::UI::WindowsAndMessaging::{
             SPI_GETCLIENTAREAANIMATION, SystemParametersInfoW,
         };
@@ -397,11 +401,14 @@ mod system {
     /// Reads the standardized XDG reduced-motion preference.
     ///
     /// Requires a backend that supports `org.freedesktop.appearance.reduced-motion`;
-    /// older versions may not expose it.
+    /// Older portals may not expose it; those failures leave animations enabled.
     #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-    pub(super) fn settle(cx: &mut App) {
+    pub(super) fn settle(cx: &mut App, generation: u64) {
         use ashpd::desktop::settings::{ReducedMotion, Settings};
         use gpui::AppContext as _;
+        use std::sync::atomic::Ordering;
+
+        use super::APPLY_GENERATION;
 
         cx.spawn(async move |cx| {
             let still = cx
@@ -412,7 +419,11 @@ mod system {
                     Some(reduced == ReducedMotion::ReducedMotion)
                 })
                 .await;
-            cx.update(|cx| cx.set_reduce_motion(still.unwrap_or(false)));
+            cx.update(|cx| {
+                if APPLY_GENERATION.load(Ordering::SeqCst) == generation {
+                    cx.set_reduce_motion(still.unwrap_or(false));
+                }
+            });
         })
         .detach();
     }
@@ -423,7 +434,7 @@ mod system {
         target_os = "linux",
         target_os = "freebsd"
     )))]
-    pub(super) fn settle(cx: &mut App) {
+    pub(super) fn settle(cx: &mut App, _generation: u64) {
         cx.set_reduce_motion(false);
     }
 }
