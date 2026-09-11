@@ -92,6 +92,7 @@ macro_rules! symbols {
 }
 
 symbols! {
+    gdk_set_allowed_backends: unsafe extern "C" fn(*const c_char),
     gtk_disable_setlocale: unsafe extern "C" fn(),
     gtk_init_check: unsafe extern "C" fn(*mut c_int, *mut *mut *mut c_char) -> Bool,
     gtk_main: unsafe extern "C" fn(),
@@ -486,13 +487,12 @@ fn gtk(api: &'static Api) -> &'static Host {
 /// are windows. Never returns unless GTK itself refuses to start.
 fn run(api: &'static Api, host: &'static Host) {
     // GTK's Wayland backend will not paint from this thread while GPUI owns the process's
-    // Wayland client, and WebKit's compositor makes it worse. XWayland and disabled compositing
-    // side-step both; neither has a public setting equivalent.
+    // Wayland client, and WebKit's compositor makes it worse. Pinning GDK to X11 sends the
+    // sign-in window through XWayland; the compositing env var has no public setting equivalent
+    // and disables the GL context WebKit still tries to share with the main process.
     // SAFETY: the webview thread has just been spawned.
-    unsafe {
-        std::env::set_var("GDK_BACKEND", "x11");
-        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
-    }
+    unsafe { (api.gdk_set_allowed_backends)(c"x11".as_ptr()) };
+    unsafe { std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1") };
     // gtk_init would otherwise move the whole process onto the user's locale.
     unsafe { (api.gtk_disable_setlocale)() };
     if unsafe { (api.gtk_init_check)(ptr::null_mut(), ptr::null_mut()) } == 0 {
