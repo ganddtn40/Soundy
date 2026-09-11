@@ -154,12 +154,12 @@ impl Discord {
             self.timing.reset();
             return Shown::Off;
         };
-        // a paused status stays up, but without the timestamps, so nothing keeps counting
+        // a paused status stays up when enabled, but without the timestamps, so nothing keeps counting
         let playing = playback.wants_playing();
 
         let since = self.timing.listening_since();
         let settings = self.settings.read(cx);
-        if !settings.discord_presence() {
+        if !settings.discord_presence() || !playing && !settings.discord_show_paused() {
             return Shown::Off;
         }
 
@@ -283,7 +283,7 @@ async fn next_presence(receiver: &mut watch::Receiver<Shown>, shown: &Shown) -> 
             receiver.changed().await.ok()?;
             continue;
         }
-        if !matches!((shown, &wanted), (Shown::On(_), Shown::On(_))) {
+        if matches!(wanted, Shown::Off) {
             return Some(wanted);
         }
 

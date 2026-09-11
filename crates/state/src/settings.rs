@@ -214,6 +214,7 @@ struct Values {
     sleep_timer: bool,
     discord_presence: bool,
     discord_name: DiscordName,
+    discord_show_paused: bool,
     discord_badge: bool,
     discord_without_details: bool,
     lyrics_for_local_files: bool,
@@ -279,6 +280,7 @@ impl Default for Values {
             sleep_timer: false,
             discord_presence: false,
             discord_name: DiscordName::Sonora,
+            discord_show_paused: false,
             discord_badge: false,
             discord_without_details: false,
             lyrics_for_local_files: true,
@@ -521,6 +523,11 @@ impl AppSettings {
     /// What the Discord status names itself after "listening to".
     pub fn discord_name(&self) -> DiscordName {
         self.values.discord_name
+    }
+
+    /// Whether the Discord status stays up while the track is paused.
+    pub fn discord_show_paused(&self) -> bool {
+        self.values.discord_show_paused
     }
 
     /// Whether the Discord status carries the badge of the provider the track came from.
@@ -777,6 +784,11 @@ impl AppSettings {
 
     pub fn set_discord_name(&mut self, name: DiscordName, cx: &mut Context<Self>) {
         self.values.discord_name = name;
+        self.schedule_save(cx);
+    }
+
+    pub fn set_discord_show_paused(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        self.values.discord_show_paused = enabled;
         self.schedule_save(cx);
     }
 
