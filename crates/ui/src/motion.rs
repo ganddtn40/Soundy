@@ -400,8 +400,8 @@ mod system {
 
     /// Reads the standardized XDG reduced-motion preference.
     ///
-    /// Requires a backend that supports `org.freedesktop.appearance.reduced-motion`;
-    /// Older portals may not expose it; those failures leave animations enabled.
+    /// Older portals may not expose `org.freedesktop.appearance.reduced-motion`; that failure
+    /// leaves animations enabled.
     #[cfg(any(target_os = "linux", target_os = "freebsd"))]
     pub(super) fn settle(cx: &mut App, generation: u64) {
         use ashpd::desktop::settings::{ReducedMotion, Settings};
