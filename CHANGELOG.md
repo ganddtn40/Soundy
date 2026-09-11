@@ -7,6 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The Motion setting's System option now follows the operating system's reduced-motion preference
+  on Linux, macOS and Windows, refreshing when Sonora comes back to the foreground. Older Linux
+  portals that do not expose the standardized setting safely keep normal animations.
+
 ## [0.34.1] - 2026-09-11
 
 ### Fixed
