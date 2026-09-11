@@ -485,6 +485,14 @@ fn gtk(api: &'static Api) -> &'static Host {
 /// Initialises GTK, then alternates between parking and running a main loop for as long as there
 /// are windows. Never returns unless GTK itself refuses to start.
 fn run(api: &'static Api, host: &'static Host) {
+    // GTK's Wayland backend will not paint from this thread while GPUI owns the process's
+    // Wayland client, and WebKit's compositor makes it worse. XWayland and disabled compositing
+    // side-step both; neither has a public setting equivalent.
+    // SAFETY: the webview thread has just been spawned.
+    unsafe {
+        std::env::set_var("GDK_BACKEND", "x11");
+        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+    }
     // gtk_init would otherwise move the whole process onto the user's locale.
     unsafe { (api.gtk_disable_setlocale)() };
     if unsafe { (api.gtk_init_check)(ptr::null_mut(), ptr::null_mut()) } == 0 {
