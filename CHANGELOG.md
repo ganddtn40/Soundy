@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Local M4A files show their embedded cover art.
+
 ## [0.34.1] - 2026-09-11
 
 ### Fixed
