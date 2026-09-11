@@ -56,10 +56,10 @@ struct Presence {
 /// doubles as the key of the image uploaded to the Discord application, and is left out when the
 /// badge is turned off. `listening` is what the status calls itself and follows the setting;
 /// `name` is the badge tooltip and is always the provider's own name.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 struct Source {
     badge: Option<&'static str>,
-    listening: Option<&'static str>,
+    listening: Option<String>,
     name: &'static str,
 }
 
@@ -169,8 +169,20 @@ impl Discord {
             badge: settings.discord_badge().then(|| provider.slug()),
             listening: match settings.discord_name() {
                 DiscordName::Sonora => None,
-                DiscordName::Provider => Some(provider.listening_to()),
-                DiscordName::Music => Some(MUSIC),
+                DiscordName::Provider => Some(provider.listening_to().to_owned()),
+                DiscordName::Music => Some(MUSIC.to_owned()),
+                DiscordName::Title => fit_text(&track.name).or_else(|| Some(MUSIC.to_owned())),
+                DiscordName::Artist => fit_text(&track.artists).or_else(|| Some(MUSIC.to_owned())),
+                DiscordName::ArtistTitle => {
+                    let artists = track.artists.trim();
+                    let title = track.name.trim();
+                    fit_text(&match (artists.is_empty(), title.is_empty()) {
+                        (false, false) => format!("{artists} - {title}"),
+                        (false, true) => artists.to_owned(),
+                        (true, false) => title.to_owned(),
+                        (true, true) => MUSIC.to_owned(),
+                    })
+                }
             },
             name: provider.name(),
         });
@@ -354,7 +366,11 @@ fn activity(shown: &Shown) -> Option<activity::Activity<'_>> {
     let mut activity = activity::Activity::new()
         .activity_type(activity::ActivityType::Listening)
         .details(presence.details.as_str());
-    if let Some(listening) = presence.source.and_then(|source| source.listening) {
+    if let Some(listening) = presence
+        .source
+        .as_ref()
+        .and_then(|source| source.listening.as_deref())
+    {
         activity = activity.name(listening);
     }
     if let Some(state) = presence.state.as_deref() {
@@ -381,6 +397,7 @@ fn assets(presence: &Presence) -> Option<activity::Assets<'_>> {
     let text = presence.image_text.as_deref();
     let badge = presence
         .source
+        .as_ref()
         .and_then(|source| source.badge.map(|key| (key, source.name)));
     if image.is_none() && text.is_none() && badge.is_none() {
         return None;

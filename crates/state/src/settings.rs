@@ -31,24 +31,38 @@ use crate::{Repeat, Sonora};
 
 /// Which panel the right sidebar shows.
 /// What the Discord status calls itself. `Provider` asks the provider the track came from, so
-/// local files say Local Music rather than the provider's own name.
+/// local files say Local Music rather than the provider's own name. `ArtistTitle` shows as
+/// "Artist - Title".
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum DiscordName {
     #[default]
     Sonora,
     Provider,
     Music,
+    Title,
+    Artist,
+    ArtistTitle,
 }
 
 impl DiscordName {
-    pub const ALL: [Self; 3] = [Self::Sonora, Self::Provider, Self::Music];
+    pub const ALL: [Self; 6] = [
+        Self::Sonora,
+        Self::Provider,
+        Self::Music,
+        Self::Title,
+        Self::Artist,
+        Self::ArtistTitle,
+    ];
 
     pub fn id(self) -> &'static str {
         match self {
             Self::Sonora => "sonora",
             Self::Provider => "provider",
             Self::Music => "music",
+            Self::Title => "title",
+            Self::Artist => "artist",
+            Self::ArtistTitle => "artist-title",
         }
     }
 
@@ -57,6 +71,9 @@ impl DiscordName {
             Self::Sonora => "settings-discord-name-sonora",
             Self::Provider => "settings-discord-name-provider",
             Self::Music => "settings-discord-name-music",
+            Self::Title => "settings-discord-name-title",
+            Self::Artist => "settings-discord-name-artist",
+            Self::ArtistTitle => "settings-discord-name-artist-title",
         }
     }
 
