@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- You can choose to show the track's artist, title, or both as the Discord status name, in addition
+  to Sonora, Provider, and Music.
+
+- Discord status can be configured to stay or hide when the track is paused.
+
 ### Fixed
 
 - The Motion setting's System option now follows the operating system's reduced-motion preference
