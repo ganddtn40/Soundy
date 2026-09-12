@@ -1449,6 +1449,9 @@ impl SettingsView {
         ];
         if self.settings.read(cx).discord_presence() {
             rows.push(Row::Item(self.discord_name_row(cx).into_any_element()));
+            rows.push(Row::Item(
+                self.discord_show_paused_row(cx).into_any_element(),
+            ));
             rows.push(Row::Item(self.discord_badge_row(cx).into_any_element()));
             rows.push(Row::Item(self.discord_anonymous_row(cx).into_any_element()));
         }
@@ -1503,6 +1506,26 @@ impl SettingsView {
             muted,
             small,
             picker.into_any_element(),
+        )
+    }
+
+    fn discord_show_paused_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let muted = theme.muted_foreground;
+        let small = theme.text(Text::Small);
+        let on = self.settings.read(cx).discord_show_paused();
+
+        self.row(
+            t!("settings-discord-show-paused"),
+            t!("settings-discord-show-paused-detail"),
+            muted,
+            small,
+            Switch::new("discord-show-paused", on)
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.settings
+                        .update(cx, |settings, cx| settings.set_discord_show_paused(!on, cx));
+                }))
+                .into_any_element(),
         )
     }
 

@@ -7,11 +7,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.34.2] - 2026-09-12
+
+### Added
+
+- You can choose to show the track's artist, title, or both as the Discord status name, in addition
+  to Sonora, Provider, and Music.
+
+- Discord status can be configured to stay or hide when the track is paused.
+
 ### Fixed
 
 - The Motion setting's System option now follows the operating system's reduced-motion preference
   on Linux, macOS and Windows, refreshing when Sonora comes back to the foreground. Older Linux
   portals that do not expose the standardized setting safely keep normal animations.
+- Local M4A files show their embedded cover art.
+- On Linux under Wayland, the cookie sign-in window draws its page instead of staying blank.
 
 ## [0.34.1] - 2026-09-11
 
@@ -1487,7 +1498,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Initial release: a native Spotify client with playback, an interactive queue, the saved library,
 search, album, playlist, artist and song pages, context menus and adaptive theming.
 
-[unreleased]: https://github.com/sonorahq/sonora/compare/v0.34.1...HEAD
+[unreleased]: https://github.com/sonorahq/sonora/compare/v0.34.2...HEAD
+[0.34.2]: https://github.com/sonorahq/sonora/compare/v0.34.1...v0.34.2
 [0.34.1]: https://github.com/sonorahq/sonora/compare/v0.34.0...v0.34.1
 [0.34.0]: https://github.com/sonorahq/sonora/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/sonorahq/sonora/compare/v0.32.0...v0.33.0
