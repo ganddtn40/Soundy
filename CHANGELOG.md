@@ -23,6 +23,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   portals that do not expose the standardized setting safely keep normal animations.
 - Local M4A files show their embedded cover art.
 - On Linux under Wayland, the cookie sign-in window draws its page instead of staying blank.
+- The arrow that floats over a scrolled queue brings the now-playing track back into view
+  instead of jumping to the top of the history. It only goes to the top when nothing is playing.
 
 ## [0.34.1] - 2026-09-11
 
