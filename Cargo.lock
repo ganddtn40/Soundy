@@ -9142,6 +9142,7 @@ version = "0.34.3"
 dependencies = [
  "anyhow",
  "block2 0.6.2",
+ "dirs",
  "libc",
  "log",
  "objc2 0.6.4",
