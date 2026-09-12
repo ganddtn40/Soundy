@@ -144,7 +144,9 @@ pub fn return_top(id: impl Into<ElementId>, bar: &Entity<Scrollbar>, cx: &App) -
 
 /// A perched button that glides a scrolling region back to a resting offset, in either
 /// direction. It stays away until the region has drifted far enough from that spot for the trip
-/// to be worth one. `tooltip` is an i18n key. The parent has to be `relative`.
+/// to be worth one. `goal` is how far down the region should sit, in the positive pixels
+/// `Scrollbar::offset` reports, and is turned into gpui's negative offset before it is aimed at.
+/// `tooltip` is an i18n key. The parent has to be `relative`.
 pub fn return_to(
     id: impl Into<ElementId>,
     bar: &Entity<Scrollbar>,
@@ -164,7 +166,7 @@ pub fn return_to(
             .icon("icons/undo-2.svg")
             .tooltip(tooltip)
             .on_click(move |_, window, cx| {
-                bar.update(cx, |bar, _| bar.aim(goal, window));
+                bar.update(cx, |bar, _| bar.aim(-goal, window));
             }),
         cx,
     ))
