@@ -422,6 +422,7 @@ impl SettingsView {
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.settings
                             .update(cx, |settings, cx| settings.set_language(id, cx));
+                        this.popovers.close();
                         cx.notify();
                     }))
             }))
@@ -566,6 +567,7 @@ impl SettingsView {
                             let name = name.to_string();
                             this.settings
                                 .update(cx, |settings, cx| settings.set_font(name, cx));
+                            this.popovers.close();
                             cx.notify();
                         }))
                 })
