@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- On Nix, the YouTube Music sign-in no longer goes black after the email step. The package now
+  gives WebKit the GStreamer plugins it needs to play a page's media.
+
 ## [0.34.3] - 2026-09-12
 
 ### Fixed

@@ -82,6 +82,18 @@
 
           asset = release.assets.${pkgs.stdenv.hostPlatform.system};
 
+          # WebKit plays a page's media through GStreamer and aborts its web process when no
+          # audio sink element exists. The Nix webkitgtk closure carries only core and base, and
+          # autoaudiosink lives in good, so the plugin path has to name all three.
+          gstPluginPath = pkgs.lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (
+            with pkgs.gst_all_1;
+            [
+              gstreamer
+              gst-plugins-base
+              gst-plugins-good
+            ]
+          );
+
           alsaPluginDirectory = pkgs.symlinkJoin {
             name = "sonora-alsa-plugins";
             paths = [
@@ -159,7 +171,8 @@
                 "$out/bin/sonora"
               wrapProgram "$out/bin/sonora" \
                 --set ALSA_PLUGIN_DIR ${alsaPluginDirectory} \
-                --prefix GIO_EXTRA_MODULES : ${pkgs.glib-networking}/lib/gio/modules
+                --prefix GIO_EXTRA_MODULES : ${pkgs.glib-networking}/lib/gio/modules \
+                --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : ${gstPluginPath}
             '';
 
             meta = {
@@ -254,6 +267,16 @@
                   export GBM_BACKENDS_PATH="${pkgs.mesa}/lib/gbm"
                 fi
                 export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules''${GIO_EXTRA_MODULES:+:$GIO_EXTRA_MODULES}"
+                export GST_PLUGIN_SYSTEM_PATH_1_0="${
+                  pkgs.lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (
+                    with pkgs.gst_all_1;
+                    [
+                      gstreamer
+                      gst-plugins-base
+                      gst-plugins-good
+                    ]
+                  )
+                }''${GST_PLUGIN_SYSTEM_PATH_1_0:+:$GST_PLUGIN_SYSTEM_PATH_1_0}"
               ''
               # gpui_apple compiles its shaders with `xcrun -sdk macosx metal` at build
               # time. The Nix Apple SDK has no Metal toolchain, so hand xcrun back to the
