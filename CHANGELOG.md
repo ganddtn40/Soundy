@@ -7,6 +7,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The cookie sign-in window opens natively on Wayland and no longer needs XWayland. It also opens
+  on desktops that export `GDK_BACKEND=wayland`, which used to fail with "cannot reach the display
+  server".
+- The Nix package can open the sign-in window: it now ships webkitgtk and the TLS module the page
+  needs, instead of reporting that webkit2gtk is not installed.
+
 ## [0.34.2] - 2026-09-12
 
 ### Added
