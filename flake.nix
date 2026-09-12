@@ -199,6 +199,9 @@
                 alsa-lib
                 dbus
                 sqlite
+                openssl
+                webkitgtk_4_1
+                glib-networking
               ]
             else
               [ ];
@@ -243,6 +246,7 @@
                   export VK_DRIVER_FILES="${pkgs.mesa}/share/vulkan/icd.d"
                   export VK_IMPLICIT_LAYER_PATH="${pkgs.mesa}/share/vulkan/implicit_layer.d"
                 fi
+                export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules''${GIO_EXTRA_MODULES:+:$GIO_EXTRA_MODULES}"
               ''
               # gpui_apple compiles its shaders with `xcrun -sdk macosx metal` at build
               # time. The Nix Apple SDK has no Metal toolchain, so hand xcrun back to the

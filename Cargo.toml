@@ -84,7 +84,15 @@ objc2-web-kit = { version = "0.3", default-features = false, features = [
   "WKWebViewConfiguration",
   "WKWebsiteDataStore",
 ] }
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSResponder", "NSRunningApplication"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+  "std",
+  "NSAccessibility",
+  "NSApplication",
+  "NSResponder",
+  "NSRunningApplication",
+  "NSWorkspace",
+] }
+ashpd = { version = "0.13", default-features = false, features = ["async-io", "settings"] }
 reqwest = { version = "0.13", default-features = false, features = [
   "blocking",
   "json",
