@@ -7,6 +7,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.34.3] - 2026-09-12
+
+### Fixed
+
+- The cookie sign-in window opens natively on Wayland and no longer needs XWayland. It also opens
+  on desktops that export `GDK_BACKEND=wayland`, which used to fail with "cannot reach the display
+  server".
+- The Nix package can open the sign-in window: it now ships webkitgtk and the TLS module the page
+  needs, instead of reporting that webkit2gtk is not installed.
+- The left sidebar steps aside on the same frame the queue opens or closes, instead of waiting for
+  the next redraw.
+
 ## [0.34.2] - 2026-09-12
 
 ### Added
@@ -1500,7 +1512,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Initial release: a native Spotify client with playback, an interactive queue, the saved library,
 search, album, playlist, artist and song pages, context menus and adaptive theming.
 
-[unreleased]: https://github.com/sonorahq/sonora/compare/v0.34.2...HEAD
+[unreleased]: https://github.com/sonorahq/sonora/compare/v0.34.3...HEAD
+[0.34.3]: https://github.com/sonorahq/sonora/compare/v0.34.2...v0.34.3
 [0.34.2]: https://github.com/sonorahq/sonora/compare/v0.34.1...v0.34.2
 [0.34.1]: https://github.com/sonorahq/sonora/compare/v0.34.0...v0.34.1
 [0.34.0]: https://github.com/sonorahq/sonora/compare/v0.33.0...v0.34.0

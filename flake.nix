@@ -74,6 +74,8 @@
                 alsa-lib
                 dbus
                 sqlite
+                webkitgtk_4_1
+                glib-networking
               ]
             else
               [ ];
@@ -156,7 +158,8 @@
                 --add-rpath "${pkgs.lib.makeLibraryPath (runtimeLibraries ++ [ pkgs.stdenv.cc.cc.lib ])}" \
                 "$out/bin/sonora"
               wrapProgram "$out/bin/sonora" \
-                --set ALSA_PLUGIN_DIR ${alsaPluginDirectory}
+                --set ALSA_PLUGIN_DIR ${alsaPluginDirectory} \
+                --prefix GIO_EXTRA_MODULES : ${pkgs.glib-networking}/lib/gio/modules
             '';
 
             meta = {
@@ -241,10 +244,14 @@
                 "";
 
             shellHook =
+              # WebKit composites through EGL, which has to find the same drivers.
               pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
                 if [ ! -d /run/opengl-driver ]; then
                   export VK_DRIVER_FILES="${pkgs.mesa}/share/vulkan/icd.d"
                   export VK_IMPLICIT_LAYER_PATH="${pkgs.mesa}/share/vulkan/implicit_layer.d"
+                  export __EGL_VENDOR_LIBRARY_DIRS="${pkgs.mesa}/share/glvnd/egl_vendor.d"
+                  export LIBGL_DRIVERS_PATH="${pkgs.mesa}/lib/dri"
+                  export GBM_BACKENDS_PATH="${pkgs.mesa}/lib/gbm"
                 fi
                 export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules''${GIO_EXTRA_MODULES:+:$GIO_EXTRA_MODULES}"
               ''
