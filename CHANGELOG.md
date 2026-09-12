@@ -14,6 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   server".
 - The Nix package can open the sign-in window: it now ships webkitgtk and the TLS module the page
   needs, instead of reporting that webkit2gtk is not installed.
+- The left sidebar steps aside on the same frame the queue opens or closes, instead of waiting for
+  the next redraw.
 
 ## [0.34.2] - 2026-09-12
 

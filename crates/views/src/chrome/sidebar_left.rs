@@ -225,15 +225,19 @@ impl SidebarLeft {
         super::cap(MIN_WIDTH, MAX_WIDTH, reserved, window)
     }
 
-    pub fn adapt(&mut self, window: &Window, cx: &mut Context<Self>) {
+    /// Flips into or out of the cramped state from the room the window leaves
+    /// beside a right sidebar of `right` pixels. This runs inside a render,
+    /// where a notify schedules nothing, so a flip asks for a full window
+    /// refresh instead. That effect lands once the draw is over.
+    pub fn adapt(&mut self, right: Pixels, window: &Window, cx: &mut App) {
         self.width = ui::snapped(self.width, window);
 
-        let taken = self.width + super::Chrome::sidebar_right(cx);
-        let space_left = window.viewport_size().width - taken;
+        let space_left = window.viewport_size().width - self.width - right;
         let cramped = space_left < SNUG;
         if cramped != self.cramped {
             self.cramped = cramped;
             self.forced = None;
+            cx.refresh_windows();
         }
     }
 
@@ -620,7 +624,7 @@ impl Render for SidebarLeft {
 
         let current = self.trail.read(cx).current();
         self.follow(&current);
-        self.adapt(window, cx);
+        self.adapt(super::Chrome::sidebar_right(cx), window, cx);
 
         if !cx.has_active_drag() {
             self.dropping = false;

@@ -164,11 +164,11 @@ impl Shell for Workspace {
 
 impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let right = self.sidebar_right.read(cx).occupied_width(window);
         self.sidebar
-            .update(cx, |sidebar, cx| sidebar.adapt(window, cx));
+            .update(cx, |sidebar, cx| sidebar.adapt(right, window, cx));
         let left = self.sidebar.read(cx).occupied_width();
         let overlay_width = self.sidebar.read(cx).overlay_width();
-        let right = self.sidebar_right.read(cx).occupied_width(window);
         Chrome::publish(left, right, cx);
         let covered = self.sidebar_right.read(cx).covers_content(window);
         let overlay = self.sidebar.read(cx).overlays();
