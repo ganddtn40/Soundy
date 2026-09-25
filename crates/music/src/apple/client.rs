@@ -1237,6 +1237,7 @@ impl MusicApi for AppleClient {
                 &[
                     ("views", "top-songs,full-albums,singles"),
                     ("include[songs]", "artists,albums"),
+                    ("extend", "artistBio"),
                 ],
             )
             .await?;
@@ -1254,7 +1255,7 @@ impl MusicApi for AppleClient {
         let answered = self
             .get(
                 &self.catalog(&format!("/artists/{}", escape::component(artist_id))),
-                &[],
+                &[("extend", "artistBio")],
             )
             .await?;
         answered

@@ -356,7 +356,8 @@ pub fn artist(value: &Value) -> Option<Artist> {
         name: text(attributes, "name")?,
         cover_large: artwork(attributes, HERO),
         biography: text(attributes, "editorialNotes")
-            .or_else(|| text(attributes.get("editorialNotes")?, "standard")),
+            .or_else(|| text(attributes.get("editorialNotes")?, "standard"))
+            .or_else(|| text(attributes, "artistBio")),
         monthly_listeners: None,
         top_tracks: view(value, "top-songs").iter().filter_map(song).collect(),
         albums: view(value, "full-albums")
@@ -374,7 +375,8 @@ pub fn artist_profile(value: &Value) -> Option<ArtistProfile> {
         cover_large: artwork(attributes, HERO),
         biography: attributes
             .get("editorialNotes")
-            .and_then(|notes| text(notes, "standard").or_else(|| text(notes, "short"))),
+            .and_then(|notes| text(notes, "standard").or_else(|| text(notes, "short")))
+            .or_else(|| text(attributes, "artistBio")),
     })
 }
 
