@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Recently played now shows what you played on your other devices, such as your phone, read
+  from your Apple Music account. It refreshes each time you bring Sonora back to the front,
+  rather than only after a restart.
+- Plays you start in Sonora now reach Apple Music's recently played on your other devices.
+- The Recently Played shelf on Home shows the albums you actually played last, and keeps
+  up as you play without restarting the app, rather than Apple's slower ranking.
+
 ### Fixed
 
 - Artist pages show the artist's biography from Apple Music, titles in italics and all,

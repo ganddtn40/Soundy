@@ -34,6 +34,21 @@ use crate::{
 /// The API the web player calls.
 const API: &str = "https://amp-api.music.apple.com/v1";
 
+/// Where the web player posts its play-activity beacon. It is a different host from the amp-api
+/// gateway, and the one that makes a play count toward the account's recently played and play
+/// history across devices.
+const ACTIVITY: &str = "https://universal-activity-service.itunes.apple.com/play";
+
+/// The client build string the web player stamps on every play beacon. The activity service
+/// drops a beacon that does not look like an Apple Music client.
+const BEACON_BUILD: &str = "AppleMusic/1.0 Linux/0.0 model/Linux x86_64 build/2638.11.0-external";
+
+/// The user-agent the web player reports in the beacon body, alongside the build string.
+const BEACON_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:156.0) Gecko/20100101 Firefox/156.0";
+
+/// Container type 3 is an album: the surface a catalog play is reported from.
+const CONTAINER_ALBUM: u8 = 3;
+
 /// How many rows a library or track listing asks for at a time, which is Apple's maximum.
 const PAGE: usize = 100;
 
@@ -375,6 +390,52 @@ impl AppleClient {
         self.send(reqwest::Method::DELETE, path, query, None)
             .await
             .map(|_| ())
+    }
+
+    /// Posts a play-activity beacon to Apple's activity service. This is a different host from
+    /// the amp-api gateway, so it does not go through [`send`](Self::send); it carries the same
+    /// bearer and account token every other request does, and neither is ever logged. The body
+    /// is built by [`report_play`](MusicApi::report_play).
+    async fn play_activity(&self, body: Value) -> Result<()> {
+        // The beacon is fire-and-forget, so an edge connection reset is worth one quick retry;
+        // a real HTTP status is returned at once rather than retried.
+        let mut attempt = 0;
+        loop {
+            attempt += 1;
+            match self.play_activity_once(&body).await {
+                Ok(()) => return Ok(()),
+                Err(error) if attempt < 3 && is_transient(&error) => {
+                    log::debug!("apple: play activity retry {attempt}: {error:#}");
+                    tokio::time::sleep(Duration::from_millis(300 * attempt)).await;
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
+    /// One post of a play-activity beacon. See [`play_activity`](Self::play_activity), which wraps
+    /// this with a retry for the edge's occasional connection resets.
+    async fn play_activity_once(&self, body: &Value) -> Result<()> {
+        let response = self
+            .http
+            .post(ACTIVITY)
+            .header(
+                reqwest::header::AUTHORIZATION,
+                format!("Bearer {}", self.bearer),
+            )
+            .header("Music-User-Token", self.user_token.as_ref())
+            .header(reqwest::header::ORIGIN, "https://music.apple.com")
+            .header(reqwest::header::REFERER, "https://music.apple.com/")
+            .json(body)
+            .send()
+            .await
+            .context("cannot reach apple's play activity service")?;
+        let status = response.status();
+        if !status.is_success() {
+            let detail = response.text().await.unwrap_or_default();
+            bail!("apple play activity answered {status}: {detail}");
+        }
+        Ok(())
     }
 
     /// Walks a paged listing and reads every row with `read`. The rows come from
@@ -992,6 +1053,107 @@ impl MusicApi for AppleClient {
         Ok(None)
     }
 
+    /// Reports a play to Apple's play-activity service, so the track reaches the account's
+    /// recently played on every device. It mirrors the web player's `JSPLAY` PLAY_START event;
+    /// only a catalog id counts, and a failure is logged and dropped, never breaking playback.
+    ///
+    /// The field shape is read off music.apple.com's MusicKit rather than documented: the
+    /// service silently drops a beacon missing the tokens and client identity it expects.
+    async fn report_play(&self, track_id: &str) -> Result<()> {
+        if Self::is_mine(track_id) {
+            return Ok(());
+        }
+        // Only a numeric catalog id names anything the catalog history keeps.
+        if track_id.parse::<u64>().is_err() {
+            return Ok(());
+        }
+        // Duration and album container come from one catalog lookup; a failed lookup still sends.
+        let song = self
+            .get(
+                &self.catalog(&format!("/songs/{}", escape::component(track_id))),
+                &[
+                    ("include[songs]", "albums"),
+                    ("fields[songs]", "durationInMillis"),
+                    ("fields[albums]", "url"),
+                ],
+            )
+            .await
+            .ok();
+        let data = song
+            .as_ref()
+            .and_then(|answered| answered.pointer("/data/0"));
+        let duration = data
+            .and_then(|song| song.pointer("/attributes/durationInMillis"))
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        let album = data
+            .and_then(|song| song.pointer("/relationships/albums/data/0/id"))
+            .and_then(Value::as_str);
+        // MusicKit mints a persistent id per play; a random 64-bit hex stands in the same way.
+        let persistent = format!("{:016x}", fastrand::u64(..));
+        let mut item = serde_json::json!({
+            "build-version": BEACON_BUILD,
+            "developer-token": self.bearer.as_ref(),
+            // PLAY_START is event type 1 in the web player's enum; the beacon that lands the play.
+            "event-type": 1,
+            "event-reason-hint-type": 1,
+            "type": 1,
+            // A subscription stream reports its catalog id under `subscription-adam-id`.
+            "ids": { "subscription-adam-id": track_id },
+            "internal-build": false,
+            "media-type": 0,
+            "media-duration-in-milliseconds": duration,
+            "milliseconds-since-play": 1,
+            "offline": false,
+            "persistent-id": persistent,
+            "play-mode": {
+                "auto-play-mode": 1,
+                "repeat-play-mode": 1,
+                "shuffle-play-mode": 1,
+            },
+            "private-enabled": false,
+            "sb-enabled": true,
+            "siri-initiated": false,
+            "source-type": 16,
+            "start-position-in-milliseconds": 0,
+            "store-front": self.storefront.as_ref(),
+            "user-agent": BEACON_AGENT,
+            "user-token": self.user_token.as_ref(),
+            "utc-offset-in-seconds": 0,
+        });
+        // The album container is set only when the lookup gave one.
+        if let Some(album) = album {
+            item["container-type"] = serde_json::json!(CONTAINER_ALBUM);
+            item["container-ids"] = serde_json::json!({ "album-adam-id": album });
+        }
+        let body = serde_json::json!({
+            "client_id": "JSCLIENT",
+            "event_type": "JSPLAY",
+            "data": [item],
+        });
+        self.play_activity(body).await
+    }
+
+    /// The account's recently played songs across every device, newest first. Only songs are
+    /// kept; stations and music videos the list can also carry are dropped.
+    async fn recently_played(&self) -> Result<Vec<Track>> {
+        let answered = self
+            .get(
+                "/me/recent/played/tracks",
+                &[
+                    ("limit", "30"),
+                    ("include[songs]", "artists,albums"),
+                    ("types", "songs"),
+                ],
+            )
+            .await?;
+        Ok(answered
+            .pointer("/data")
+            .and_then(Value::as_array)
+            .map(|rows| rows.iter().filter_map(wire::song).collect())
+            .unwrap_or_default())
+    }
+
     /// The songs the listener has added. Only the ones with a catalog id are listed: an upload
     /// has no catalog encode behind it, and this path plays catalog tracks.
     async fn all_tracks(&self) -> Result<Vec<Track>> {
@@ -1544,10 +1706,53 @@ impl MusicApi for AppleClient {
         if sections.is_empty() {
             sections = self.charts(None).await.unwrap_or_default();
         }
+        // The recommendations' own "Recently Played" group is Apple's cached ranking and lags
+        // real plays, so the live list from `recent_resources` replaces its items instead.
+        if let Ok(live) = <Self as MusicApi>::recent_resources(self).await
+            && !live.is_empty()
+        {
+            match sections
+                .iter()
+                .position(|section| section.title.eq_ignore_ascii_case("recently played"))
+            {
+                Some(at) => sections[at].items = live,
+                // No Apple group to take the title from (a non-English storefront names it
+                // differently); the shelf still goes right below the top one.
+                None => sections.insert(
+                    1.min(sections.len()),
+                    GenreSection {
+                        title: "Recently Played".to_owned(),
+                        items: live,
+                    },
+                ),
+            }
+        }
         Ok(HomeFeed {
             sections,
             ..HomeFeed::default()
         })
+    }
+
+    /// The account's live recently played shelf, newest first: the albums and playlists the
+    /// recent plays came from, read the way the web player's own shelf reads them.
+    async fn recent_resources(&self) -> Result<Vec<GenreItem>> {
+        let answered = self.get("/me/recent/played", &[("limit", "10")]).await?;
+        Ok(answered
+            .get("data")
+            .and_then(Value::as_array)
+            .map(|rows| {
+                rows.iter()
+                    .filter_map(|row| match row.get("type").and_then(Value::as_str) {
+                        Some("albums") => wire::album(row).map(GenreItem::Album),
+                        Some("library-albums") => wire::library_album(row).map(GenreItem::Album),
+                        Some("playlists") | Some("library-playlists") => {
+                            wire::playlist(row).map(GenreItem::Playlist)
+                        }
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default())
     }
 
     /// The genres of the storefront, without the root that parents them all.
@@ -1665,6 +1870,15 @@ fn rows(answered: &Value) -> &[Value] {
         .and_then(Value::as_array)
         .map(Vec::as_slice)
         .unwrap_or_default()
+}
+
+/// Whether a play-activity failure is a transient connection problem, such as the edge's
+/// occasional reset, rather than a real answer worth surfacing. Only these are retried.
+fn is_transient(error: &anyhow::Error) -> bool {
+    error
+        .chain()
+        .filter_map(|cause| cause.downcast_ref::<reqwest::Error>())
+        .any(|error| error.is_connect() || error.is_timeout() || error.is_request())
 }
 
 #[cfg(test)]
