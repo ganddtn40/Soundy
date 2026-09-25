@@ -95,6 +95,7 @@ const PORTRAITS: usize = 50;
 /// type and refuses a longer list outright: a hundred albums, but only twenty-five artists.
 const RATED_ALBUMS: usize = 100;
 const RATED_ARTISTS: usize = 25;
+const RATED_SONGS: usize = 100;
 
 /// What the listener is called on their own playlists, until Apple offers a name for them.
 const OWNER: &str = "You";
@@ -562,20 +563,6 @@ impl AppleClient {
         Ok(collected)
     }
 
-    /// The id of the Favorite Songs playlist, found by what it is rather than what it is
-    /// called. The tags that mark it are only sent when asked for.
-    async fn favorites_playlist(&self) -> Result<Option<String>> {
-        let found = self
-            .walk(
-                "/me/library/playlists",
-                PAGE,
-                &[("extend[library-playlists]", "tags")],
-                wire::favorites_playlist,
-            )
-            .await?;
-        Ok(found.into_iter().next())
-    }
-
     /// Keeps the library resources of one kind the listener has favorited, out of `items`
     /// paired with their library ids.
     ///
@@ -1036,14 +1023,16 @@ impl MusicApi for AppleClient {
         Ok(self.paged(ARTISTS, PAGE, CATALOG_QUERY, wire::saved_artist))
     }
 
-    /// The favorite songs, which Apple keeps as a playlist of its own in the library. Nothing
-    /// when the account has no such playlist yet, which is what an account that has never
-    /// favorited a song looks like.
+    /// The favorite songs: the library songs the listener has rated, read the same way as the
+    /// albums and artists. The rating is the source of truth, not the Favorite Songs playlist,
+    /// which only exists while the account adds favorites to its library.
     async fn saved_tracks(&self) -> Result<Vec<Track>> {
-        match self.favorites_playlist().await? {
-            Some(playlist) => self.playlist_tracks(&playlist).await,
-            None => Ok(Vec::new()),
-        }
+        let songs = self
+            .walk(SONGS, PAGE, SONGS_QUERY, |row| {
+                Some((library_id(row)?, wire::library_song(row)?))
+            })
+            .await?;
+        self.rated("songs", RATED_SONGS, songs).await
     }
 
     /// The favorite albums: the library albums the listener has rated, since a favorite is a
@@ -1068,15 +1057,10 @@ impl MusicApi for AppleClient {
         self.rated("artists", RATED_ARTISTS, artists).await
     }
 
-    /// The tags are asked for so this and [`favorites_playlist`](Self::favorites_playlist)
-    /// read one listing between them.
     async fn playlists(&self) -> Result<Vec<Playlist>> {
-        self.walk(
-            "/me/library/playlists",
-            PAGE,
-            &[("extend[library-playlists]", "tags")],
-            |row| wire::library_playlist(row, OWNER),
-        )
+        self.walk("/me/library/playlists", PAGE, &[], |row| {
+            wire::library_playlist(row, OWNER)
+        })
         .await
     }
 

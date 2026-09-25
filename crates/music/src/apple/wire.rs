@@ -334,28 +334,6 @@ pub fn library_playlist(value: &Value, owner: &str) -> Option<Playlist> {
     })
 }
 
-/// The id of the Favorite Songs playlist, if this library playlist row is it. Apple keeps the
-/// listener's favorites as a playlist it manages itself: tagged `favorited`, with nothing in
-/// the catalog behind it and no editing allowed. Its name is localized, so the name is never
-/// what identifies it. The tags only come when the listing asks for them with
-/// `extend[library-playlists]=tags`.
-pub fn favorites_playlist(value: &Value) -> Option<String> {
-    let attributes = value.get("attributes")?;
-    let flag = |name: &str| {
-        attributes
-            .get(name)
-            .and_then(Value::as_bool)
-            .unwrap_or(false)
-    };
-    let tagged = attributes
-        .get("tags")
-        .and_then(Value::as_array)
-        .is_some_and(|tags| tags.iter().any(|tag| tag.as_str() == Some("favorited")));
-    (tagged && !flag("canEdit") && !flag("hasCatalog"))
-        .then(|| value.get("id")?.as_str().map(str::to_owned))
-        .flatten()
-}
-
 /// One library artist. Only the catalog counterpart has a picture, and only its id can open a
 /// page, so an artist without one is left out.
 pub fn saved_artist(value: &Value) -> Option<SavedArtist> {

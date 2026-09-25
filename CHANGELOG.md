@@ -7,6 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Songs you have favorited on Apple Music now show as loved in Sonora. They are read from
+  your ratings, the same way your favorite albums and artists are, rather than from the
+  Favorite Songs playlist an account can be set up without.
+
 ## [0.40.0] - 2026-09-25
 
 ### Added
