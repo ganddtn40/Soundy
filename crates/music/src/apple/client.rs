@@ -987,10 +987,26 @@ impl MusicApi for AppleClient {
         }
     }
 
+    /// The account, named and pictured from the listener's Apple Music profile when they have
+    /// one; otherwise the service name with no picture. A missing profile never fails sign-in.
     async fn profile(&self) -> Result<UserProfile> {
+        let social = match self.get("/me/social-profile", &[]).await {
+            Ok(answered) => answered,
+            // No social profile on the account: the service name and no picture still sign in.
+            Err(error) => {
+                log::debug!("apple: no social profile for this account: {error:#}");
+                Value::Null
+            }
+        };
+        let attributes = social.pointer("/data/0/attributes");
+        let display_name = attributes
+            .and_then(|attributes| wire::text(attributes, "name"))
+            .unwrap_or_else(|| "Apple Music".to_owned());
+        let avatar = attributes.and_then(|attributes| wire::artwork(attributes, wire::ART));
         Ok(UserProfile {
             id: self.storefront.to_string(),
-            display_name: "Apple Music".to_owned(),
+            display_name,
+            avatar,
         })
     }
 

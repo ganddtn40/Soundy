@@ -16,8 +16,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The Recently Played shelf on Home shows the albums you actually played last, and keeps
   up as you play without restarting the app, rather than Apple's slower ranking.
 
+### Changed
+
+- The account shown in Settings > General names the service beside your region, so an Apple
+  Music account reads "Apple Music" and your country rather than the country on its own.
+
 ### Fixed
 
+- The Apple Music account in Settings shows your Apple Music profile name and picture when
+  you have set one up, rather than only "Apple Music" and your country.
 - Artist pages show the artist's biography from Apple Music, titles in italics and all,
   rather than placeholder text.
 - Songs you have favorited on Apple Music now show as loved in Sonora. They are read from
