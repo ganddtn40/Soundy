@@ -572,7 +572,7 @@ impl MusicApi for LocalClient {
             });
         }
 
-        let mut artists = self.artists();
+        let mut artists = self.scanned.read().unwrap().artists.clone();
         if !artists.is_empty() {
             fastrand::shuffle(&mut artists);
             sections.push(GenreSection {
@@ -669,6 +669,7 @@ mod tests {
             tracks,
             albums: vec![],
             portraits: HashMap::new(),
+            artists: vec![],
         };
 
         let client = LocalClient::new(scanned, db.clone(), index);
