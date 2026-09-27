@@ -193,12 +193,6 @@ pub trait MusicApi: Send + Sync {
         Ok(Vec::new())
     }
 
-    /// The account's live recently played shelf, newest first: the albums and playlists recent
-    /// plays came from. A provider with no such shelf keeps the default and answers with nothing.
-    async fn recent_resources(&self) -> Result<Vec<GenreItem>> {
-        Ok(Vec::new())
-    }
-
     async fn playlists(&self) -> Result<Vec<Playlist>>;
     /// Changes the provider's own pin for `uri`, one of the uris `pin_targets` lists or
     /// `pin_uri` builds.

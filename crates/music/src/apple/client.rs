@@ -438,6 +438,28 @@ impl AppleClient {
         Ok(())
     }
 
+    /// The account's live recently played shelf, newest first: the albums and playlists the
+    /// recent plays came from, read the way the web player's own shelf reads them.
+    async fn recent_items(&self) -> Result<Vec<GenreItem>> {
+        let answered = self.get("/me/recent/played", &[("limit", "10")]).await?;
+        Ok(answered
+            .get("data")
+            .and_then(Value::as_array)
+            .map(|rows| {
+                rows.iter()
+                    .filter_map(|row| match row.get("type").and_then(Value::as_str) {
+                        Some("albums") => wire::album(row).map(GenreItem::Album),
+                        Some("library-albums") => wire::library_album(row).map(GenreItem::Album),
+                        Some("playlists") | Some("library-playlists") => {
+                            wire::playlist(row).map(GenreItem::Playlist)
+                        }
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
     /// Walks a paged listing and reads every row with `read`. The rows come from
     /// [`listing`](Self::listing), so two walks of one listing close together cost one fetch.
     async fn walk<T, F>(
@@ -1691,6 +1713,7 @@ impl MusicApi for AppleClient {
     async fn home(&self) -> Result<HomeFeed> {
         let answered = self.get("/me/recommendations", &[("limit", "12")]).await?;
         let mut sections = Vec::new();
+        let mut recents = Vec::new();
         for group in answered
             .get("data")
             .and_then(Value::as_array)
@@ -1715,60 +1738,30 @@ impl MusicApi for AppleClient {
                         .collect()
                 })
                 .unwrap_or_default();
-            if !items.is_empty() {
-                sections.push(GenreSection { title, items });
+            match is_recents(group) {
+                true => recents = items,
+                false if !items.is_empty() => sections.push(GenreSection { title, items }),
+                false => {}
             }
         }
         if sections.is_empty() {
             sections = self.charts(None).await.unwrap_or_default();
         }
-        // The recommendations' own "Recently Played" group is Apple's cached ranking and lags
-        // real plays, so the live list from `recent_resources` replaces its items instead.
-        if let Ok(live) = <Self as MusicApi>::recent_resources(self).await
-            && !live.is_empty()
-        {
-            match sections
-                .iter()
-                .position(|section| section.title.eq_ignore_ascii_case("recently played"))
-            {
-                Some(at) => sections[at].items = live,
-                // No Apple group to take the title from (a non-English storefront names it
-                // differently); the shelf still goes right below the top one.
-                None => sections.insert(
-                    1.min(sections.len()),
-                    GenreSection {
-                        title: "Recently Played".to_owned(),
-                        items: live,
-                    },
-                ),
+        // Apple's own recently played group is a cached ranking that lags real plays, so the live
+        // list leads Quick picks and the group only stands in when that list cannot be read.
+        let listen_again = match self.recent_items().await {
+            Ok(live) if !live.is_empty() => live,
+            Ok(_) => recents,
+            Err(error) => {
+                log::warn!("apple: cannot load recently played: {error:#}");
+                recents
             }
-        }
+        };
         Ok(HomeFeed {
+            listen_again,
             sections,
             ..HomeFeed::default()
         })
-    }
-
-    /// The account's live recently played shelf, newest first: the albums and playlists the
-    /// recent plays came from, read the way the web player's own shelf reads them.
-    async fn recent_resources(&self) -> Result<Vec<GenreItem>> {
-        let answered = self.get("/me/recent/played", &[("limit", "10")]).await?;
-        Ok(answered
-            .get("data")
-            .and_then(Value::as_array)
-            .map(|rows| {
-                rows.iter()
-                    .filter_map(|row| match row.get("type").and_then(Value::as_str) {
-                        Some("albums") => wire::album(row).map(GenreItem::Album),
-                        Some("library-albums") => wire::library_album(row).map(GenreItem::Album),
-                        Some("playlists") | Some("library-playlists") => {
-                            wire::playlist(row).map(GenreItem::Playlist)
-                        }
-                        _ => None,
-                    })
-                    .collect()
-            })
-            .unwrap_or_default())
     }
 
     /// The genres of the storefront, without the root that parents them all.
@@ -1886,6 +1879,18 @@ fn rows(answered: &Value) -> &[Value] {
         .and_then(Value::as_array)
         .map(Vec::as_slice)
         .unwrap_or_default()
+}
+
+/// Whether a recommendation group is the account's recently played one, which Quick picks
+/// replace. Apple names it in the storefront's language, so its kind decides and the English
+/// title is only a fallback.
+fn is_recents(group: &Value) -> bool {
+    let kind = group.pointer("/attributes/kind").and_then(Value::as_str);
+    let title = group
+        .pointer("/attributes/title/stringForDisplay")
+        .and_then(Value::as_str);
+    matches!(kind, Some("music-recents" | "recently-played"))
+        || title.is_some_and(|title| title.eq_ignore_ascii_case("recently played"))
 }
 
 /// Whether a play-activity failure is a transient connection problem, such as the edge's
