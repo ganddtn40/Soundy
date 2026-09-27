@@ -24,6 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   track and start playing it anyway.
 - Sonora stops after three tracks in a row fail to play and waits for you to press play, instead of
   skipping through the whole queue when the connection drops.
+- When Spotify rate-limits you for skipping through tracks quickly, Sonora says so and tries the
+  same track again after a short wait, instead of hanging for ten seconds and skipping it.
 
 ## [0.40.0] - 2026-09-25
 
