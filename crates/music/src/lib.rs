@@ -370,6 +370,11 @@ pub enum PlaybackEvent {
     Unavailable {
         id: Option<String>,
     },
+    /// The provider turned the load down for now, as it does under a rate limit, so the same
+    /// track may play after a wait.
+    Throttled {
+        id: Option<String>,
+    },
     Refused,
     Gated,
     OutputChanged,
@@ -385,7 +390,8 @@ impl PlaybackEvent {
             | Self::Seeked { id, .. }
             | Self::Length { id, .. }
             | Self::Ended { id, .. }
-            | Self::Unavailable { id, .. } => id.as_deref(),
+            | Self::Unavailable { id, .. }
+            | Self::Throttled { id } => id.as_deref(),
             _ => None,
         }
     }
