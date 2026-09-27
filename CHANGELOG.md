@@ -26,6 +26,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Your favorite artists and Recommended for today follow.
 - When the queue runs out with repeat and radio off, Sonora goes back to its first track and waits
   paused, so pressing play starts the queue over.
+- Albums in Quick picks say whether they are an album, EP or single, the way songs and playlists
+  already say what they are.
 - The account shown in Settings > General names the service beside your region, so an Apple
   Music account reads "Apple Music" and your country rather than the country on its own.
 
