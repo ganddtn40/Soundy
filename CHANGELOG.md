@@ -15,8 +15,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from your Apple Music account. It refreshes each time you bring Sonora back to the front,
   rather than only after a restart.
 - Plays you start in Sonora now reach Apple Music's recently played on your other devices.
-- On Apple Music, Quick picks on Home open on the albums and playlists you played last on any
-  device, the same way they do for Spotify and YouTube Music.
+- On Apple Music, Quick picks on Home open on the albums, playlists and songs you played last on
+  any device, the same way they do for Spotify and YouTube Music. An album you played a single
+  song from shows as that song.
 
 ### Changed
 

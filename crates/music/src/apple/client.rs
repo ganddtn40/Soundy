@@ -392,30 +392,10 @@ impl AppleClient {
             .map(|_| ())
     }
 
-    /// Posts a play-activity beacon to Apple's activity service. This is a different host from
-    /// the amp-api gateway, so it does not go through [`send`](Self::send); it carries the same
-    /// bearer and account token every other request does, and neither is ever logged. The body
-    /// is built by [`report_play`](MusicApi::report_play).
-    async fn play_activity(&self, body: Value) -> Result<()> {
-        // The beacon is fire-and-forget, so an edge connection reset is worth one quick retry;
-        // a real HTTP status is returned at once rather than retried.
-        let mut attempt = 0;
-        loop {
-            attempt += 1;
-            match self.play_activity_once(&body).await {
-                Ok(()) => return Ok(()),
-                Err(error) if attempt < 3 && is_transient(&error) => {
-                    log::debug!("apple: play activity retry {attempt}: {error:#}");
-                    tokio::time::sleep(Duration::from_millis(300 * attempt)).await;
-                }
-                Err(error) => return Err(error),
-            }
-        }
-    }
-
-    /// One post of a play-activity beacon. See [`play_activity`](Self::play_activity), which wraps
-    /// this with a retry for the edge's occasional connection resets.
-    async fn play_activity_once(&self, body: &Value) -> Result<()> {
+    /// Posts a play-activity beacon to Apple's activity service, once. This is a different host
+    /// from the amp-api gateway, so it does not go through [`send`](Self::send). It carries the
+    /// same bearer and account token every other request does, and neither is ever logged.
+    async fn play_activity(&self, body: &Value) -> Result<()> {
         let response = self
             .http
             .post(ACTIVITY)
@@ -1169,7 +1149,7 @@ impl MusicApi for AppleClient {
             "event_type": "JSPLAY",
             "data": [item],
         });
-        self.play_activity(body).await
+        self.play_activity(&body).await
     }
 
     /// The account's recently played songs across every device, newest first. Only songs are
@@ -1749,7 +1729,11 @@ impl MusicApi for AppleClient {
         }
         // Apple's own recently played group is a cached ranking that lags real plays, so the live
         // list leads Quick picks and the group only stands in when that list cannot be read.
-        let listen_again = match self.recent_items().await {
+        let (containers, songs) = futures::join!(
+            self.recent_items(),
+            <Self as MusicApi>::recently_played(self)
+        );
+        let containers = match containers {
             Ok(live) if !live.is_empty() => live,
             Ok(_) => recents,
             Err(error) => {
@@ -1757,6 +1741,11 @@ impl MusicApi for AppleClient {
                 recents
             }
         };
+        let songs = songs.unwrap_or_else(|error| {
+            log::warn!("apple: cannot load recently played songs: {error:#}");
+            Vec::new()
+        });
+        let listen_again = recent_mix(containers, songs);
         Ok(HomeFeed {
             listen_again,
             sections,
@@ -1881,25 +1870,55 @@ fn rows(answered: &Value) -> &[Value] {
         .unwrap_or_default()
 }
 
-/// Whether a recommendation group is the account's recently played one, which Quick picks
-/// replace. Apple names it in the storefront's language, so its kind decides and the English
-/// title is only a fallback.
-fn is_recents(group: &Value) -> bool {
-    let kind = group.pointer("/attributes/kind").and_then(Value::as_str);
-    let title = group
-        .pointer("/attributes/title/stringForDisplay")
-        .and_then(Value::as_str);
-    matches!(kind, Some("music-recents" | "recently-played"))
-        || title.is_some_and(|title| title.eq_ignore_ascii_case("recently played"))
+/// The recently played part of Quick picks: the albums and playlists recent plays came from in
+/// Apple's order, then the recent songs no album there covers. An album only one of those songs
+/// came from stands as that song, since a lone song from it is a song play rather than an
+/// album play.
+fn recent_mix(containers: Vec<GenreItem>, songs: Vec<Track>) -> Vec<GenreItem> {
+    let played = |album: &str| {
+        songs
+            .iter()
+            .filter(|song| song.album_id.as_deref() == Some(album))
+            .count()
+    };
+    let mut mixed: Vec<GenreItem> = containers
+        .into_iter()
+        .map(|item| match &item {
+            GenreItem::Album(album) if played(&album.id) == 1 => songs
+                .iter()
+                .find(|song| song.album_id.as_deref() == Some(album.id.as_str()))
+                .map(|song| GenreItem::Track(song.clone()))
+                .unwrap_or(item),
+            _ => item,
+        })
+        .collect();
+    let covered: HashSet<String> = mixed
+        .iter()
+        .filter_map(|item| match item {
+            GenreItem::Album(album) => Some(album.id.clone()),
+            GenreItem::Track(track) => track.album_id.clone(),
+            _ => None,
+        })
+        .collect();
+    let mut seen = HashSet::new();
+    mixed.extend(
+        songs
+            .into_iter()
+            .filter(|song| {
+                song.album_id
+                    .as_ref()
+                    .is_none_or(|album| !covered.contains(album))
+            })
+            .filter(|song| song.id.clone().is_some_and(|id| seen.insert(id)))
+            .map(GenreItem::Track),
+    );
+    mixed
 }
 
-/// Whether a play-activity failure is a transient connection problem, such as the edge's
-/// occasional reset, rather than a real answer worth surfacing. Only these are retried.
-fn is_transient(error: &anyhow::Error) -> bool {
-    error
-        .chain()
-        .filter_map(|cause| cause.downcast_ref::<reqwest::Error>())
-        .any(|error| error.is_connect() || error.is_timeout() || error.is_request())
+/// Whether a recommendation group is the account's recently played one, which Quick picks
+/// replace. Its title is in the storefront's language, so only its kind is checked.
+fn is_recents(group: &Value) -> bool {
+    group.pointer("/attributes/kind").and_then(Value::as_str) == Some("recently-played")
 }
 
 #[cfg(test)]

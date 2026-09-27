@@ -346,12 +346,10 @@ impl History {
     /// Reports the play to the provider that owns the track, fire-and-forget. A failure is
     /// logged and dropped, never touching what the listener hears.
     fn report(&self, track_id: &str, cx: &Context<Self>) {
-        let session = self.session.read(cx);
-        let client = match music::is_local_id(track_id) {
-            true => session.local_client(),
-            false => session.client(),
-        };
-        let Some(client) = client else {
+        if music::is_local_id(track_id) {
+            return;
+        }
+        let Some(client) = self.session.read(cx).client() else {
             return;
         };
         let track_id = track_id.to_owned();
