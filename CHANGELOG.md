@@ -9,6 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Sonora speaks Czech. Pick it in Language settings.
 - Custom color themes can live as separate JSON files in the config themes folder. Sonora lists them
   in Appearance settings and picks up edits, additions, and deletions without a restart.
 

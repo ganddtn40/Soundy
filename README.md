@@ -197,6 +197,7 @@ AI-assisted proofreading and translation of human-written text are permitted.
 | Русский (`ru`) | 713/745 | 96% |
 | Українська (`uk`) | 713/745 | 96% |
 | Polski (`pl`) | 713/745 | 96% |
+| Čeština (`cs`) | 745/745 | 100% |
 | Português (Brasil) (`pt-BR`) | 607/745 | 81% |
 | 简体中文 (`zh-CN`) | 607/745 | 81% |
 | Türkçe (`tr`) | 607/745 | 81% |
