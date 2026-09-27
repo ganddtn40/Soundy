@@ -4548,6 +4548,7 @@ dependencies = [
  "flate2",
  "futures",
  "http",
+ "jiff",
  "kakasi",
  "librespot-core",
  "librespot-playback",

@@ -200,16 +200,23 @@ impl MusicApi for LibrespotClient {
         pathfinder::search_playlists(&self.session, query).await
     }
 
+    /// Spotify's own home feed, or the Made For You page when that cannot be read.
     async fn home(&self) -> Result<HomeFeed> {
-        let mut sections = pathfinder::genre(&self.session, MADE_FOR_YOU)
-            .await?
-            .sections;
-        playlists::name_blanks(&self.session, &mut sections).await;
+        let mut feed = match pathfinder::home(&self.session).await {
+            Ok(feed) => feed,
+            Err(error) => {
+                log::warn!("home: cannot load the Spotify feed, showing Made For You: {error:#}");
+                HomeFeed {
+                    sections: pathfinder::genre(&self.session, MADE_FOR_YOU)
+                        .await?
+                        .sections,
+                    ..HomeFeed::default()
+                }
+            }
+        };
+        playlists::name_blanks(&self.session, &mut feed.sections).await;
 
-        Ok(HomeFeed {
-            sections,
-            ..HomeFeed::default()
-        })
+        Ok(feed)
     }
 
     async fn genres(&self) -> Result<Vec<Genre>> {
