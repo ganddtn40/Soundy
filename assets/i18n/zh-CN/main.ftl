@@ -281,7 +281,6 @@ login-account-title = 选择一个账户
 login-account-detail = 此会话登录了多个 Google 账户。请选择 Sonora 应使用的账户。
 
 # album and playlist pages
-detail-album = 专辑
 detail-playlist = 播放列表
 detail-play-album = 播放专辑
 detail-play-playlist = 播放该列表
@@ -448,7 +447,7 @@ settings-theme-detail = 选择应用的配色方案
 settings-opacity = 不透明度
 settings-opacity-detail = 调整应用背景的不透明度
 settings-opacity-value = { $percent }%
-settings-theme-config = 打开配置
+settings-theme-folder = 打开配置
 settings-adaptive = 自适应主题
 settings-adaptive-detail = 使用正在播放专辑的封面为配色方案着色
 settings-visualizer = 可视化效果

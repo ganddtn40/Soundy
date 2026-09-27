@@ -318,7 +318,6 @@ login-choose-title = Sign in to { $provider }
 login-choose-detail = Choose how to sign in to { $provider }.
 
 # album and playlist pages
-detail-album = Album
 detail-playlist = Playlist
 detail-play-album = Play album
 detail-play-playlist = Play playlist
@@ -500,7 +499,7 @@ settings-theme-detail = Choose the application colour palette
 settings-opacity = Opacity
 settings-opacity-detail = Adjust the app background opacity
 settings-opacity-value = { $percent }%
-settings-theme-config = Open config
+settings-theme-folder = Open folder
 settings-adaptive = Adaptive theme
 settings-adaptive-detail = Tint the palette with the artwork of the playing album
 settings-ambient = Ambient background
@@ -766,6 +765,7 @@ theme-ocean = Ocean
 theme-rose = Rose
 theme-lavender = Lavender
 theme-amber = Amber
+theme-unavailable = { $name } (unavailable)
 
 # corners
 corners-square = Square
@@ -813,6 +813,9 @@ toast-queue-failed = That could not be added to the queue
 toast-keys-refused = Spotify is not granting this account playback keys
 toast-sign-in-to-play = { $name } only streams to a signed-in listener
 toast-track-unplayable = { $name } could not be played
+toast-playback-stopped = Playback stopped after several tracks in a row could not be played
+toast-throttled = { $name } is limiting playback for now. Trying again in a moment
+toast-still-throttled = { $name } is still limiting playback. Press play to try again
 toast-library-add-failed = { $name } could not be added to your library
 toast-library-remove-failed = { $name } could not be removed from your library
 toast-library-added = Added to your library

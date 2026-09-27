@@ -266,7 +266,6 @@ login-account-title = Bir hesap seç
 login-account-detail = Bu oturumda birden çok Google hesabı açık. Sonora'nın kullanacağı hesabı seç.
 
 # album and playlist pages
-detail-album = Albüm
 detail-playlist = Çalma listesi
 detail-play-album = Albümü çal
 detail-play-playlist = Çalma listesini çal
@@ -431,7 +430,7 @@ settings-theme-detail = Uygulamanın renk paletini seç
 settings-opacity = Saydamlık
 settings-opacity-detail = Uygulama arka planının saydamlığını ayarla
 settings-opacity-value = { $percent }%
-settings-theme-config = Yapılandırmayı aç
+settings-theme-folder = Yapılandırmayı aç
 settings-adaptive = Uyarlanabilir tema
 settings-adaptive-detail = Paleti, çalan albümün kapağıyla renklendir
 settings-visualizer = Görselleştirici

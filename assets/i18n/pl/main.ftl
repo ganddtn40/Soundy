@@ -331,7 +331,6 @@ login-choose-title = Zaloguj się do { $provider }
 login-choose-detail = Wybierz sposób logowania do { $provider }.
 
 # album and playlist pages
-detail-album = Album
 detail-playlist = Playlista
 detail-play-album = Odtwórz album
 detail-play-playlist = Odtwórz playlistę
@@ -514,7 +513,7 @@ settings-theme-detail = Paleta kolorów aplikacji
 settings-opacity = Krycie
 settings-opacity-detail = Dostosuj krycie tła aplikacji
 settings-opacity-value = { $percent }%
-settings-theme-config = Otwórz konfigurację
+settings-theme-folder = Otwórz konfigurację
 settings-adaptive = Motyw adaptacyjny
 settings-adaptive-detail = Zabarw paletę okładką odtwarzanego albumu
 settings-ambient = Tło nastrojowe

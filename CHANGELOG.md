@@ -9,6 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Custom color themes can live as separate JSON files in the config themes folder. Sonora lists them
+  in Appearance settings and picks up edits, additions, and deletions without a restart.
 - Recently played now shows what you played on your other devices, such as your phone, read
   from your Apple Music account. It refreshes each time you bring Sonora back to the front,
   rather than only after a restart.
@@ -18,11 +20,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The Spotify home page is now Spotify's own home feed rather than rows of mixes. Quick picks
+  open on the albums, playlists and artists you played lately, and shelves such as Jump back in,
+  Your favorite artists and Recommended for today follow.
+- When the queue runs out with repeat and radio off, Sonora goes back to its first track and waits
+  paused, so pressing play starts the queue over.
 - The account shown in Settings > General names the service beside your region, so an Apple
   Music account reads "Apple Music" and your country rather than the country on its own.
 
 ### Fixed
 
+- Pausing while a track fails to load now keeps playback paused. Sonora used to skip to the next
+  track and start playing it anyway.
+- Sonora stops after three tracks in a row fail to play and waits for you to press play, instead of
+  skipping through the whole queue when the connection drops.
+- When Spotify rate-limits you for skipping through tracks quickly, Sonora says so and tries the
+  same track again after a short wait, instead of hanging for ten seconds and skipping it.
+- Album pages now say whether a release is an album, EP, single or compilation, instead of calling
+  everything an album. Subsonic servers and local files that tag the release type are labelled the
+  same way.
 - The Apple Music account in Settings shows your Apple Music profile name and picture when
   you have set one up, rather than only "Apple Music" and your country.
 - Artist pages show the artist's biography from Apple Music, titles in italics and all,

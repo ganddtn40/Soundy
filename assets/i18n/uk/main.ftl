@@ -329,7 +329,6 @@ login-choose-title = Вхід у { $provider }
 login-choose-detail = Виберіть спосіб входу в { $provider }.
 
 # album and playlist pages
-detail-album = Альбом
 detail-playlist = Плейлист
 detail-play-album = Слухати альбом
 detail-play-playlist = Слухати плейлист
@@ -512,7 +511,7 @@ settings-theme-detail = Кольорова палітра застосунку
 settings-opacity = Непрозорість
 settings-opacity-detail = Налаштуйте непрозорість фону застосунку
 settings-opacity-value = { $percent }%
-settings-theme-config = Відкрити конфіг
+settings-theme-folder = Відкрити конфіг
 settings-adaptive = Адаптивна тема
 settings-adaptive-detail = Підфарбовувати палітру обкладинкою альбому, що грає
 settings-ambient = Атмосферне тло

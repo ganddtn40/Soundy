@@ -244,7 +244,7 @@ impl Root {
                     tint: cx.theme().tint,
                     ..settings.look()
                 };
-                let overrides = settings.theme_overrides().clone();
+                let overrides = settings.theme_overrides();
                 Theme::fade(look, &overrides, cx);
             })
             .detach();

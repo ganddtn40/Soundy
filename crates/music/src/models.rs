@@ -112,6 +112,29 @@ impl ReleaseType {
             Self::Podcast => "Podcast",
         }
     }
+
+    /// Reads the MusicBrainz release types a tag or an OpenSubsonic server lists, such as
+    /// `["album", "compilation"]` or a single `"EP; Live"`, in any case. A primary EP or single
+    /// wins over a compilation, and a release naming neither is an album.
+    pub fn from_musicbrainz<'a>(
+        types: impl IntoIterator<Item = &'a str>,
+        compilation: bool,
+    ) -> Self {
+        let mut named = compilation.then_some(Self::Compilation);
+        let parts = types
+            .into_iter()
+            .flat_map(|types| types.split([';', '/', ',', '\0']))
+            .map(str::trim);
+        for part in parts {
+            match part.to_ascii_lowercase().as_str() {
+                "ep" => return Self::Ep,
+                "single" => return Self::Single,
+                "compilation" => named = Some(Self::Compilation),
+                _ => {}
+            }
+        }
+        named.unwrap_or(Self::Album)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -488,4 +511,31 @@ pub enum PinOutcome {
     Updated,
     LimitReached,
     Outside,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn musicbrainz_types_name_the_release() {
+        let cases = [
+            (&["ep"][..], false, ReleaseType::Ep),
+            (&["EP", "Live"], false, ReleaseType::Ep),
+            (&["single"], false, ReleaseType::Single),
+            (&["album", "compilation"], false, ReleaseType::Compilation),
+            (&["Album; Compilation"], false, ReleaseType::Compilation),
+            (&["ep/compilation"], false, ReleaseType::Ep),
+            (&["album"], true, ReleaseType::Compilation),
+            (&["album", "soundtrack"], false, ReleaseType::Album),
+            (&[], false, ReleaseType::Album),
+        ];
+        for (types, compilation, expected) in cases {
+            assert_eq!(
+                ReleaseType::from_musicbrainz(types.iter().copied(), compilation),
+                expected,
+                "{types:?}"
+            );
+        }
+    }
 }
