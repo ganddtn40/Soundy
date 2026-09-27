@@ -12,6 +12,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Custom color themes can live as separate JSON files in the config themes folder. Sonora lists them
   in Appearance settings and picks up edits, additions, and deletions without a restart.
 
+### Fixed
+
+- Pausing while a track fails to load now keeps playback paused. Sonora used to skip to the next
+  track and start playing it anyway.
+- Sonora stops after three tracks in a row fail to play and waits for you to press play, instead of
+  skipping through the whole queue when the connection drops.
+
 ## [0.40.0] - 2026-09-25
 
 ### Added
