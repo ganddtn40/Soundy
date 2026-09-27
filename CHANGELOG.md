@@ -28,6 +28,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   paused, so pressing play starts the queue over.
 - Albums in Quick picks say whether they are an album, EP or single, the way songs and playlists
   already say what they are.
+- Quick picks open on at most ten of your recently played items on every service, so the picks
+  after them always get room.
 - The account shown in Settings > General names the service beside your region, so an Apple
   Music account reads "Apple Music" and your country rather than the country on its own.
 
@@ -42,6 +44,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Album pages now say whether a release is an album, EP, single or compilation, instead of calling
   everything an album. Subsonic servers and local files that tag the release type are labelled the
   same way.
+- Quick picks no longer flash a handful of random library songs while your account is still
+  loading at launch. They wait for the account and fill in once.
 - The Apple Music account in Settings shows your Apple Music profile name and picture when
   you have set one up, rather than only "Apple Music" and your country.
 - Artist pages show the artist's biography from Apple Music, titles in italics and all,
