@@ -18,6 +18,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   open on the albums, playlists and artists you played lately, and shelves such as Jump back in,
   Your favorite artists and Recommended for today follow.
 
+### Fixed
+
+- Pausing while a track fails to load now keeps playback paused. Sonora used to skip to the next
+  track and start playing it anyway.
+- Sonora stops after three tracks in a row fail to play and waits for you to press play, instead of
+  skipping through the whole queue when the connection drops.
+
 ## [0.40.0] - 2026-09-25
 
 ### Added

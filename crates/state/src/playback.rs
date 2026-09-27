@@ -102,6 +102,9 @@ const PRELOAD_BEFORE_END: Duration = Duration::from_secs(10);
 const SKIP_DEBOUNCE: Duration = Duration::from_millis(250);
 const RESTART_WINDOW: Duration = Duration::from_secs(3);
 const KEY_COOLDOWN: Duration = Duration::from_secs(1);
+/// How many loads in a row may fail before the queue stops moving on by itself and waits for
+/// play.
+const FAILURE_LIMIT: u8 = 3;
 const RESUME_STEP: Duration = Duration::from_secs(5);
 const TAPER_DB: f32 = 50.;
 const SIMILAR_LIMIT: usize = 20;
@@ -366,6 +369,8 @@ pub struct Playback {
     skipped: Option<Instant>,
     /// No load goes out before this after a track failed, so a bad key cannot be hammered.
     blocked_until: Option<Instant>,
+    /// Loads that failed since audio last played or the user last chose a track.
+    failures: u8,
     refused: Option<Refusal>,
     /// Where the restored track resumes. Set until the engine has it ready or the user plays.
     resume_at: Option<Duration>,
@@ -478,6 +483,7 @@ impl Playback {
             preloaded: None,
             skipped: None,
             blocked_until: None,
+            failures: 0,
             refused: None,
             resume_at: None,
             seek_in_flight: None,
@@ -591,6 +597,9 @@ impl Playback {
             return;
         }
         self.silence_other(&id);
+        if start != Start::Segue {
+            self.failures = 0;
+        }
 
         self.track = Some(track.clone());
         self.state = PlaybackState::Loading;
@@ -614,6 +623,9 @@ impl Playback {
         self.load = Some(cx.spawn(async move |this, cx| {
             cx.background_executor().timer(wait).await;
             this.update(cx, |this, cx| {
+                if this.intent == Intent::Pause {
+                    return this.hold(at, cx);
+                }
                 let Some(engine) = this.engine_for(&id) else {
                     return;
                 };
@@ -1727,6 +1739,29 @@ impl Playback {
         self.prepare_resume(cx);
     }
 
+    /// Moves to the next playable track and holds it paused without fetching it, so play loads
+    /// it then. Leaves nothing loaded when the queue has run out.
+    fn hold_next(&mut self, cx: &mut Context<Self>) {
+        self.fetch = None;
+        self.track = self.playable_next(cx);
+        if self.track.is_some() {
+            self.hold(Duration::ZERO, cx);
+            self.remember(true, cx);
+        }
+    }
+
+    /// Keeps the current track paused at `at` without asking the engine for it, so play loads
+    /// it from there.
+    fn hold(&mut self, at: Duration, cx: &mut Context<Self>) {
+        self.intent = Intent::Pause;
+        self.state = PlaybackState::Paused;
+        self.position = at;
+        self.clock.reset(at, false);
+        self.resume_at = Some(at);
+        self.resume_ready = false;
+        cx.notify();
+    }
+
     /// Whether the user wants the current track playing, whatever the engine has managed so
     /// far. A transport control reads this; anything that follows the sound reads `state`.
     pub fn wants_playing(&self) -> bool {
@@ -2162,6 +2197,7 @@ impl Playback {
                 let started = self.state != PlaybackState::Playing;
                 self.intent = Intent::Play;
                 self.state = PlaybackState::Playing;
+                self.failures = 0;
                 self.position = at;
                 self.clock.reset(at, true);
                 if started {
@@ -2243,14 +2279,25 @@ impl Playback {
                     KEY_COOLDOWN.as_secs()
                 );
                 self.blocked_until = Some(Instant::now() + KEY_COOLDOWN);
+                self.failures = self.failures.saturating_add(1);
                 self.state = PlaybackState::Idle;
                 self.position = Duration::ZERO;
                 self.clock.reset(Duration::ZERO, false);
-                Toasts::linked(Outcome::Failed, "toast-track-unplayable", name, target, cx);
+                let exhausted = self.failures >= FAILURE_LIMIT;
+                match exhausted {
+                    true => {
+                        log::warn!("playback: {FAILURE_LIMIT} tracks failed in a row, stopping");
+                        Toasts::show(Outcome::Failed, "toast-playback-stopped", cx);
+                    }
+                    false => {
+                        Toasts::linked(Outcome::Failed, "toast-track-unplayable", name, target, cx)
+                    }
+                }
                 cx.emit(PlaybackEvent::EndedPlayback);
-                match self.repeat {
-                    Repeat::One => self.segue_queue(cx),
-                    _ => self.advance(failed, cx),
+                match (exhausted || self.intent == Intent::Pause, self.repeat) {
+                    (true, _) => self.hold_next(cx),
+                    (false, Repeat::One) => self.segue_queue(cx),
+                    (false, _) => self.advance(failed, cx),
                 }
             }
             BackendEvent::Refused => {
@@ -2281,6 +2328,7 @@ impl Playback {
             self.preloaded = None;
             self.skipped = None;
             self.blocked_until = None;
+            self.failures = 0;
             self.refused = None;
             self.track = None;
             self.origin = None;
