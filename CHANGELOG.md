@@ -12,6 +12,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Custom color themes can live as separate JSON files in the config themes folder. Sonora lists them
   in Appearance settings and picks up edits, additions, and deletions without a restart.
 
+### Changed
+
+- The Spotify home page is now Spotify's own home feed rather than rows of mixes. Quick picks
+  open on the albums, playlists and artists you played lately, and shelves such as Jump back in,
+  Your favorite artists and Recommended for today follow.
+
 ### Fixed
 
 - Pausing while a track fails to load now keeps playback paused. Sonora used to skip to the next
