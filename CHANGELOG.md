@@ -17,6 +17,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The Spotify home page is now Spotify's own home feed rather than rows of mixes. Quick picks
   open on the albums, playlists and artists you played lately, and shelves such as Jump back in,
   Your favorite artists and Recommended for today follow.
+- When the queue runs out with repeat and radio off, Sonora goes back to its first track and waits
+  paused, so pressing play starts the queue over.
 
 ### Fixed
 
@@ -26,6 +28,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   skipping through the whole queue when the connection drops.
 - When Spotify rate-limits you for skipping through tracks quickly, Sonora says so and tries the
   same track again after a short wait, instead of hanging for ten seconds and skipping it.
+- Album pages now say whether a release is an album, EP, single or compilation, instead of calling
+  everything an album. Subsonic servers and local files that tag the release type are labelled the
+  same way.
 
 ## [0.40.0] - 2026-09-25
 

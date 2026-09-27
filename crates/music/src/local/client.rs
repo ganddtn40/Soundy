@@ -286,9 +286,9 @@ impl MusicApi for LocalClient {
     }
 
     async fn track_from_path(&self, path: &Path) -> Result<Track> {
-        let (track, ..) = wire::track_from_file(path, None, None, &self.cache_dir)
+        let tagged = wire::track_from_file(path, None, None, &self.cache_dir)
             .ok_or_else(|| anyhow!("cannot read {} as an audio file", path.display()))?;
-        Ok(track)
+        Ok(tagged.track)
     }
 
     async fn track_playcount(&self, _track_id: &str) -> Result<Option<u64>> {
