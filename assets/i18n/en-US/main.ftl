@@ -318,7 +318,6 @@ login-choose-title = Sign in to { $provider }
 login-choose-detail = Choose how to sign in to { $provider }.
 
 # album and playlist pages
-detail-album = Album
 detail-playlist = Playlist
 detail-play-album = Play album
 detail-play-playlist = Play playlist
