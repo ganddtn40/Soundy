@@ -122,6 +122,7 @@ pub fn profile(username: String) -> UserProfile {
     UserProfile {
         id: username.clone(),
         display_name: username,
+        avatar: None,
     }
 }
 
