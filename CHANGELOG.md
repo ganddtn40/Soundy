@@ -30,6 +30,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Pressing play on an album, playlist, artist or track no longer starts it over while it is loading,
   buffering after a seek, or waiting to resume from your last session. It pauses or resumes
   instead, and shows pause as soon as you press it, as the player bar already did.
+- Narrowing the window with both sidebars open no longer brings the left sidebar back once the right
+  one hides. The left one folds away first and stays folded until the window is wide again.
 
 ## [0.41.0] - 2026-09-28
 
