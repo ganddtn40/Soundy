@@ -14,6 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   without an account, and says why when you hover them.
 - Fullscreen opens on the tab you left it on, whether artwork, lyrics or queue, even after a
   restart.
+- On Windows, Sonora shows up in Settings > Apps > Default apps, so you can make it the default
+  player for your audio files and for spotify: links.
 
 ### Fixed
 
