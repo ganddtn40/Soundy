@@ -190,7 +190,7 @@ AI-assisted proofreading and translation of human-written text are permitted.
 | English (`en-US`) | 750/750 | 100% |
 | Deutsch (`de`) | 629/750 | 84% |
 | Español (`es`) | 691/750 | 92% |
-| Français (`fr`) | 628/750 | 84% |
+| Français (`fr`) | 750/750 | 100% |
 | Italiano (`it`) | 606/750 | 81% |
 | Bahasa Indonesia (`id`) | 606/750 | 81% |
 | 日本語 (`ja`) | 606/750 | 81% |
