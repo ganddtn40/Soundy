@@ -18,6 +18,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - The local Songs page is titled Songs during the first library scan, rather than Favorites.
+- Pressing play after a long pause no longer jumps to the next track a moment later. After a pause
+  of five minutes or more, Sonora reloads the track where you left it.
 
 ## [0.41.0] - 2026-09-28
 
