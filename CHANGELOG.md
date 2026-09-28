@@ -26,6 +26,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   PowerShell can save them, now load instead of being reported as broken.
 - The Flatpak now offers the browser sign-in for YouTube, Apple Music and Deezer, and gets YouTube
   its proof-of-origin token. The next update pulls in the GNOME runtime to make this work.
+- Pressing play on an album, playlist, artist or track no longer starts it over while it is loading,
+  buffering after a seek, or waiting to resume from your last session. It pauses or resumes
+  instead, and shows pause as soon as you press it, as the player bar already did.
 
 ## [0.41.0] - 2026-09-28
 
