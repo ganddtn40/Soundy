@@ -244,7 +244,6 @@ login-account-title = アカウントを選択
 login-account-detail = このセッションは複数の Google アカウントにサインインしています。Sonora が使うアカウントを選んでください。
 
 # album and playlist pages
-detail-album = アルバム
 detail-playlist = プレイリスト
 detail-play-album = アルバムを再生
 detail-play-playlist = プレイリストを再生
@@ -406,7 +405,7 @@ settings-theme-detail = アプリのカラーパレットを選ぶ
 settings-opacity = 不透明度
 settings-opacity-detail = アプリ背景の不透明度を調整する
 settings-opacity-value = { $percent }%
-settings-theme-config = 設定ファイルを開く
+settings-theme-folder = 設定ファイルを開く
 settings-adaptive = アダプティブテーマ
 settings-adaptive-detail = 再生中のアルバムのアートワークでパレットを彩る
 settings-visualizer = ビジュアライザー

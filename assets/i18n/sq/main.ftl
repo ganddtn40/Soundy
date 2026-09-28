@@ -317,7 +317,6 @@ login-choose-title = Hyr te { $provider }
 login-choose-detail = Zgjidh se si të hysh te { $provider }.
 
 # album and playlist pages
-detail-album = Album
 detail-playlist = Listë luajtjeje
 detail-play-album = Luaj albumin
 detail-play-playlist = Luaj listën e luajtjes
@@ -484,7 +483,7 @@ settings-theme-detail = Zgjidh paletën e ngjyrave të aplikacionit
 settings-opacity = Tejdukshmëria
 settings-opacity-detail = Rregullo tejdukshmërinë e sfondit të aplikacionit
 settings-opacity-value = { $percent }%
-settings-theme-config = Hap konfigurimin
+settings-theme-folder = Hap konfigurimin
 settings-adaptive = Temë adaptive
 settings-adaptive-detail = Ngjyroso paletën me kopertinën e albumit që po luhet
 settings-ambient = Sfond ambiental

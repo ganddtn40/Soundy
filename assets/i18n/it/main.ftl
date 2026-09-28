@@ -281,7 +281,6 @@ login-account-title = Scegli un account
 login-account-detail = Questa sessione ha effettuato l'accesso a più di un account Google. Scegli quello che Sonora deve usare.
 
 # album and playlist pages
-detail-album = Album
 detail-playlist = Playlist
 detail-play-album = Riproduci album
 detail-play-playlist = Riproduci playlist
@@ -449,7 +448,7 @@ settings-theme-detail = Scegli la palette di colori dell'applicazione
 settings-opacity = Opacità
 settings-opacity-detail = Regola l'opacità dello sfondo dell'app
 settings-opacity-value = { $percent }%
-settings-theme-config = Apri configurazione
+settings-theme-folder = Apri configurazione
 settings-adaptive = Tema adattivo
 settings-adaptive-detail = Colora la palette con la copertina dell'album in riproduzione
 settings-visualizer = Visualizzatore

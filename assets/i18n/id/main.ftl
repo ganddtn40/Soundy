@@ -281,7 +281,6 @@ login-account-title = Pilih akun
 login-account-detail = Sesi ini terhubung ke lebih dari satu akun Google. Pilih akun yang ingin digunakan Sonora.
 
 # album and playlist pages
-detail-album = Album
 detail-playlist = Playlist
 detail-play-album = Putar album
 detail-play-playlist = Putar playlist
@@ -448,7 +447,7 @@ settings-theme-detail = Pilih palet warna aplikasi
 settings-opacity = Opasitas
 settings-opacity-detail = Atur tingkat transparansi latar belakang aplikasi
 settings-opacity-value = { $percent }%
-settings-theme-config = Buka konfigurasi
+settings-theme-folder = Buka konfigurasi
 settings-adaptive = Tema adaptif
 settings-adaptive-detail = Sesuaikan aksen warna tema dengan gambar sampul album yang sedang diputar
 settings-visualizer = Visualizer
