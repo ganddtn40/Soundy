@@ -24,6 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   of five minutes or more, Sonora reloads the track where you left it.
 - Settings and custom theme files saved on Windows with a byte order mark, as Notepad and
   PowerShell can save them, now load instead of being reported as broken.
+- The Flatpak now offers the browser sign-in for YouTube, Apple Music and Deezer, and gets YouTube
+  its proof-of-origin token. The next update pulls in the GNOME runtime to make this work.
 
 ## [0.41.0] - 2026-09-28
 
