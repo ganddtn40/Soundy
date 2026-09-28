@@ -32,6 +32,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   instead, and shows pause as soon as you press it, as the player bar already did.
 - Narrowing the window with both sidebars open no longer brings the left sidebar back once the right
   one hides. The left one folds away first and stays folded until the window is wide again.
+- Tracks you added to the queue no longer appear twice in it when you turn shuffle on or off after
+  restarting Sonora.
 
 ## [0.41.0] - 2026-09-28
 
