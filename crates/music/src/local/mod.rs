@@ -1,11 +1,14 @@
 mod client;
 mod id3;
 mod index;
+mod lyrics;
 mod playback;
 mod scan;
 mod store;
 mod tags;
 mod wire;
+
+pub use lyrics::LocalLyrics;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -53,6 +56,7 @@ impl LocalProvider {
             profile: UserProfile {
                 id: "local".to_owned(),
                 display_name: "Local Files".to_owned(),
+                avatar: None,
             },
             api,
             playback,

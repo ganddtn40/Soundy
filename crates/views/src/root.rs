@@ -84,6 +84,8 @@ pub struct Root {
     background: Option<gpui::WindowBackgroundAppearance>,
     #[cfg(target_os = "windows")]
     rounded: Option<ui::Rounding>,
+    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+    decorations: gpui::WindowDecorations,
 }
 
 impl Root {
@@ -212,6 +214,12 @@ impl Root {
             if !window.is_window_active() {
                 return;
             }
+            // Pick up plays made on other devices while Sonora was in the background, off the
+            // window coming back to the foreground rather than a poll.
+            Sonora::global(cx)
+                .history
+                .clone()
+                .update(cx, |history, cx| history.refresh(cx));
             let settings = Sonora::global(cx).settings.clone();
             let (stillness, pace) = {
                 let settings = settings.read(cx);
@@ -223,6 +231,10 @@ impl Root {
             ui::motion::apply(stillness, pace, cx);
         })
         .detach();
+
+        cx.observe_window_activation(window, |_, window, cx| update_focus_for_wake(window, cx))
+            .detach();
+        update_focus_for_wake(window, cx);
 
         window
             .observe_window_appearance(|_, cx| {
@@ -241,7 +253,7 @@ impl Root {
                     tint: cx.theme().tint,
                     ..settings.look()
                 };
-                let overrides = settings.theme_overrides().clone();
+                let overrides = settings.theme_overrides();
                 Theme::fade(look, &overrides, cx);
             })
             .detach();
@@ -290,6 +302,8 @@ impl Root {
             background: None,
             #[cfg(target_os = "windows")]
             rounded: None,
+            #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+            decorations: Sonora::global(cx).settings.read(cx).window_decorations(),
         };
         root.show(start, cx);
         root
@@ -403,12 +417,14 @@ impl Root {
             .update(cx, |workspace, cx| workspace.show_side(tab, cx));
     }
 
-    /// Tells the adaptive theme whether fullscreen is up. The ambient background is painted
-    /// out of the cover's hues, so fullscreen samples the cover even with the adaptive theme
-    /// off, and leaving drops the tint again.
-    fn tinting(&self, fullscreen: bool, cx: &mut Context<Self>) {
+    /// Tells the adaptive theme and the wake lock whether fullscreen is up. The ambient
+    /// background is painted out of the cover's hues, so fullscreen samples the cover even with
+    /// the adaptive theme off, and leaving drops the tint again.
+    fn announce_fullscreen(&self, fullscreen: bool, cx: &mut Context<Self>) {
         self.adaptive
             .update(cx, |adaptive, cx| adaptive.set_fullscreen(fullscreen, cx));
+        let wake = Sonora::global(cx).wake.clone();
+        wake.update(cx, |wake, cx| wake.set_fullscreen(fullscreen, cx));
     }
 
     fn toggle_fullscreen(&mut self, cx: &mut Context<Self>) {
@@ -489,13 +505,13 @@ impl Root {
             .update(cx, |view, cx| view.set_visible(home, cx));
         if let Destination::Fullscreen = destination {
             self.view = RootView::Fullscreen;
-            self.tinting(true, cx);
+            self.announce_fullscreen(true, cx);
             self.pending = Some(Focus::Fullscreen);
             cx.notify();
             return;
         }
         self.view = RootView::Workspace;
-        self.tinting(false, cx);
+        self.announce_fullscreen(false, cx);
         self.pending = Some(match destination {
             Destination::Search => Focus::Search,
             _ => Focus::Workspace,
@@ -631,6 +647,13 @@ fn scripts(custom: bool) -> &'static FontFallbacks {
     }
 }
 
+/// Tells the wake lock whether the window has focus, which the display lock needs.
+fn update_focus_for_wake(window: &Window, cx: &mut App) {
+    let focused = window.is_window_active();
+    let wake = Sonora::global(cx).wake.clone();
+    wake.update(cx, |wake, cx| wake.set_focused(focused, cx));
+}
+
 impl Render for Root {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // An account that could not be reached is still an account, so nothing about a lost
@@ -671,7 +694,7 @@ impl Render for Root {
 
         let theme = *cx.theme();
         window.set_rem_size(theme.font_size);
-        let appearance = ui::backdrop(theme.blur, theme.transparent);
+        let appearance = ui::backdrop(theme.blur_window, theme.transparent);
         if self.background != Some(appearance) {
             self.background = Some(appearance);
             window.set_background_appearance(appearance);
@@ -689,6 +712,15 @@ impl Render for Root {
             }
         }
 
+        #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+        {
+            let decorations = Sonora::global(cx).settings.read(cx).window_decorations();
+            if self.decorations != decorations {
+                self.decorations = decorations;
+                window.request_decorations(decorations);
+            }
+        }
+
         // GPUI can't clip a subtree to a rounded parent (its content mask is a plain
         // rectangle), so on Linux/FreeBSD each edge of the chrome that actually touches a
         // corner rounds itself to match — see `chrome::window_radius`, and `TitleBar` /
@@ -699,6 +731,11 @@ impl Render for Root {
         #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
         let radius: Option<gpui::Pixels> = None;
 
+        // The ambient field covers the window whole and carries the window's own opacity, so
+        // the page colour under it would only stack a second alpha beneath that and leave a
+        // see-through fullscreen reading nearly solid.
+        let ambient = matches!(self.view, RootView::Fullscreen) && ambient::shown(cx);
+
         let root = div()
             .relative()
             .flex()
@@ -708,7 +745,7 @@ impl Render for Root {
             .when_some(radius, |this, radius| {
                 this.rounded(radius).overflow_hidden()
             })
-            .bg(theme.background)
+            .when(!ambient, |this| this.bg(theme.background))
             .text_color(theme.foreground)
             .capture_any_mouse_down(|_, window, cx| {
                 if ui::cancel_middle_scroll(cx) {
@@ -763,10 +800,7 @@ impl Render for Root {
                 cx.listener(|this, _: &ToggleLyrics, _, cx| this.show_side(SideTab::Lyrics, cx)),
             )
             // The ambient background sits behind everything, title bar included.
-            .when(
-                matches!(self.view, RootView::Fullscreen) && ambient::shown(cx),
-                |this| this.child(self.ambient.clone()),
-            )
+            .when(ambient, |this| this.child(self.ambient.clone()))
             .child(self.title_bar.clone())
             .when_else(
                 show_sign_in,

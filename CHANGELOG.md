@@ -9,9 +9,198 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Hovering over an unavailable theme explains why it can't be selected.
-- Songs, Albums, Artists and Playlists options of "Show on startup" setting are disabled for guests,
-  since they are empty and may be confused with Local Music sections.
+- Hovering a theme you cannot pick while the adaptive theme is on says why it is unavailable.
+- In guest mode, Show on startup greys out Songs, Albums, Artists and Playlists, which stay empty
+  without an account, and says why when you hover them.
+
+### Fixed
+
+- The local Songs page is titled Songs during the first library scan, rather than Favorites.
+
+## [0.41.0] - 2026-09-28
+
+### Added
+
+- Custom color themes can live as separate JSON files in the config themes folder. Sonora lists them
+  in Appearance settings and picks up edits, additions, and deletions without a restart.
+- Recently played now shows what you played on your other devices, such as your phone, read
+  from your Apple Music account. It refreshes each time you bring Sonora back to the front,
+  rather than only after a restart.
+- Plays you start in Sonora now reach Apple Music's recently played on your other devices.
+- On Apple Music, Quick picks on Home open on the albums, playlists and songs you played last on
+  any device, the same way they do for Spotify and YouTube Music. An album you played a single
+  song from shows as that song.
+
+### Changed
+
+- The Spotify home page is now Spotify's own home feed rather than rows of mixes. Quick picks
+  open on the albums, playlists and artists you played lately, and shelves such as Jump back in,
+  Your favorite artists and Recommended for today follow.
+- When the queue runs out with repeat and radio off, Sonora goes back to its first track and waits
+  paused, so pressing play starts the queue over.
+- Albums in Quick picks say whether they are an album, EP or single, the way songs and playlists
+  already say what they are.
+- Quick picks open on at most ten of your recently played items on every service, so the picks
+  after them always get room.
+- The account shown in Settings > General names the service beside your region, so an Apple
+  Music account reads "Apple Music" and your country rather than the country on its own.
+
+### Fixed
+
+- Pausing while a track fails to load now keeps playback paused. Sonora used to skip to the next
+  track and start playing it anyway.
+- Sonora stops after three tracks in a row fail to play and waits for you to press play, instead of
+  skipping through the whole queue when the connection drops.
+- When Spotify rate-limits you for skipping through tracks quickly, Sonora says so and tries the
+  same track again after a short wait, instead of hanging for ten seconds and skipping it.
+- Album pages now say whether a release is an album, EP, single or compilation, instead of calling
+  everything an album. Subsonic servers and local files that tag the release type are labelled the
+  same way.
+- Quick picks no longer flash a handful of random library songs while your account is still
+  loading at launch. They wait for the account and fill in once.
+- The Apple Music account in Settings shows your Apple Music profile name and picture when
+  you have set one up, rather than only "Apple Music" and your country.
+- Artist pages show the artist's biography from Apple Music, titles in italics and all,
+  rather than placeholder text.
+- Songs you have favorited on Apple Music now show as loved in Sonora. They are read from
+  your ratings, the same way your favorite albums and artists are, rather than from the
+  Favorite Songs playlist an account can be set up without.
+
+## [0.40.0] - 2026-09-25
+
+### Added
+
+- The visualizer can ignore Sonora's volume. Turn on Ignore volume under Fullscreen in
+  Appearance settings and the bars stay full height when you turn the music down.
+- Album pages now carry recommendations wherever the provider offers them: related
+  releases and similar artists under Albums and Artists tabs, and Apple Music artists
+  list what they appear on.
+- Album pages print the release's copyright line or record label under the tracks, on
+  Apple Music, Spotify, Deezer and OpenSubsonic servers that list one.
+- Album and playlist pages hold placeholder rows while their tracks load, as many as the
+  release has when Sonora already knows the count, so the page no longer jumps when they arrive.
+- An album's menu has Add to playlist, which puts the whole album into a playlist and skips
+  the tracks it already holds.
+- On Linux the desktop media widget shows Sonora's icon and has shuffle and repeat buttons that
+  stay in step with the player bar.
+- Sonora keeps the computer awake while music plays and if the fullscreen view is active, keeps
+  the screen on as well. This can be disabled in settings.
+- Navidrome and other Subsonic servers now see what you play. The server's now-playing list
+  shows where you are in the track and whether it's paused, and play counts and recently played
+  update once you've listened long enough to scrobble.
+- Discord shows a cover for local files, Subsonic servers and any other track whose own art
+  Discord cannot load, found on Deezer by artist and album. Turn off Artwork for local files in
+  Privacy settings to keep your local files' tags on your computer.
+
+### Changed
+
+- Album and playlist menus no longer list Open and Play, which clicking the card already does,
+  so they read like a song's menu.
+- Every album, playlist, artist and track card opens its right-click menu, including the
+  album page's recommendations and an artist's Appears on row.
+- Album, playlist, library and history pages give their total length as 46m 15s, or 1h 2m past
+  an hour, rather than a clock reading like 46:15.
+
+### Fixed
+
+- Local albums whose files have no album artist tag no longer split into one album per
+  featured artist. Tracks in the same folder with the same album name now make one album.
+- Loud tracks no longer flatten the top of the visualizer wave.
+- Secondary text and table headers in the Dark and Light themes are easier to read, and now
+  meet the WCAG AA contrast minimum, with or without the adaptive theme.
+- On Linux, playerctl and the desktop media widget read Sonora's real volume instead of always
+  seeing 100%.
+- A YouTube Music sign-in no longer runs out after about 40 minutes. Likes and playlist edits keep
+  working, and Sonora stays signed in across restarts.
+- An LRC `[offset:]` tag is applied to every line, so a sheet that starts a few hundred
+  milliseconds late or early stays in time.
+- An untagged song named like `01. Title - Artist` keeps the title without the track number,
+  instead of leaving `01.` on the front.
+- An LRC line that ends with its own timestamp, such as `[00:12.00]lyric[00:15.00]`, keeps the
+  words and drops the closing stamp from the text.
+- Discord shows the cover art of YouTube Music tracks that have no album, such as music videos
+  and radio picks.
+- Local files keep playing after Spotify refuses the account's audio keys or a provider asks you
+  to sign in again.
+
+## [0.39.0] - 2026-09-24
+
+### Added
+
+- The Add to playlist menu has a search field at the top. Type to narrow the list, then use the
+  arrow keys and Enter to pick a playlist.
+- Sonora picks up changes to `settings.json` while it runs, so a script that rewrites your theme
+  colours from the wallpaper recolours the app right away, without a restart. If the file has
+  an error, Sonora tells you which line and saves nothing until it is fixed.
+- Sonora plays every track at its own sample rate rather than resampling it to the device
+  default, so a 96 kHz FLAC leaves the app at 96 kHz. Moving between tracks of different rates
+  leaves a short pause.
+- Normalize loudness now works for Apple Music, Deezer, local files, and Navidrome and other
+  OpenSubsonic servers, using each service's own loudness figure and the tracks' ReplayGain
+  tags. A quiet track is raised only as far as it can go without clipping.
+- Albanian (Shqip) interface language.
+- Guest mode now serves recommendations from your local music collection on the Home screen,
+  including Quick picks, recently added albums, local playlists, and artists.
+
+### Changed
+
+- Keep playing when closed is now called Keep running in the background. A new Show in the system
+  tray switch next to it hides the tray icon, or the menu bar item on macOS, whether or not Sonora
+  keeps running after its window closes. Settings > General > Window
+
+- An artist page opens as soon as their profile and popular tracks arrive, and fills its
+  releases in behind that, so an artist with a thousand of them no longer leaves the page
+  blank for half a minute.
+- Scrolling an artist's releases stays smooth however long the discography is, and resizing
+  the window keeps the same releases in view.
+- A track played on its own now follows its station past the first batch on YouTube Music,
+  rather than starting over from the last track, and never replays what the queue has heard.
+- Radio now plays in the order the provider ranks it rather than shuffled.
+- Menus, fields and floating panels frost what they cover, and menus sit lighter over it.
+- Hovering a menu item, a table row or a sidebar entry now shades what is behind it rather than
+  covering it, so a frosted surface keeps its blur under the pointer. Separators and outlines
+  read through the same way.
+- Settings > Appearance > Blur UI turns that frosting off. The old Blur setting is now Blur
+  window, and only shows on macOS and Windows, where it works.
+- Menus cast a soft shadow, and dialogs have rounder corners.
+
+### Fixed
+
+- The Playlists page loads for a Spotify account whose username has a letter outside plain
+  ASCII, such as ö, instead of failing with a 400 error.
+- Playback comes back on its own after your only output device disappears and returns, so a
+  Bluetooth headset that drops its link and reconnects picks the track up again rather than
+  leaving Sonora silent until you restart it.
+- Apple Music plays with the Widevine module an older Chromium keeps, which Sonora found
+  before but could not open.
+- The Widevine row in Settings shows its whole explanation rather than cutting it off, and
+  offers the download from Google even when a browser's copy was found. A copy downloaded that
+  way is the one Sonora uses from then on.
+- An empty Apple Music playlist opens as an empty playlist rather than a "Could not load" error.
+- The library shown at launch from the last session stays whole until the provider has sent
+  all of it, rather than shrinking to the first page and filling back in.
+- Sonora shows up once in your system's audio mixer, rather than once for your streaming
+  service and again for local files.
+- Guest mode is remembered again, so choosing it no longer brings the welcome screen
+  back on every launch.
+- YouTube Music tracks that stopped loading with a 403 now play: Sonora sends the
+  proof-of-origin token YouTube asks for, minting it in a hidden browser window, and falls
+  back to a second stream when the first one is refused.
+- Covers no longer swap places with each other while a grid is scrolled quickly.
+- The cover handed to the system media controls is the album artwork rather than the
+  64-pixel thumbnail a track carries, so media widgets and lock screens draw it sharp.
+- Frosted menus and fields no longer turn grey under their own shadow on the light theme.
+- Menus and dialogs show their shadow from the moment they open rather than once they have
+  settled.
+- The tray icon of the Flatpak and the AppImage shows the Sonora logo in trays such as Dank
+  Material Shell, which drew a missing-texture placeholder in its place.
+- Updating on Windows no longer puts the Sonora shortcut back on your desktop after you deleted
+  it, or overwrites one you made yourself.
+- Apple Music pins sync both ways: what is pinned on music.apple.com joins the sidebar,
+  and pinning an album, artist or playlist in Sonora pins it there too.
+- Editing the track or disc number of a local MP3 now sticks, including in files that carry an
+  ID3v1 tag or an older tag stacked behind the first. An ID3v2.3 file stays ID3v2.3, so other
+  players and taggers see the new number too.
 
 ## [0.38.0] - 2026-09-20
 
@@ -129,6 +318,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Playback needs Google's Widevine module. Sonora uses the copy a browser on your computer has,
   or offers to download it from Google and shows Google's terms first. Settings can remove a
   downloaded module again.
+- Local files are a lyrics provider for the synced or plain lyrics embedded in them or kept in a
+  same-name `.lrc` file beside them, and can be preferred over the others.
 
 ### Fixed
 
@@ -1730,7 +1921,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Initial release: a native Spotify client with playback, an interactive queue, the saved library,
 search, album, playlist, artist and song pages, context menus and adaptive theming.
 
-[unreleased]: https://github.com/sonorahq/sonora/compare/v0.38.0...HEAD
+[unreleased]: https://github.com/sonorahq/sonora/compare/v0.41.0...HEAD
+[0.41.0]: https://github.com/sonorahq/sonora/compare/v0.40.0...v0.41.0
+[0.40.0]: https://github.com/sonorahq/sonora/compare/v0.39.0...v0.40.0
+[0.39.0]: https://github.com/sonorahq/sonora/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/sonorahq/sonora/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/sonorahq/sonora/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/sonorahq/sonora/compare/v0.35.0...v0.36.0

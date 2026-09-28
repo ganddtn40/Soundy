@@ -113,6 +113,7 @@ impl Screen {
         Self::ALL.into_iter().find(|screen| screen.id() == id)
     }
 
+    /// Whether the screen shows account library data, and so stays empty in guest mode.
     pub fn needs_account(self) -> bool {
         match self {
             Self::Home => false,

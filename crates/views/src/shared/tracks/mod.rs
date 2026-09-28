@@ -17,7 +17,9 @@ use gpui::{
 use music::{Shape, Track};
 use router::Destination;
 use state::{Detail, History, Library, Origin, Playback, PlaybackState, Shelf, Sonora};
-use ui::{Button, Cell, ColumnSpec, Menu, Pin, ROW_GROUP, Scrollbar, TableSource, TableState};
+use ui::{
+    Button, Cell, ColumnSpec, Menu, Pending, Pin, ROW_GROUP, Scrollbar, TableSource, TableState,
+};
 
 use crate::shared::cells;
 use crate::shared::confirm::{Confirm, Kind};
@@ -41,6 +43,12 @@ pub(crate) fn playback_status(playback: &Entity<Playback>, cx: &App) -> Playback
 pub(crate) trait Tracks: 'static {
     fn tracks<'a>(&self, cx: &'a App) -> &'a [Track];
     fn is_loading(&self, cx: &App) -> bool;
+
+    /// The skeleton rows the table draws before the first tracks arrive. A list that
+    /// leaves the default shows nothing while it loads.
+    fn pending(&self, _cx: &App) -> Option<Pending> {
+        None
+    }
 }
 
 pub(crate) fn first_playable(table: &Entity<TableState<TrackSource>>, cx: &App) -> Option<usize> {
@@ -161,7 +169,7 @@ pub(crate) struct TrackSource {
 }
 
 struct Spread {
-    stamp: (usize, String, bool, bool),
+    stamp: usize,
     extent: Option<(f32, f32)>,
 }
 
@@ -188,6 +196,7 @@ impl TrackSource {
         provider: impl Tracks,
         playback: Entity<Playback>,
         playlist_scrollbar: Entity<Scrollbar>,
+        cx: &mut App,
     ) -> Self {
         Self {
             columns,
@@ -199,7 +208,7 @@ impl TrackSource {
             album: None,
             playlist: None,
             history: None,
-            menu: ItemMenu::new(playlist_scrollbar),
+            menu: ItemMenu::new(playlist_scrollbar, cx),
             table: None,
             sieve: TrackSieve::default(),
             spread: RefCell::new(None),
@@ -212,13 +221,12 @@ impl TrackSource {
         changed
     }
 
-    pub(crate) fn extent(&self, query: &str, cx: &App) -> Option<(f32, f32)> {
+    /// The shortest and longest track in the whole list, `None` only when the list is empty.
+    /// The span deliberately ignores the sieve and the search, so narrowing the table can never
+    /// shrink the slider that did the narrowing and leave the user with no way back.
+    pub(crate) fn extent(&self, cx: &App) -> Option<(f32, f32)> {
         let tracks = self.provider.tracks(cx);
-        let open = TrackSieve {
-            duration: None,
-            ..self.sieve
-        };
-        let stamp = (tracks.len(), query.to_owned(), open.explicit, open.playable);
+        let stamp = tracks.len();
         if let Some(spread) = self.spread.borrow().as_ref()
             && spread.stamp == stamp
         {
@@ -228,9 +236,6 @@ impl TrackSource {
         let mut low = f32::MAX;
         let mut high = f32::MIN;
         for track in tracks {
-            if !open.keeps(track) || !hits(track, query) {
-                continue;
-            }
             let seconds = track.duration.as_secs_f32();
             low = low.min(seconds);
             high = high.max(seconds);
@@ -519,24 +524,23 @@ impl TableSource for TrackSource {
         })
     }
 
-    fn filter_axes(&self, query: &str, cx: &App) -> Vec<Filter> {
-        let Some(bounds) = self.extent(query, cx) else {
-            return Vec::new();
-        };
-        let value = self.sieve.duration.unwrap_or(bounds);
-
-        let mut axes = vec![
+    fn filter_axes(&self, cx: &App) -> Vec<Filter> {
+        let duration = self.extent(cx).map(|bounds| {
             Filter::Range(
                 RangeAxis {
                     key: "filter-duration",
                     label: t!("filter-duration"),
                     bounds,
-                    value,
+                    value: self.sieve.duration.unwrap_or(bounds),
                     unit: Unit::Clock,
                     values: None,
                 }
                 .clamped(),
-            ),
+            )
+        });
+
+        let mut axes: Vec<Filter> = duration.into_iter().collect();
+        axes.extend([
             Filter::Flag(FlagAxis {
                 key: "filter-explicit",
                 label: t!("filter-explicit"),
@@ -547,7 +551,7 @@ impl TableSource for TrackSource {
                 label: t!("filter-playable"),
                 on: self.sieve.playable,
             }),
-        ];
+        ]);
         if self.catalog(cx) {
             axes.push(Filter::Flag(FlagAxis {
                 key: "filter-favorites",
@@ -594,6 +598,10 @@ impl TableSource for TrackSource {
 
     fn is_loading(&self, cx: &App) -> bool {
         self.provider.is_loading(cx)
+    }
+
+    fn pending(&self, cx: &App) -> Option<Pending> {
+        self.provider.pending(cx)
     }
 
     fn pin(&self, row: usize, cx: &App) -> Option<Pin> {

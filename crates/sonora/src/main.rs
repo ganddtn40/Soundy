@@ -101,6 +101,7 @@ fn main() {
                 storage::Cache::standard(),
             ));
         let lyrics: Vec<Arc<dyn LyricsProvider>> = vec![
+            Arc::new(music::local::LocalLyrics),
             Arc::new(music::spotify::SpotifyLyrics::from_env()),
             Arc::new(music::youtube::YouTubeLyrics::new()),
             Arc::new(music::binimum::Binimum::new()),
@@ -124,7 +125,7 @@ fn main() {
             let settings = Sonora::global(cx).settings.read(cx);
             (
                 settings.look(),
-                settings.theme_overrides().clone(),
+                settings.theme_overrides(),
                 settings.language().to_owned(),
                 settings.icons().to_owned(),
                 settings.stillness(),
@@ -292,12 +293,14 @@ fn open_window(cx: &mut App) {
         network: _,
         pins: _,
         playback,
+        potoken: _,
         queue,
         scan: _,
         scrobbling: _,
         settings: _,
         updates: _,
         usage: _,
+        wake: _,
     } = Sonora::global(cx);
     let (session, library, playback, queue) = (
         session.clone(),
@@ -319,7 +322,7 @@ fn open_window(cx: &mut App) {
     #[cfg(any(target_os = "linux", target_os = "freebsd"))]
     let decorations = settings.window_decorations();
     let look = settings.look();
-    let background = ui::backdrop(look.blur, look.transparent);
+    let background = ui::backdrop(look.blur_window, look.transparent);
 
     cx.open_window(
         WindowOptions {
