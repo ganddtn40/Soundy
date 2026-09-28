@@ -345,7 +345,6 @@ detail-play-playlist = Přehrát playlist
 # play button
 play-pause = Pozastavit
 play-resume = Pokračovat
-play-loading = Načítá se…
 play-shuffle = Náhodně
 
 # artist page
