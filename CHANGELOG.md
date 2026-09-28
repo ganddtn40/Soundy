@@ -9,6 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Sonora speaks Czech. Pick it in Language settings.
 - Hovering a theme you cannot pick while the adaptive theme is on says why it is unavailable.
 - In guest mode, Show on startup greys out Songs, Albums, Artists and Playlists, which stay empty
   without an account, and says why when you hover them.
