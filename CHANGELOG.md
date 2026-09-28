@@ -16,6 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - The local Songs page is titled Songs during the first library scan, rather than Favorites.
+- Settings and custom theme files saved on Windows with a byte order mark, as Notepad and
+  PowerShell can save them, now load instead of being reported as broken.
 
 ## [0.41.0] - 2026-09-28
 
