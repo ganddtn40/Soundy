@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Scrolling through Home stays smooth as new shelves and their covers come into view.
+
 ## [0.42.0] - 2026-09-29
 
 ### Added
