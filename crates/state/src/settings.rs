@@ -487,6 +487,7 @@ struct StateValues {
     sidebar_right_width: f32,
     sidebar_right_open: bool,
     sidebar_right_tab: SideTab,
+    fullscreen_tab: Option<SideTab>,
     shuffle: bool,
     repeat: Repeat,
     radio: bool,
@@ -514,6 +515,7 @@ impl Default for StateValues {
             sidebar_right_width: DEFAULT_SIDEBAR_RIGHT_WIDTH,
             sidebar_right_open: false,
             sidebar_right_tab: SideTab::Queue,
+            fullscreen_tab: Some(SideTab::Lyrics),
             shuffle: false,
             repeat: Repeat::Off,
             radio: false,
@@ -655,7 +657,7 @@ impl AppSettings {
                 (None, false)
             }
         };
-        let parsed = bytes.map(|bytes| (serde_json::from_slice::<Values>(&bytes), bytes));
+        let parsed = bytes.map(|bytes| (serde_json::from_slice::<Values>(json(&bytes)), bytes));
         let (values, writable, disk, broken) = match parsed {
             Some((Ok(values), bytes)) => (values, writable, Some(bytes), None),
             Some((Err(error), _)) => {
@@ -874,6 +876,12 @@ impl AppSettings {
 
     pub fn sidebar_right_tab(&self) -> SideTab {
         self.state.sidebar_right_tab
+    }
+
+    /// The panel the fullscreen view last showed beside the cover, or `None` when it showed the
+    /// artwork alone.
+    pub fn fullscreen_tab(&self) -> Option<SideTab> {
+        self.state.fullscreen_tab
     }
 
     pub fn shuffle(&self) -> bool {
@@ -1416,6 +1424,14 @@ impl AppSettings {
             return;
         }
         self.state.sidebar_right_tab = tab;
+        self.schedule_state_save(cx);
+    }
+
+    pub fn set_fullscreen_tab(&mut self, tab: Option<SideTab>, cx: &mut Context<Self>) {
+        if self.state.fullscreen_tab == tab {
+            return;
+        }
+        self.state.fullscreen_tab = tab;
         self.schedule_state_save(cx);
     }
 
@@ -1968,7 +1984,7 @@ impl AppSettings {
             self.broken = None;
             return SettingsReload::Unchanged;
         }
-        let values = match serde_json::from_slice::<Values>(&bytes) {
+        let values = match serde_json::from_slice::<Values>(json(&bytes)) {
             Ok(values) => values,
             Err(error) => {
                 log::warn!("settings: cannot parse {}: {error}", self.path.display());
@@ -2151,9 +2167,15 @@ fn load_themes(directory: &Path, previous: &[CustomTheme]) -> LoadedThemes {
     LoadedThemes { themes, retry }
 }
 
+/// The JSON in a file without the UTF-8 byte order mark that Notepad and PowerShell can put in
+/// front of it on Windows, which serde_json rejects as an unexpected character.
+fn json(bytes: &[u8]) -> &[u8] {
+    bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes)
+}
+
 /// Parses one theme file and assigns the identifier derived from its path.
 fn parse_theme(bytes: &[u8], path: &Path, id: &str) -> Result<CustomTheme> {
-    let value: serde_json::Value = serde_json::from_slice(bytes)
+    let value: serde_json::Value = serde_json::from_slice(json(bytes))
         .with_context(|| format!("cannot parse {}", path.display()))?;
     let object = value
         .as_object()
