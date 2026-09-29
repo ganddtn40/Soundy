@@ -18,6 +18,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - On Windows, Sonora shows up in Settings > Apps > Default apps, so you can make it the default
   player for your audio files and for spotify: links.
 
+### Changed
+
+- YouTube Music tracks start playing as soon as the first seconds arrive, instead of after the
+  whole song has downloaded, so a slow connection no longer means a long wait before each song.
+
 ### Fixed
 
 - The local Songs page is titled Songs during the first library scan, rather than Favorites.
