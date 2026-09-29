@@ -351,8 +351,12 @@ impl FullscreenView {
         let album = track.as_ref().and_then(|track| track.album_id.clone());
         let small = track.as_ref().and_then(|track| track.cover.clone());
         let cover_large = self.cover.read(cx).large();
+        // Only upgrade to the cached large art when the track itself has a cover.
+        // Local folders share one album_id; Cover caches the first track's art for the
+        // album. Without this guard, a track with no art would show a sibling's cover
+        // after any track with art was played (issue #833).
         let large = cover_large
-            .filter(|url| Some(*url) != small.as_deref())
+            .filter(|url| small.is_some() && Some(*url) != small.as_deref())
             .map(SharedString::from);
 
         if self.large != large {
