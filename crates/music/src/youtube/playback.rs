@@ -115,6 +115,10 @@ impl Fetch for YouTube {
         error.downcast_ref::<ytmusic::SignInRequired>().is_some()
     }
 
+    async fn downloaded(&self, loaded: &Loaded) {
+        loaded.stream.finished().await;
+    }
+
     /// A fragmented stream opened unseekable cannot move, so a seek opens a second decoder
     /// spliced to the target.
     fn reopen_to_seek(&self) -> bool {
