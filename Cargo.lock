@@ -10313,11 +10313,12 @@ dependencies = [
 [[package]]
 name = "ytmusic"
 version = "0.1.0"
-source = "git+https://github.com/sonorahq/ytmusic-rs?rev=d4ec8ad#d4ec8ad4b6db7297198a8afa93abcb78f75be5c7"
+source = "git+https://github.com/sonorahq/ytmusic-rs?rev=f213c0b#f213c0b4351d7321514c9bbd96553ce1f73fb1c6"
 dependencies = [
  "anyhow",
  "async-trait",
  "base64",
+ "bytes",
  "cookie_store",
  "log",
  "rand 0.9.5",

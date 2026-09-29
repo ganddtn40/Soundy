@@ -131,6 +131,13 @@ const RADIO_LOOKAHEAD: usize = 10;
 /// straight away, so a provider serving the same tracks over would otherwise never be let go of.
 const STATION_DRY_LIMIT: u8 = 3;
 
+/// A track the engine was asked to fetch ahead, and whether it was also lined up to follow the
+/// current one gaplessly.
+struct Preloaded {
+    id: String,
+    segue: bool,
+}
+
 /// The position shown between the engine's reports. It runs on wall time from `reset` and is
 /// nudged toward each report by `correct`, spread over a moment so the progress bar and the
 /// lyrics glide instead of stepping. Parked, it holds `base`.
@@ -377,7 +384,7 @@ pub struct Playback {
     enqueue: Option<Task<()>>,
     suggest: Option<Task<()>>,
     /// The track the engine was asked to fetch ahead, so it is asked once.
-    preloaded: Option<String>,
+    preloaded: Option<Preloaded>,
     /// When the user last skipped, for telling a burst of skips from one.
     skipped: Option<Instant>,
     /// No load goes out before this after a track failed, so a bad key cannot be hammered.
@@ -576,10 +583,17 @@ impl Playback {
         {
             return;
         }
-        if self.preloaded.as_deref() == Some(id) {
+        if self
+            .preloaded
+            .as_ref()
+            .is_some_and(|held| held.id == id && (held.segue || !segue))
+        {
             return;
         }
-        self.preloaded = Some(id.to_owned());
+        self.preloaded = Some(Preloaded {
+            id: id.to_owned(),
+            segue,
+        });
         let Some(engine) = self.engine_for(id) else {
             return;
         };
@@ -1237,8 +1251,8 @@ impl Playback {
         }
     }
 
-    /// Asks the engine to fetch the next track once the current one is near its end, so a
-    /// gapless engine can line it up.
+    /// Lines the next track up behind the current one once it is near its end, so a gapless
+    /// engine can join them. An engine that fetched it already only queues it here.
     fn preload_next(&mut self, position: Duration, cx: &Context<Self>) {
         let Some(duration) = self.track.as_ref().map(|track| track.duration) else {
             return;
@@ -1249,7 +1263,12 @@ impl Playback {
         {
             return;
         }
+        self.preload_upcoming(true, cx);
+    }
 
+    /// Asks the engine to fetch the track that plays after this one. With `segue` it is also
+    /// lined up to follow gaplessly, which waits for the end because the queue can still change.
+    fn preload_upcoming(&mut self, segue: bool, cx: &Context<Self>) {
         let next = match self.repeat != Repeat::One {
             true => self.queue.read(cx).upcoming().next().cloned(),
             false => None,
@@ -1259,7 +1278,7 @@ impl Playback {
             return;
         };
 
-        self.preload_internal(&next, true);
+        self.preload_internal(&next, segue);
     }
 
     pub fn radio(&self) -> bool {
@@ -2201,6 +2220,7 @@ impl Playback {
             // target, so a seek queued behind it must survive.
             BackendEvent::Position { .. }
             | BackendEvent::Length { .. }
+            | BackendEvent::Downloaded { .. }
             | BackendEvent::Loading { .. }
             | BackendEvent::OutputChanged => {}
             BackendEvent::Playing { .. }
@@ -2285,6 +2305,7 @@ impl Playback {
                     self.follow_up_seek(cx);
                 }
             }
+            BackendEvent::Downloaded { .. } => self.preload_upcoming(false, cx),
             BackendEvent::Length { duration, .. } => {
                 if let Some(track) = self.track.as_mut()
                     && !duration.is_zero()
