@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-09-29
+
 ### Added
 
 - Sonora speaks Czech. Pick it in Language settings.
@@ -21,6 +23,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The French translation is complete, so no screen falls back to English any more.
 - YouTube Music tracks start playing as soon as the first seconds arrive, instead of after the
   whole song has downloaded, so a slow connection no longer means a long wait before each song.
 - Once the current track has finished downloading, Sonora starts downloading the next one in the
@@ -1949,7 +1952,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Initial release: a native Spotify client with playback, an interactive queue, the saved library,
 search, album, playlist, artist and song pages, context menus and adaptive theming.
 
-[unreleased]: https://github.com/sonorahq/sonora/compare/v0.41.0...HEAD
+[unreleased]: https://github.com/sonorahq/sonora/compare/v0.42.0...HEAD
+[0.42.0]: https://github.com/sonorahq/sonora/compare/v0.41.0...v0.42.0
 [0.41.0]: https://github.com/sonorahq/sonora/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/sonorahq/sonora/compare/v0.39.0...v0.40.0
 [0.39.0]: https://github.com/sonorahq/sonora/compare/v0.38.0...v0.39.0
