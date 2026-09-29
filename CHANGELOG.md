@@ -41,6 +41,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   one hides. The left one folds away first and stays folded until the window is wide again.
 - Tracks you added to the queue no longer appear twice in it when you turn shuffle on or off after
   restarting Sonora.
+- Opening an audio file from your file manager plays it at once, even while the local library is
+  still scanning, instead of waiting for the scan to finish.
 
 ## [0.41.0] - 2026-09-28
 
