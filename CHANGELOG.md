@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Scrolling through Home stays smooth as new shelves and their covers come into view.
+- Deleting a playlist or removing it from your library also removes its sidebar pin. Going back
+  no longer shows a stale copy of the playlist.
 
 ## [0.42.0] - 2026-09-29
 
