@@ -62,6 +62,8 @@ const VEIL: f32 = 0.34;
 /// and gets by on a pixel; a bar of the visualizer is a hard edge and needs a real radius
 /// before it stops reading through the text over it.
 const VEIL_BLUR: Pixels = px(12.);
+/// How far the shadow under the title and the artist line spreads.
+const TEXT_SHADOW: Pixels = px(6.);
 const REST: Duration = Duration::from_millis(1500);
 const WAKE_DEBOUNCE: Duration = Duration::from_millis(400);
 const SPRING_REST: f32 = 0.001;
@@ -441,6 +443,10 @@ impl FullscreenView {
         let explicit = track.as_ref().is_some_and(|track| track.explicit);
         let held = track.clone();
         let meta_bounds = self.meta_bounds.clone();
+        // Each line carries a blurred copy of itself in the page colour underneath, so it
+        // stays legible where a visualizer peak or bright ambient art passes behind it.
+        let effects = shared::effects();
+        let shadow = theme.background;
         let trailing = |track: Option<music::Track>, cx: &App| {
             div()
                 .flex()
@@ -499,8 +505,9 @@ impl FullscreenView {
                     .child(
                         div()
                             .id("fullscreen-title")
+                            .relative()
+                            .flex()
                             .min_w_0()
-                            .truncate()
                             .text_size(theme.text(Text::Title))
                             .font_weight(FontWeight::SEMIBOLD)
                             .when_some(album, |this, album| {
@@ -519,24 +526,59 @@ impl FullscreenView {
                                     cx.stop_propagation();
                                 }),
                             )
-                            .child(title),
+                            .when(effects, |this| {
+                                this.child(
+                                    div()
+                                        .absolute()
+                                        .inset_0()
+                                        .flex()
+                                        .blur(TEXT_SHADOW)
+                                        .text_color(shadow)
+                                        .child(div().min_w_0().truncate().child(title.clone())),
+                                )
+                            })
+                            .child(div().min_w_0().truncate().child(title)),
                     )
                     .child(div().flex().flex_1().child(trailing(track.clone(), cx))),
             )
             .when_some(track, |this, track| {
+                let body = theme.text(Text::Body);
                 this.child(
                     div().flex().w_full().min_w_0().justify_center().child(
-                        InlineLinks::new(
-                            "fullscreen-artists",
-                            track.artist_refs.into_iter().map(|artist| {
-                                InlineLink::new(artist.name, artist.id.map(Into::into))
-                            }),
-                            track.artists,
-                            theme.muted_foreground,
-                        )
-                        .text_size(theme.text(Text::Body))
-                        .truncate()
-                        .on_click(|id, cx| navigate(Destination::Artist(id), cx)),
+                        div()
+                            .relative()
+                            .flex()
+                            .min_w_0()
+                            .when(effects, |this| {
+                                this.child(
+                                    InlineLinks::new(
+                                        "fullscreen-artists-shadow",
+                                        track.artist_refs.iter().map(|artist| {
+                                            InlineLink::new(artist.name.clone(), None)
+                                        }),
+                                        track.artists.clone(),
+                                        shadow,
+                                    )
+                                    .text_size(body)
+                                    .truncate()
+                                    .absolute()
+                                    .inset_0()
+                                    .blur(TEXT_SHADOW),
+                                )
+                            })
+                            .child(
+                                InlineLinks::new(
+                                    "fullscreen-artists",
+                                    track.artist_refs.into_iter().map(|artist| {
+                                        InlineLink::new(artist.name, artist.id.map(Into::into))
+                                    }),
+                                    track.artists,
+                                    theme.muted_foreground,
+                                )
+                                .text_size(body)
+                                .truncate()
+                                .on_click(|id, cx| navigate(Destination::Artist(id), cx)),
+                            ),
                     ),
                 )
             })
