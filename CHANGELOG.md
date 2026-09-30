@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Local tracks that have multiple artist tags now show each one as its own artist. Artist names
+  that only differ in capitalization no longer create duplicate entries.
+
 ### Fixed
 
 - Scrolling through Home stays smooth as new shelves and their covers come into view.
