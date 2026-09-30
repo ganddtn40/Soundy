@@ -19,6 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Editing a local song's artists returns you to the artist list if the artist page you were
+  viewing no longer has any songs.
 - Scrolling through Home stays smooth as new shelves and their covers come into view.
 - Deleting a playlist or removing it from your library also removes its sidebar pin. Going back
   no longer shows a stale copy of the playlist.

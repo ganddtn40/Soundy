@@ -33,7 +33,7 @@ mod usage;
 mod wake;
 mod window_shape;
 
-pub use artist::ArtistDetail;
+pub use artist::{ArtistDetail, ArtistDetailEvent};
 pub use cover::Cover;
 pub use detail::{Collection, Detail, Header};
 pub use drm::{CdmState, Drm};
