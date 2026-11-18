@@ -375,11 +375,104 @@ pub struct TrackTags {
     pub lyrics: String,
 }
 
+/// Where an entry of an imported playlist can be played, if anywhere. Every entry keeps its
+/// place in the imported order whatever this says; only `Available` and `Personal` are playable.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ImportStatus {
+    /// A track the active provider streams, matched by title, artist and duration.
+    #[default]
+    Available,
+    /// A file in the listener's own library.
+    Personal,
+    /// The source offers a clip, not the whole recording.
+    Preview,
+    /// The source links out to its own player, which Soundy cannot play.
+    External,
+    /// Nothing in the library or on the active provider matches this entry.
+    Unavailable,
+}
+
+impl ImportStatus {
+    /// The string the database stores.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Available => "available",
+            Self::Personal => "personal",
+            Self::Preview => "preview",
+            Self::External => "external",
+            Self::Unavailable => "unavailable",
+        }
+    }
+
+    /// Reads a status the database stored, defaulting to `Unavailable` for a value this build
+    /// does not know, so a row written by a newer build is never pretended to be playable.
+    pub fn parse(value: &str) -> Self {
+        match value {
+            "available" => Self::Available,
+            "personal" => Self::Personal,
+            "preview" => Self::Preview,
+            "external" => Self::External,
+            _ => Self::Unavailable,
+        }
+    }
+
+    /// Whether a row with this status may start playback.
+    pub fn playable(self) -> bool {
+        matches!(self, Self::Available | Self::Personal)
+    }
+}
+
+/// One entry of a playlist imported from another service. The source's own names and duration
+/// are kept even when a match was found, so a row always says what the source said.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ImportedEntry {
+    /// The entry's place in the source playlist, from zero.
+    pub position: u32,
+    /// The source service's own id for the recording, when it has one.
+    pub source_id: Option<String>,
+    /// Where the entry can be opened on the source service, when it can.
+    pub source_url: Option<String>,
+    pub title: String,
+    pub artists: String,
+    pub album: String,
+    pub duration: Duration,
+    pub cover: Option<String>,
+    /// The recording's ISRC, used to match a release across albums.
+    pub isrc: Option<String>,
+    /// What the library or the active provider made of this entry.
+    pub status: ImportStatus,
+    /// The id of the playable track that matched, when one did.
+    pub track_id: Option<String>,
+    /// When the entry was added to the source playlist, in seconds since the epoch.
+    pub added_at: Option<i64>,
+}
+
+/// What an import wrote about its source, beside the entries.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ImportedPlaylistData {
+    /// What the source service is called in a stored row, `"spotify"` so far.
+    pub source: String,
+    pub source_id: String,
+    pub name: String,
+    pub description: String,
+    pub owner: String,
+    pub source_url: String,
+    pub cover_url: Option<String>,
+    /// When the import ran, in seconds since the epoch.
+    pub imported_at: i64,
+    pub entries: Vec<ImportedEntry>,
+    /// How many entries share a recording with an earlier one. Both are kept.
+    pub duplicates: u32,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PlaylistDetail {
     pub playlist: Playlist,
     pub tracks: Vec<Track>,
     pub continuation: Option<String>,
+    /// The import status of each row in `tracks`, aligned by index. Empty for a playlist that
+    /// was not imported.
+    pub statuses: Vec<Option<ImportStatus>>,
 }
 
 /// Which end of a list holds the songs added last, for a list that comes in the order its songs

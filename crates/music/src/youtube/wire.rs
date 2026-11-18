@@ -128,6 +128,7 @@ pub fn playlist_detail(source: ytmusic::PlaylistDetail) -> PlaylistDetail {
         playlist: playlist(source.playlist, owned, public),
         tracks,
         continuation: source.continuation,
+        statuses: Vec::new(),
     }
 }
 

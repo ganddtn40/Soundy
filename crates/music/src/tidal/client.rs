@@ -947,6 +947,7 @@ impl TidalClient {
             playlist,
             tracks,
             continuation: None,
+            statuses: Vec::new(),
         })
     }
 
@@ -1568,6 +1569,7 @@ impl MusicApi for TidalClient {
             playlist,
             tracks,
             continuation: None,
+            statuses: Vec::new(),
         })
     }
 

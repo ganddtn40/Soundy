@@ -1227,6 +1227,7 @@ impl MusicApi for JellyfinClient {
             playlist,
             tracks,
             continuation: None,
+            statuses: Vec::new(),
         })
     }
 

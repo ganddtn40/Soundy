@@ -9,6 +9,8 @@ use state::{Addition, CoverEdit, Leaving, Outcome, Shelf, Sonora, Toasts, cover_
 use ui::{ActiveTheme as _, Artwork, Button, Modal, PinKind, TabBar};
 use ui::{Dismiss, FORM_CONTEXT, Field, Form, Input, Submit};
 
+use crate::shared::spotify_import::SpotifyImport;
+
 #[derive(Clone)]
 pub(crate) enum Edit {
     Create {
@@ -317,18 +319,36 @@ impl Render for PlaylistEditor {
             Edit::Delete(_) => t!("playlist-delete-title"),
             Edit::Again { .. } => t!("playlist-again-title"),
         };
-        // A blank new playlist can come from an M3U file instead, which the local shelf reads.
+        // A blank new playlist can come from an M3U file or from Spotify instead. The side door
+        // names the M3U picker for what it is, so it is never mistaken for the Spotify importer.
         let import =
             matches!(&edit, Edit::Create { addition, .. } if addition.is_empty()).then(|| {
-                Button::new("import-playlist")
-                    .ghost()
-                    .small()
-                    .icon("icons/file-music.svg")
-                    .label(t!("menu-import-playlist"))
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.close(window, cx);
-                        crate::shared::local::import_playlist(cx);
-                    }))
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .child(
+                        Button::new("import-playlist")
+                            .ghost()
+                            .small()
+                            .icon("icons/file-music.svg")
+                            .label(t!("menu-import-m3u"))
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.close(window, cx);
+                                crate::shared::local::import_playlist(cx);
+                            })),
+                    )
+                    .child(
+                        Button::new("import-spotify-playlist")
+                            .ghost()
+                            .small()
+                            .icon("icons/spotify.svg")
+                            .tooltip("menu-import-from-spotify")
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.close(window, cx);
+                                SpotifyImport::open(window, cx);
+                            })),
+                    )
             });
         let shelves = self.shelves(&edit, cx);
         let detail = match &edit {

@@ -3,9 +3,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use gpui::prelude::*;
-use gpui::{AnyElement, Context, FontWeight, SharedString, div, img};
+use gpui::{AnyElement, Context, FontWeight, SharedString, div, img, px, svg};
 use i18n::t;
-use ui::{ActiveTheme as _, Avatar, Glowing as _, Text};
+use ui::{ActiveTheme as _, Artwork, Glowing as _, Text};
 
 use super::rows::outward;
 use super::{Group, SettingsView, Slot, group_heading};
@@ -14,52 +14,28 @@ use super::{Group, SettingsView, Slot, group_heading};
 const MARK_TILE: f32 = 0.5;
 /// The app icon as this platform shows it, registered by the binary's asset source.
 const APP_ICON: &str = "brand/soundy.svg";
+/// The developer's GitHub avatar, kept beside the binary so the card has a face with no
+/// network. The copy GitHub serves is laid over it once it arrives, and whenever it fails the
+/// bundled one stays legible underneath.
+const PROFILE_AVATAR: &str = "brand/ganddtn40.jpg";
+const DEVELOPER_NAME: &str = "ℨ𝔶𝔯𝔬𝔙𝔞𝔵";
+const DEVELOPER_LOGIN: &str = "@ganddtn40";
+const DEVELOPER_URL: &str = "https://github.com/ganddtn40";
+/// The avatar GitHub serves for the login. A week number in the query makes the image cache
+/// miss once a week, which refreshes it without polling and without a request on every launch.
+const DEVELOPER_AVATAR: &str = "https://github.com/ganddtn40.png?size=200&week=";
 const LICENSE_URL: &str = "https://www.gnu.org/licenses/gpl-3.0.html";
 const SOURCE_URL: &str = "https://github.com/sonorahq/sonora";
 
-#[derive(Clone, Copy)]
-struct Member {
-    login: &'static str,
-    avatar: &'static str,
-    profile: &'static str,
-    role: Role,
+/// The avatar URL for this week, so a changed picture reaches the card within a week while the
+/// HTTP cache answers every launch in between.
+fn developer_avatar() -> String {
+    let week = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|since| since.as_secs() / (7 * 24 * 60 * 60))
+        .unwrap_or_default();
+    format!("{DEVELOPER_AVATAR}{week}")
 }
-
-#[derive(Clone, Copy)]
-enum Role {
-    LeadMaintainer,
-    Maintainer,
-    Contributor,
-}
-
-impl Role {
-    fn label(self) -> SharedString {
-        match self {
-            Self::LeadMaintainer => t!("settings-role-lead-maintainer"),
-            Self::Maintainer => t!("settings-role-maintainer"),
-            Self::Contributor => t!("settings-role-contributor"),
-        }
-    }
-}
-
-macro_rules! member {
-    ($login:literal, $role:expr) => {
-        Member {
-            login: $login,
-            avatar: concat!("https://github.com/", $login, ".png"),
-            profile: concat!("https://github.com/", $login),
-            role: $role,
-        }
-    };
-}
-
-const MEMBERS: [Member; 5] = [
-    member!("nolight132", Role::LeadMaintainer),
-    member!("zxsleebu", Role::Maintainer),
-    member!("fx-got", Role::Maintainer),
-    member!("Makakashan", Role::Contributor),
-    member!("imizgun", Role::Contributor),
-];
 
 impl SettingsView {
     pub(super) fn about_groups(&self) -> Vec<Group> {
@@ -155,55 +131,104 @@ impl SettingsView {
             .child(t!("settings-notice"))
     }
 
-    /// The people behind Sonora, each opening their GitHub profile.
+    /// The developer behind this build, as one card that opens the GitHub profile. The card is
+    /// the only member: the upstream team list belongs to Sonora, not to this fork.
     pub(super) fn team(&self, cx: &Context<Self>) -> impl IntoElement {
         let theme = *cx.theme();
+        let avatar = theme.metrics.cover * 0.72;
+        let remote = developer_avatar();
 
         div()
             .flex()
             .flex_col()
             .child(
-                group_heading(t!("settings-team"), Some("icons/user-round.svg"), cx)
-                    .id("settings-team")
+                group_heading(t!("settings-developer"), Some("icons/github.svg"), cx)
+                    .id("settings-developer-heading")
                     .role(gpui::accesskit::Role::Heading)
                     .aria_level(2)
-                    .aria_label(t!("settings-team")),
+                    .aria_label(t!("settings-developer")),
             )
-            .children(MEMBERS.into_iter().enumerate().map(|(index, member)| {
+            .child(
                 div()
-                    .id(("team-member", index))
+                    .id("settings-developer")
                     .role(gpui::accesskit::Role::Link)
-                    .aria_label(member.login)
-                    .aria_description(member.role.label())
-                    .aria_position_in_set(index + 1)
-                    .aria_size_of_set(MEMBERS.len())
+                    .aria_label(DEVELOPER_NAME)
+                    .aria_description(t!("settings-developer-bio"))
                     .flex()
                     .items_center()
-                    .gap_3()
-                    .h(theme.metrics.list_row)
-                    .mx_neg_3()
-                    .px_3()
+                    .gap_4()
+                    .p(theme.metrics.pad * 2.)
                     .rounded(theme.radius)
+                    .border_1()
+                    .border_color(theme.border)
+                    .bg(theme.secondary.opacity(0.35))
+                    .shadow_sm()
                     .cursor_pointer()
-                    .on_click(move |_, _, cx| cx.open_url(member.profile))
-                    .child(Avatar::new(Some(member.avatar)).size(theme.metrics.thumb))
+                    .on_click(|_, _, cx| cx.open_url(DEVELOPER_URL))
                     .child(
                         div()
+                            .relative()
+                            .flex_none()
+                            .w(avatar)
+                            .h(avatar)
+                            .child(img(PROFILE_AVATAR).size(avatar).rounded_full())
+                            // The live picture fades in over the bundled one, so the card
+                            // never shows a placeholder and never waits on the network.
+                            .child(
+                                Artwork::new(Some(remote))
+                                    .size(avatar)
+                                    .circle()
+                                    .overlay()
+                                    .absolute()
+                                    .top_0()
+                                    .left_0(),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
                             .flex_1()
                             .min_w_0()
-                            .truncate()
-                            .font_weight(FontWeight::MEDIUM)
-                            .child(member.login),
+                            .gap_1()
+                            .child(
+                                div()
+                                    .text_size(theme.text(Text::Heading))
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .truncate()
+                                    .child(DEVELOPER_NAME),
+                            )
+                            .child(
+                                div()
+                                    .text_size(theme.text(Text::Small))
+                                    .text_color(theme.muted_foreground)
+                                    .child(DEVELOPER_LOGIN),
+                            )
+                            .child(
+                                div()
+                                    .text_size(theme.text(Text::Small))
+                                    .text_color(theme.muted_foreground)
+                                    .child(t!("settings-developer-bio")),
+                            ),
                     )
                     .child(
                         div()
                             .flex_none()
+                            .flex()
+                            .items_center()
+                            .gap_2()
                             .text_size(theme.text(Text::Label))
                             .text_color(theme.muted_foreground)
-                            .child(member.role.label()),
+                            .child(t!("settings-developer-github"))
+                            .child(
+                                svg()
+                                    .path(icons::path("icons/github.svg"))
+                                    .size(px(18.))
+                                    .text_color(theme.foreground),
+                            ),
                     )
-                    .glowed(theme.secondary_hover)
-            }))
+                    .glowed(theme.secondary_hover),
+            )
     }
 }
 

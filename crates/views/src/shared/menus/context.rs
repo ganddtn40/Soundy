@@ -19,6 +19,7 @@ use crate::shared::local;
 use crate::shared::pins::Pinned as _;
 use crate::shared::playlist_editor::{Edit, PlaylistEditor};
 use crate::shared::smart_playlist::{SmartEdit, SmartPlaylistEditor};
+use crate::shared::spotify_import::SpotifyImport;
 use crate::shared::tag_editor::TagEditor;
 
 /// The narrowest the menu of one song, album, artist or playlist gets, which is wide enough for
@@ -1251,6 +1252,11 @@ pub(crate) fn playlist_menu(playlist: Playlist, playback: Entity<Playback>, cx: 
                     .icon("icons/square-arrow-out-up-right.svg")
                     .on_click(move |_, _, cx| local::export_playlist(playlist.clone(), cx))
             }))
+            .chain([
+                MenuItem::new("import-spotify-playlist", t!("menu-import-from-spotify"))
+                    .icon("icons/spotify.svg")
+                    .on_click(|_, window, cx| SpotifyImport::open(window, cx)),
+            ])
             .collect(),
         false => Vec::new(),
     };
@@ -1530,9 +1536,14 @@ pub(crate) fn new_playlist_menu(
                 })
         }))
         .item(
-            MenuItem::new("import-playlist", t!("menu-import-playlist"))
+            MenuItem::new("import-playlist", t!("menu-import-m3u"))
                 .icon("icons/file-music.svg")
                 .on_click(|_, _, cx| local::import_playlist(cx)),
+        )
+        .item(
+            MenuItem::new("import-spotify-playlist", t!("menu-import-from-spotify"))
+                .icon("icons/spotify.svg")
+                .on_click(|_, window, cx| SpotifyImport::open(window, cx)),
         )
 }
 

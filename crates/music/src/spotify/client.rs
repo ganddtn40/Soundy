@@ -46,6 +46,10 @@ impl MusicApi for LibrespotClient {
         Some(self.connect.clone())
     }
 
+    fn spotify_web(&self) -> Option<crate::spotify::SpotifyWeb> {
+        Some(crate::spotify::SpotifyWeb::new(self.session.clone()))
+    }
+
     fn cover_at(&self, cover: &str, size: CoverSize) -> Option<String> {
         wire::cover_at(cover, size)
     }

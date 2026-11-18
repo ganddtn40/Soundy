@@ -12,6 +12,7 @@ pub mod drm;
 pub mod engine;
 pub mod equalizer;
 pub mod escape;
+pub mod import;
 pub mod jellyfin;
 pub mod kugou;
 pub mod link;
@@ -58,9 +59,10 @@ pub use equalizer::Equalizer;
 pub use models::{
     Album, AlbumCatalogue, AlbumDetail, Arrival, Artist, ArtistCatalogue, ArtistProfile, ArtistRef,
     Contributor, CoverSize, Credit, Found, Genre, GenreDetail, GenreItem, GenreSection, HomeFeed,
-    ImportedPlaylist, Lyrics, LyricsHit, LyricsLane, LyricsLine, LyricsQuery, LyricsWord,
-    PinOutcome, PinTarget, PinTargetKind, Playlist, PlaylistDetail, ReleaseType, RomanizedText,
-    SavedArtist, Track, TrackKey, TrackTags, UserDetail, UserProfile, Voice, WritingSystem,
+    ImportStatus, ImportedEntry, ImportedPlaylist, ImportedPlaylistData, Lyrics, LyricsHit,
+    LyricsLane, LyricsLine, LyricsQuery, LyricsWord, PinOutcome, PinTarget, PinTargetKind,
+    Playlist, PlaylistDetail, ReleaseType, RomanizedText, SavedArtist, Track, TrackKey, TrackTags,
+    UserDetail, UserProfile, Voice, WritingSystem,
 };
 pub use output::{Server as SoundServer, missing_bridge};
 pub use redact::redact;
@@ -129,6 +131,12 @@ pub trait MusicApi: Send + Sync {
     /// The provider's device network, for a provider that has one. Spotify Connect is the
     /// only one so far.
     fn connect(&self) -> Option<Arc<connect::Connect>> {
+        None
+    }
+
+    /// The Spotify Web API, for the one provider that can read a playlist link. `None` for
+    /// every other provider, so an importer can say why it cannot run instead of failing later.
+    fn spotify_web(&self) -> Option<crate::spotify::SpotifyWeb> {
         None
     }
 
@@ -333,6 +341,12 @@ pub trait MusicApi: Send + Sync {
     /// and counted.
     async fn import_playlist(&self, _path: &Path) -> Result<ImportedPlaylist> {
         anyhow::bail!("this provider cannot import playlist files")
+    }
+
+    /// Writes a playlist imported from another service into the local library, returning the id
+    /// of the playlist it created or refreshed. Only the local provider answers.
+    async fn save_import(&self, _data: &ImportedPlaylistData) -> Result<String> {
+        anyhow::bail!("this provider cannot keep imported playlists")
     }
 
     /// Writes a playlist to `path` as M3U8, for a provider whose tracks are files.

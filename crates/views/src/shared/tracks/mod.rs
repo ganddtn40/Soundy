@@ -68,6 +68,11 @@ pub(crate) trait Tracks: 'static {
     fn arrival(&self, _cx: &App) -> Option<Arrival> {
         None
     }
+
+    /// Where an imported playlist's row can be played, if anywhere. No other list has one.
+    fn import_status(&self, _row: usize, _cx: &App) -> Option<music::ImportStatus> {
+        None
+    }
 }
 
 pub(crate) fn first_playable(table: &Entity<TableState<TrackSource>>, cx: &App) -> Option<usize> {
@@ -508,18 +513,25 @@ impl TrackSource {
         color: Option<Hsla>,
         cx: &App,
     ) -> AnyElement {
+        // An imported row says where it plays, which matters more than the file badge it would
+        // otherwise carry: an imported row that matched a personal file is marked as such by
+        // its own status.
+        let status = match self.provider.import_status(cell.row, cx) {
+            Some(status) => Some(cells::import_status(cell.row, status, cx)),
+            None => match self.marks_local(cx)
+                && track.id.as_deref().is_some_and(|id| Shelf::of(id).local())
+            {
+                true => Some(cells::local_badge(cell.row)),
+                false => download_mark(cell, track, cx),
+            },
+        };
         cells::title(
             cell,
             track.name.clone(),
             color,
             track.explicit.then(|| t!("song-explicit")),
             None,
-            match self.marks_local(cx)
-                && track.id.as_deref().is_some_and(|id| Shelf::of(id).local())
-            {
-                true => Some(cells::local_badge(cell.row)),
-                false => download_mark(cell, track, cx),
-            },
+            status,
             self.liked_button(cell, track, cx),
         )
     }

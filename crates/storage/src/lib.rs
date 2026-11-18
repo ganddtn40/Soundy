@@ -53,6 +53,38 @@ const SCHEMA: &str = "
         playlist_id TEXT PRIMARY KEY,
         path TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS imported_playlists (
+        playlist_id TEXT PRIMARY KEY,
+        source TEXT NOT NULL,
+        source_id TEXT NOT NULL,
+        description TEXT NOT NULL,
+        owner TEXT NOT NULL,
+        source_url TEXT NOT NULL,
+        cover_url TEXT,
+        imported_at INTEGER NOT NULL,
+        total INTEGER NOT NULL,
+        duplicates INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS imported_playlists_source
+        ON imported_playlists (source, source_id);
+    CREATE TABLE IF NOT EXISTS imported_entries (
+        playlist_id TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        source_id TEXT,
+        source_url TEXT,
+        title TEXT NOT NULL,
+        artists TEXT NOT NULL,
+        album TEXT NOT NULL,
+        duration_ms INTEGER NOT NULL,
+        cover TEXT,
+        isrc TEXT,
+        status TEXT NOT NULL,
+        track_id TEXT,
+        added_at INTEGER,
+        PRIMARY KEY (playlist_id, position)
+    );
+    CREATE INDEX IF NOT EXISTS imported_entries_order
+        ON imported_entries (playlist_id, position);
     CREATE TABLE IF NOT EXISTS favorites (
         track_id TEXT PRIMARY KEY,
         added_at INTEGER NOT NULL

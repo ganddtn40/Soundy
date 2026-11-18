@@ -31,6 +31,7 @@ use crate::shared::playlist_editor::PlaylistEditor;
 use crate::shared::powerbar::{Powerbar, PowerbarEvent};
 use crate::shared::smart_playlist::SmartPlaylistEditor;
 use crate::shared::soloist::SoloistSetup;
+use crate::shared::spotify_import::SpotifyImport;
 use crate::shared::tag_editor::TagEditor;
 use crate::shared::tracks::{LIBRARY_COLUMNS, album_columns};
 use crate::shared::transport::{CoverAway, CoverFade, ShellSwap};
@@ -88,6 +89,7 @@ struct Shells {
 /// shell is up, so one raised from the fullscreen player opens there.
 struct Dialogs {
     playlist_editor: Entity<PlaylistEditor>,
+    spotify_import: Entity<SpotifyImport>,
     smart_playlist_editor: Entity<SmartPlaylistEditor>,
     tag_editor: Entity<TagEditor>,
     confirm: Entity<Confirm>,
@@ -103,6 +105,7 @@ impl Dialogs {
     fn new(cx: &mut App) -> Self {
         Self {
             playlist_editor: PlaylistEditor::entity(cx),
+            spotify_import: SpotifyImport::entity(cx),
             smart_playlist_editor: SmartPlaylistEditor::entity(cx),
             tag_editor: TagEditor::entity(cx),
             confirm: Confirm::entity(cx),
@@ -115,9 +118,10 @@ impl Dialogs {
         }
     }
 
-    fn views(&self) -> [AnyView; 10] {
+    fn views(&self) -> [AnyView; 11] {
         [
             self.playlist_editor.clone().into(),
+            self.spotify_import.clone().into(),
             self.smart_playlist_editor.clone().into(),
             self.tag_editor.clone().into(),
             self.confirm.clone().into(),

@@ -170,6 +170,8 @@ smart-rules-problem-compared = The value does not fit the rule
 smart-rules-problem-boolean = A boolean field takes a truth value
 smart-rules-problem-bad-order = The order is asc or desc
 menu-import-playlist = Import playlist…
+menu-import-m3u = Import M3U file…
+menu-import-from-spotify = Import from Spotify…
 menu-edit-tags = Edit tags
 menu-no-playlists = No playlists
 menu-search-playlists = Search a playlist
@@ -1322,6 +1324,10 @@ settings-team = Team
 settings-role-lead-maintainer = Lead Maintainer
 settings-role-maintainer = Maintainer
 settings-role-contributor = Contributor
+settings-developer = Developer
+settings-developer-bio = Dev: typescript/sql
+settings-developer-github = github.com/ganddtn40
+settings-developer-profile = Open the GitHub profile
 settings-notice = Copyright © 2026 Soundy Contributors. Soundy comes with absolutely no warranty. It is free software, and you are welcome to redistribute it under the terms of the GNU General Public License version 3 or later. Soundy is unofficial and is not affiliated with Spotify AB.
 
 # themes
@@ -1656,3 +1662,49 @@ response-graph-readout = { $frequency } · { $direction ->
         [down] -{ $gain }
        *[flat] { $gain }
     } dB
+
+# Spotify playlist import
+spotify-import-title = Import a Spotify playlist
+spotify-import-subtitle = The playlist is kept here, and every song is matched to what you can play
+spotify-import-detail = Paste a Spotify playlist link or URI. Soundy reads it with the Spotify Web API, using the account you are signed in with.
+spotify-import-placeholder = https://open.spotify.com/playlist/…
+spotify-import-action = Import
+spotify-import-cancel = Cancel
+spotify-import-cancel-hint = The import can be stopped before it writes anything. A playlist already saved is replaced only once the new one is complete.
+spotify-import-close = Close
+spotify-import-another = Import another
+spotify-import-open-playlist = Open playlist
+spotify-import-reading = Reading the playlist from Spotify…
+spotify-import-progress = { $read } of { $total } tracks read
+spotify-import-progress-detail = Spotify answers a page at a time; large playlists take a little longer.
+spotify-import-matching = Matching the songs against your library…
+spotify-import-saving = Saving the playlist…
+spotify-import-result-detail = { $total } tracks kept · imported { $date }
+spotify-import-playable = { $count } playable
+spotify-import-personal = { $count } from your files
+spotify-import-preview = { $count } preview only
+spotify-import-external = { $count } open in Spotify
+spotify-import-unavailable = { $count } unavailable
+spotify-import-unmatched = View unmatched tracks ({ $count })
+spotify-import-unmatched-hide = Hide unmatched tracks
+spotify-import-unmatched-more = Showing the first { $shown } of { $total } unmatched tracks.
+spotify-import-open-source = Open in Spotify
+spotify-import-failed = Import failed
+spotify-import-complete = Import complete
+spotify-import-invalid-link = That is not a Spotify playlist link. Paste a link like https://open.spotify.com/playlist/… or a spotify:playlist: URI.
+spotify-import-not-connected = Importing needs Spotify signed in and selected as the active source. Soundy uses that same Spotify session and never asks for a separate app, client secret or password.
+spotify-import-unauthorized = Spotify did not accept the saved session. Sign in to Spotify again, then return here.
+spotify-import-forbidden = Spotify did not allow this account to read the playlist. Private playlists need the owner's account; Soundy does not bypass that.
+spotify-import-not-found = Spotify could not find that playlist. Check the link and that the playlist still exists.
+spotify-import-rate-limited = Spotify is rate limiting requests. Try again in about { $seconds } seconds.
+spotify-import-cancelled = The import was cancelled before anything was saved.
+spotify-import-network = Cannot reach Spotify right now: { $reason }
+spotify-import-sign-in = Sign in to Spotify
+spotify-import-accounts-hint = The importer is idle until you press Import. It reads playlists only with the Spotify Web API and never scrapes the site or extracts audio.
+spotify-import-compliance = Songs Spotify cannot stream stay in the playlist and are marked unavailable; Soundy never pretends they play. Imported playlists are read-only, keep their source order and link back to Spotify.
+import-status-available = In Soundy
+import-status-personal = Your library
+import-status-preview = Preview only
+import-status-external = External
+import-status-unavailable = Unavailable
+toast-spotify-imported = { $name } imported from Spotify

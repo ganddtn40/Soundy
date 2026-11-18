@@ -10,12 +10,12 @@ use gpui::{
     Stateful, Task, Window, div, px, svg,
 };
 use i18n::t;
-use music::{ArtistRef, Contributor};
+use music::{ArtistRef, Contributor, ImportStatus};
 use router::{Destination, Link as _, navigate};
 use state::Playback;
 use ui::{
-    ActiveTheme as _, Artwork, Avatar, Badge, Cell, InlineLink, InlineLinks, ROW_GROUP, Theme,
-    clock, tabular,
+    ActiveTheme as _, Artwork, Avatar, Badge, Cell, InlineLink, InlineLinks, ROW_GROUP, Text,
+    Theme, clock, tabular,
 };
 
 use crate::chrome::Chrome;
@@ -355,6 +355,55 @@ pub(crate) fn local_badge(row: usize) -> AnyElement {
         .aria_label(t!("song-local"))
         .flex_none()
         .child(Badge::icon(crate::shared::blend::LOCAL_MARK))
+        .into_any_element()
+}
+
+/// Where an imported playlist's row can be played, as a capsule beside its title. An imported
+/// row is kept in the list even when nothing can play it, so this is the one thing that says
+/// whether pressing it will do anything.
+pub(crate) fn import_status(row: usize, status: ImportStatus, cx: &App) -> AnyElement {
+    let theme = cx.theme();
+    let (label, tint, fill) = match status {
+        ImportStatus::Available => (
+            t!("import-status-available"),
+            theme.primary,
+            theme.primary.opacity(0.14),
+        ),
+        ImportStatus::Personal => (
+            t!("import-status-personal"),
+            theme.foreground,
+            theme.foreground.opacity(0.09),
+        ),
+        ImportStatus::Preview => (
+            t!("import-status-preview"),
+            theme.muted_foreground,
+            theme.muted,
+        ),
+        ImportStatus::External => (
+            t!("import-status-external"),
+            theme.muted_foreground,
+            theme.muted,
+        ),
+        ImportStatus::Unavailable => (
+            t!("import-status-unavailable"),
+            theme.danger_foreground.opacity(0.85),
+            theme.danger.opacity(0.55),
+        ),
+    };
+
+    div()
+        .id(("import-status", row))
+        .role(Role::Image)
+        .aria_label(label.clone())
+        .flex_none()
+        .rounded_full()
+        .px_1p5()
+        .py(px(1.))
+        .bg(fill)
+        .text_size(theme.text(Text::Label))
+        .line_height(theme.text(Text::Label))
+        .text_color(tint)
+        .child(label)
         .into_any_element()
 }
 

@@ -10,8 +10,9 @@ use crate::cover::{self, CoverLimits};
 use crate::order;
 use crate::{
     Album, AlbumCatalogue, AlbumDetail, Artist, ArtistProfile, GenreItem, GenreSection, HomeFeed,
-    ImportedPlaylist, MediaKind, MusicApi, Playlist, PlaylistDetail, SUGGESTIONS, SavedArtist,
-    Track, TrackTags, UserProfile, distinct_covers,
+    ImportStatus, ImportedEntry, ImportedPlaylist, ImportedPlaylistData, MediaKind, MusicApi,
+    Playlist, PlaylistDetail, SUGGESTIONS, SavedArtist, Track, TrackTags, UserProfile,
+    distinct_covers,
 };
 
 use super::index::Index;
@@ -103,12 +104,58 @@ impl LocalClient {
 
     fn assemble(&self, id: &str) -> Result<PlaylistDetail> {
         let stored = self.store.one(id)?;
+        if stored.imported.is_some() {
+            let (tracks, statuses) = self.assemble_imported(&self.store.entries(id)?);
+            return Ok(PlaylistDetail {
+                playlist: playlist_from(stored, &tracks),
+                tracks,
+                continuation: None,
+                statuses,
+            });
+        }
         let tracks = self.listed(&self.store.tracks(id)?);
         Ok(PlaylistDetail {
             playlist: playlist_from(stored, &tracks),
             tracks,
             continuation: None,
+            statuses: Vec::new(),
         })
+    }
+
+    /// Builds the rows of an imported playlist. A local match uses the file the scan knows, so
+    /// its cover and tags are the library's. Every other row keeps the source's own title,
+    /// artist, album and cover, and is playable only when a provider id was matched.
+    fn assemble_imported(
+        &self,
+        entries: &[ImportedEntry],
+    ) -> (Vec<Track>, Vec<Option<ImportStatus>>) {
+        let scanned = self.scanned.read().unwrap();
+        let mut tracks = Vec::with_capacity(entries.len());
+        let mut statuses = Vec::with_capacity(entries.len());
+        for entry in entries {
+            let status = if entry.status.playable() && entry.track_id.is_none() {
+                ImportStatus::Unavailable
+            } else {
+                entry.status
+            };
+            let track = match (&entry.track_id, status) {
+                (Some(id), ImportStatus::Personal) => scanned
+                    .tracks
+                    .iter()
+                    .find(|track| track.id.as_deref() == Some(id.as_str()))
+                    .cloned()
+                    .unwrap_or_else(|| imported_track(entry, None)),
+                (Some(id), ImportStatus::Available) => imported_track(entry, Some(id.clone())),
+                _ => imported_track(entry, None),
+            };
+            let missing = status == ImportStatus::Personal && !track.playable;
+            statuses.push(Some(match missing {
+                true => ImportStatus::Unavailable,
+                false => status,
+            }));
+            tracks.push(track);
+        }
+        (tracks, statuses)
     }
 
     fn album_track_paths(&self, track_id: &str) -> Vec<PathBuf> {
@@ -192,23 +239,59 @@ impl LocalClient {
     }
 }
 
+fn imported_track(entry: &ImportedEntry, id: Option<String>) -> Track {
+    Track {
+        id: id.clone(),
+        name: entry.title.clone(),
+        playable: id.is_some(),
+        artists: entry.artists.clone(),
+        artist_refs: Vec::new(),
+        album: entry.album.clone(),
+        album_artist: String::new(),
+        album_id: None,
+        cover: entry.cover.clone(),
+        duration: entry.duration,
+        added_at: entry.added_at,
+        added_by: None,
+        playcount: None,
+        popularity: 0,
+        explicit: false,
+        track_number: 0,
+        disc_number: 0,
+        tags: Vec::new(),
+        languages: Vec::new(),
+        credits: Vec::new(),
+    }
+}
+
 fn playlist_from(stored: Stored, tracks: &[Track]) -> Playlist {
     let own = stored
         .cover
         .map(|path| format!("file://{}", path.display()));
+    let imported = stored.imported;
+    let cover = own.or_else(|| imported.as_ref().and_then(|row| row.cover_url.clone()));
+    let track_count = imported
+        .as_ref()
+        .map_or(tracks.len() as u32, |row| row.total);
+    let owner = imported
+        .as_ref()
+        .map(|row| row.owner.clone())
+        .unwrap_or_default();
+    let modified_at = stored.modified_at;
+    let read_only = imported.is_some();
     Playlist {
         id: stored.id,
         name: stored.name,
-        owner: String::new(),
+        owner,
         owner_id: String::new(),
         owned: true,
         collaborative: false,
         blend: false,
         public: false,
-        cover: own.or_else(|| tracks.iter().find_map(|track| track.cover.clone())),
-        track_count: tracks.len() as u32,
-        modified_at: Some(stored.modified_at / 1_000),
-        read_only: false,
+        cover: cover.or_else(|| tracks.iter().find_map(|track| track.cover.clone())),
+        track_count,
+        modified_at: Some(modified_at / 1_000),
+        read_only,
     }
 }
 
@@ -392,6 +475,10 @@ impl MusicApi for LocalClient {
 
     async fn create_playlist(&self, name: &str) -> Result<String> {
         self.store.create(name)
+    }
+
+    async fn save_import(&self, data: &ImportedPlaylistData) -> Result<String> {
+        self.store.import(data)
     }
 
     async fn rename_playlist(&self, playlist_id: &str, name: &str) -> Result<()> {
@@ -607,11 +694,20 @@ impl MusicApi for LocalClient {
     }
 
     async fn playlist_tracks(&self, playlist_id: &str) -> Result<Vec<Track>> {
+        let stored = self.store.one(playlist_id)?;
+        if stored.imported.is_some() {
+            let (tracks, _) = self.assemble_imported(&self.store.entries(playlist_id)?);
+            return Ok(tracks);
+        }
         Ok(self.listed(&self.store.tracks(playlist_id)?))
     }
 
     async fn playlist_covers(&self, playlist_id: &str, wanted: usize) -> Result<Vec<String>> {
-        let tracks = self.listed(&self.store.tracks(playlist_id)?);
+        let stored = self.store.one(playlist_id)?;
+        let tracks = match stored.imported.is_some() {
+            true => self.assemble_imported(&self.store.entries(playlist_id)?).0,
+            false => self.listed(&self.store.tracks(playlist_id)?),
+        };
         Ok(distinct_covers(&tracks, wanted.max(COVERS)))
     }
 
@@ -1002,6 +1098,177 @@ mod tests {
             listed(&reopened).await,
             ["local:3", "local:1", "local:2", "local:0"]
         );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn imported_entry(
+        position: u32,
+        title: &str,
+        status: ImportStatus,
+        track_id: Option<&str>,
+        cover: Option<&str>,
+    ) -> ImportedEntry {
+        ImportedEntry {
+            position,
+            source_id: Some(format!("source-{position}")),
+            source_url: Some(format!("https://open.spotify.com/track/source-{position}")),
+            title: title.to_owned(),
+            artists: "Artist".to_owned(),
+            album: "Album".to_owned(),
+            duration: Duration::from_secs(200),
+            cover: cover.map(str::to_owned),
+            isrc: None,
+            status,
+            track_id: track_id.map(str::to_owned),
+            added_at: Some(1_700_000_000),
+        }
+    }
+
+    fn imported(entries: Vec<ImportedEntry>, source_id: &str) -> ImportedPlaylistData {
+        ImportedPlaylistData {
+            source: "spotify".to_owned(),
+            source_id: source_id.to_owned(),
+            name: "Imported".to_owned(),
+            description: "A list".to_owned(),
+            owner: "Owner".to_owned(),
+            source_url: format!("https://open.spotify.com/playlist/{source_id}"),
+            cover_url: Some("https://i.scdn.co/image/list".to_owned()),
+            imported_at: 1_700_000_000,
+            entries,
+            duplicates: 0,
+        }
+    }
+
+    fn test_client(dir: &Path, tracks: Vec<Track>) -> LocalClient {
+        let db = Database::at(dir.join("state.sqlite"));
+        let index = Index::new(storage::Cache::at(dir.join("cache.sqlite")));
+        LocalClient::new(
+            Scanned {
+                tracks,
+                albums: vec![],
+                artists: vec![],
+                portraits: HashMap::new(),
+            },
+            db,
+            index,
+        )
+    }
+
+    #[tokio::test]
+    async fn imported_playlists_keep_every_row_its_status_and_its_order() {
+        let dir = std::env::temp_dir().join(format!("sonora-test-{}", fastrand::u64(..)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let client = test_client(
+            &dir,
+            vec![test_track("local:file", "Song", "Artist", "Album")],
+        );
+        let data = imported(
+            vec![
+                imported_entry(
+                    0,
+                    "One",
+                    ImportStatus::Available,
+                    Some("spotify:track:a"),
+                    Some("https://i.scdn.co/image/a"),
+                ),
+                // The same song again is a deliberate duplicate, not a row to collapse.
+                imported_entry(
+                    1,
+                    "One",
+                    ImportStatus::Available,
+                    Some("spotify:track:a"),
+                    Some("https://i.scdn.co/image/a"),
+                ),
+                imported_entry(2, "Song", ImportStatus::Personal, Some("local:file"), None),
+                imported_entry(3, "Gone", ImportStatus::Unavailable, None, None),
+                // A file that was in the library when it was matched but is gone now.
+                imported_entry(4, "Gone", ImportStatus::Personal, Some("local:gone"), None),
+            ],
+            "list",
+        );
+        let id = client.save_import(&data).await.unwrap();
+
+        let detail = client.playlist(&id).await.unwrap();
+        assert_eq!(detail.tracks.len(), 5, "every source entry is kept");
+        assert_eq!(
+            detail.statuses,
+            [
+                Some(ImportStatus::Available),
+                Some(ImportStatus::Available),
+                Some(ImportStatus::Personal),
+                Some(ImportStatus::Unavailable),
+                Some(ImportStatus::Unavailable),
+            ]
+        );
+        assert_eq!(
+            detail
+                .tracks
+                .iter()
+                .map(|track| track.id.as_deref())
+                .collect::<Vec<_>>(),
+            [
+                Some("spotify:track:a"),
+                Some("spotify:track:a"),
+                Some("local:file"),
+                None,
+                None,
+            ]
+        );
+        assert_eq!(
+            detail
+                .tracks
+                .iter()
+                .map(|track| track.playable)
+                .collect::<Vec<_>>(),
+            [true, true, true, false, false]
+        );
+        assert_eq!(detail.playlist.track_count, 5);
+        assert!(detail.playlist.read_only);
+        assert_eq!(detail.playlist.owner, "Owner");
+        assert_eq!(
+            detail.playlist.cover.as_deref(),
+            Some("https://i.scdn.co/image/list")
+        );
+
+        // The listing and the hero's play-all read the imported rows, not the empty local table.
+        let listed = client.playlists().await.unwrap();
+        let row = listed.iter().find(|playlist| playlist.id == id).unwrap();
+        assert_eq!(row.track_count, 5);
+        assert!(row.read_only);
+        assert_eq!(client.playlist_tracks(&id).await.unwrap().len(), 5);
+        assert_eq!(
+            client.playlist_covers(&id, 4).await.unwrap(),
+            vec!["https://i.scdn.co/image/a".to_owned()]
+        );
+
+        // Importing the same source playlist again replaces its rows and reuses its id.
+        let again = client
+            .save_import(&imported(
+                vec![imported_entry(
+                    0,
+                    "Two",
+                    ImportStatus::Available,
+                    Some("spotify:track:b"),
+                    None,
+                )],
+                "list",
+            ))
+            .await
+            .unwrap();
+        assert_eq!(again, id);
+        let detail = client.playlist(&id).await.unwrap();
+        assert_eq!(detail.tracks.len(), 1);
+        assert_eq!(detail.tracks[0].name, "Two");
+        assert_eq!(client.playlists().await.unwrap().len(), 1);
+
+        // A different source playlist gets its own row.
+        let other = client
+            .save_import(&imported(vec![], "other"))
+            .await
+            .unwrap();
+        assert_ne!(other, id);
+        assert_eq!(client.playlists().await.unwrap().len(), 2);
 
         let _ = std::fs::remove_dir_all(&dir);
     }

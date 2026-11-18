@@ -98,6 +98,10 @@ impl Tracks for DetailTracks {
         )
     }
 
+    fn import_status(&self, row: usize, cx: &App) -> Option<music::ImportStatus> {
+        self.0.read(cx).statuses().get(row).copied().flatten()
+    }
+
     /// Your own playlist's songs come in the order its provider says. Anyone else's playlist is
     /// in its curator's order, and an album's never by when they were added.
     fn arrival(&self, cx: &App) -> Option<Arrival> {

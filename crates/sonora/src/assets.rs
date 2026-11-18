@@ -7,6 +7,10 @@ include!(concat!(env!("OUT_DIR"), "/fonts.rs"));
 
 /// Where About asks for the app icon, and the icon this platform shows for the app.
 const APP_ICON: &str = "brand/soundy.svg";
+/// The developer's GitHub avatar, verified once and kept so the profile still has its face
+/// with no network.
+const PROFILE_AVATAR: &str = "brand/ganddtn40.jpg";
+const PROFILE_AVATAR_JPG: &[u8] = include_bytes!("../../../assets/branding/ganddtn40.jpg");
 #[cfg(target_os = "macos")]
 const APP_ICON_SVG: &[u8] = include_bytes!("../../../assets/macos/soundy.svg");
 #[cfg(target_os = "windows")]
@@ -73,6 +77,9 @@ impl AssetSource for Assets {
     fn load(&self, path: &str) -> Result<Option<Cow<'static, [u8]>>> {
         if path == APP_ICON {
             return Ok(Some(Cow::Borrowed(APP_ICON_SVG)));
+        }
+        if path == PROFILE_AVATAR {
+            return Ok(Some(Cow::Borrowed(PROFILE_AVATAR_JPG)));
         }
         if let Some(bytes) = icons::asset(path) {
             return Ok(Some(Cow::Borrowed(bytes)));

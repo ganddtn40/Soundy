@@ -8,6 +8,7 @@ const KIND: &str = "svg";
 
 fn main() {
     let assets = workspace().join("assets/icons");
+    println!("cargo:rerun-if-changed={}", assets.display());
 
     let mut folders = embed::tree(&assets, KIND);
     folders.sort_by_key(|(id, _)| (id != BASE, id.clone()));

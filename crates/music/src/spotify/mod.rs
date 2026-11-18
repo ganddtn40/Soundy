@@ -18,6 +18,7 @@ mod profiles;
 mod radio;
 mod search;
 mod sink;
+pub mod web;
 mod wire;
 
 use std::sync::Arc;
@@ -34,6 +35,7 @@ use crate::{
 pub use auth::AuthConfig;
 pub use client::LibrespotClient;
 pub use lyrics::SpotifyLyrics;
+pub use web::Web as SpotifyWeb;
 
 pub struct SpotifyProvider {
     config: AuthConfig,

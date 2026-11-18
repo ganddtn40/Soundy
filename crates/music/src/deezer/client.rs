@@ -872,6 +872,7 @@ impl DeezerClient {
             playlist,
             tracks,
             continuation: None,
+            statuses: Vec::new(),
         })
     }
 
@@ -916,6 +917,7 @@ impl DeezerClient {
             playlist,
             tracks,
             continuation: None,
+            statuses: Vec::new(),
         })
     }
 
@@ -1548,6 +1550,7 @@ impl MusicApi for DeezerClient {
             playlist,
             tracks,
             continuation: None,
+            statuses: Vec::new(),
         })
     }
 

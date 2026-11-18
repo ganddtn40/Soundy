@@ -1086,9 +1086,9 @@ impl Session {
     }
 
     fn restore_local(&mut self, cx: &mut Context<Self>) {
-        if self.local_folders.is_empty() {
-            return;
-        }
+        // The local provider is also where imported playlists are kept, so it signs in even
+        // when no folder is configured: a listener who only streams can still keep a playlist
+        // imported from another service, and its rows are local ones.
         self.rescan_local(false, cx);
     }
 
@@ -1187,20 +1187,16 @@ impl Session {
         music::progress::cancel();
         self.scan_asked |= asked;
         if folders.is_empty() {
-            self.scanning = false;
             self.scan_asked = false;
             self.local_provider.sign_out();
-            self.local_folders = Vec::new();
-            self.settings.update(cx, |settings, cx| {
-                settings.set_local_folders(Vec::new(), cx)
-            });
-            self.local_client = None;
-            self.local_catalog = None;
-            self.local_capabilities = Capabilities::NONE;
-            self.local_task = None;
-            cx.notify();
-            cx.emit(SessionEvent::LocalChanged);
-            return;
+            if !self.local_folders.is_empty() {
+                self.local_folders = Vec::new();
+                self.settings.update(cx, |settings, cx| {
+                    settings.set_local_folders(Vec::new(), cx)
+                });
+            }
+            // No early return: the local provider still signs in with no roots, so the
+            // imported playlists it keeps stay reachable with no files on disk.
         }
 
         let provider = self.local_provider.clone();

@@ -90,6 +90,9 @@ pub struct Detail {
     album: Option<Album>,
     playlist: Option<Playlist>,
     tracks: Vec<Track>,
+    /// The import status of each row in `tracks`, aligned by index, for a playlist imported
+    /// from another service.
+    statuses: Vec<Option<music::ImportStatus>>,
     continuation: Option<String>,
     also_like: Vec<Album>,
     similar: Vec<SavedArtist>,
@@ -238,6 +241,7 @@ impl Detail {
             album: None,
             playlist: None,
             tracks: Vec::new(),
+            statuses: Vec::new(),
             continuation: None,
             also_like: Vec::new(),
             similar: Vec::new(),
@@ -282,6 +286,12 @@ impl Detail {
 
     pub fn tracks(&self) -> &[Track] {
         &self.tracks
+    }
+
+    /// The import status of each row in [`Detail::tracks`], aligned by index. Empty when the
+    /// page is not an imported playlist.
+    pub fn statuses(&self) -> &[Option<music::ImportStatus>] {
+        &self.statuses
     }
 
     /// What the provider lists as related to the page's album, with more from the same
@@ -683,6 +693,7 @@ impl Detail {
                     })
                     .cloned()
                     .collect();
+                self.statuses.clear();
                 self.continuation = None;
                 self.fill(cx);
             }
@@ -697,6 +708,7 @@ impl Detail {
                 self.header = Some(playlist_header(&playlist));
                 self.playlist = Some(playlist);
                 self.tracks = detail.tracks.clone();
+                self.statuses = detail.statuses.clone();
                 self.continuation = detail.continuation.clone();
             }
         }
@@ -720,6 +732,7 @@ impl Detail {
         self.album = None;
         self.playlist = None;
         self.tracks.clear();
+        self.statuses.clear();
         self.continuation = None;
         self.also_like.clear();
         self.similar.clear();

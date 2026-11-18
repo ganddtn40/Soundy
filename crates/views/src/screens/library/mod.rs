@@ -11,6 +11,7 @@ use crate::chrome::{Chrome, Searchable, Toolbar, Tooled};
 use crate::shared::confirm::{Confirm, Kind};
 use crate::shared::menus::{ItemMenu, liked_menu, new_playlist_menu};
 use crate::shared::playlist_editor::{Edit, PlaylistEditor};
+use crate::shared::spotify_import::SpotifyImport;
 
 use gpui::accesskit::Role;
 use gpui::prelude::*;
@@ -1422,8 +1423,19 @@ impl Tooled for LibraryView {
                 .into_any_element()
         });
 
+        let import = (self.section == Section::Playlists).then(|| {
+            Button::new("import-spotify-playlist")
+                .icon("icons/spotify.svg")
+                .tooltip("menu-import-from-spotify")
+                .small()
+                .ghost()
+                .on_click(|_, window, cx| SpotifyImport::open(window, cx))
+                .into_any_element()
+        });
+
         let mut tools = Vec::new();
         tools.extend(create);
+        tools.extend(import);
         let switchable = !self.section.listing();
         tools.extend(switchable.then(|| {
             tools::views(&self.popovers, self.mode(), move |mode, cx| {

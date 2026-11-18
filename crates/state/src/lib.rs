@@ -11,6 +11,7 @@ mod equalizer;
 mod genre;
 mod history;
 mod home;
+mod import;
 mod library;
 mod links;
 mod listening;
@@ -59,6 +60,7 @@ pub use equalizer::{DeviceRule, Equalizer, RuleDevice, Sound};
 pub use genre::{GenreDetails, Genres};
 pub use history::{History, HistoryState};
 pub use home::Home;
+pub use import::{Import, ImportEvent, ImportReport, Stage as ImportStage};
 pub use library::{
     Addition, CoverEdit, Leaving, Library, LibraryEvent, LibraryPart, LibraryState, Problem, Ready,
     Shelf, cover_problem,
@@ -233,6 +235,7 @@ pub struct Sonora {
     pub soloist: Entity<Soloist>,
     pub equalizer: Entity<Equalizer>,
     pub library: Entity<Library>,
+    pub imports: Entity<Import>,
     pub links: Entity<Links>,
     pub listening: Entity<Listening>,
     pub history: Entity<History>,
@@ -306,6 +309,7 @@ pub fn init(
     .detach();
     let cache = storage::Cache::standard();
     let library = cx.new(|cx| Library::new(session.clone(), io.clone(), cache, cx));
+    let imports = cx.new(|cx| Import::new(session.clone(), library.clone(), cx));
     let queue = cx.new(|cx| Queue::new(session.clone(), settings.clone(), cx));
     // Playback starts no engine until a provider is up, so the saved device is handed over
     // before any stream opens.
@@ -445,6 +449,7 @@ pub fn init(
         soloist,
         equalizer,
         library,
+        imports,
         links,
         listening,
         history,
