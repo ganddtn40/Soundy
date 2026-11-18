@@ -3,8 +3,8 @@
   <id>app.soundy.player</id>
 
   <name>Soundy</name>
-  <developer id="app.soundy">
-    <name>Soundy</name>
+  <developer id="github.com.ganddtn40">
+    <name>ganddtn40</name>
   </developer>
   <keywords>
     <keyword>music</keyword>
@@ -16,7 +16,7 @@
 
   <metadata_license>MIT</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <url type="homepage">https://github.com/sonorahq/sonora</url>
+  <url type="homepage">https://github.com/ganddtn40/soundy</url>
 
   <supports>
     <control>pointing</control>
@@ -26,9 +26,9 @@
 
   <description>
     <p>
-      Soundy is a lightweight native music player built with Rust and GPUI. It is a fork of
-      Sonora and keeps its provider integrations, lyrics, artist pages, playlists and system
-      media controls.
+      Soundy is a lightweight native music player built with Rust and GPUI. It keeps the
+      provider integrations, lyrics, artist pages, playlists and system media controls of the
+      Sonora codebase it builds on.
     </p>
   </description>
 
