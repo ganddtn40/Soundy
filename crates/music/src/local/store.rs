@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use rusqlite::{Connection, OptionalExtension as _, params};
@@ -12,6 +13,9 @@ pub struct Stored {
     pub modified_at: i64,
     /// The picture the listener gave the playlist, if any.
     pub cover: Option<PathBuf>,
+    /// Whether that picture was drawn from the playlist's own artwork rather than chosen by
+    /// the listener. A generated one may be rebuilt when a later pass finds more art.
+    pub cover_generated: bool,
     /// What the playlist was imported from, when it was.
     pub imported: Option<ImportedRow>,
 }
@@ -28,6 +32,15 @@ pub struct ImportedRow {
     pub imported_at: i64,
     pub total: u32,
     pub duplicates: u32,
+}
+
+/// One row's newly found artwork and length. `None` leaves that field as it is stored, so a
+/// second pass can fill a length without touching a picture the export already gave.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EntryArt {
+    pub position: u32,
+    pub cover: Option<String>,
+    pub duration: Option<Duration>,
 }
 
 /// Which local favorites table a star lands in.
@@ -134,7 +147,7 @@ impl Store {
             .prepare(
                 "SELECT p.id, p.name, p.modified_at, c.path,
                         i.source, i.source_id, i.description, i.owner, i.source_url,
-                        i.cover_url, i.imported_at, i.total, i.duplicates
+                        i.cover_url, i.imported_at, i.total, i.duplicates, i.cover_generated
                  FROM playlists p
                  LEFT JOIN playlist_covers c ON c.playlist_id = p.id
                  LEFT JOIN imported_playlists i ON i.playlist_id = p.id
@@ -154,7 +167,7 @@ impl Store {
             .query_row(
                 "SELECT p.id, p.name, p.modified_at, c.path,
                         i.source, i.source_id, i.description, i.owner, i.source_url,
-                        i.cover_url, i.imported_at, i.total, i.duplicates
+                        i.cover_url, i.imported_at, i.total, i.duplicates, i.cover_generated
                  FROM playlists p
                  LEFT JOIN playlist_covers c ON c.playlist_id = p.id
                  LEFT JOIN imported_playlists i ON i.playlist_id = p.id
@@ -372,6 +385,63 @@ impl Store {
         Ok(previous.map(PathBuf::from))
     }
 
+    /// Records whether the playlist's own picture was drawn from its tracks. A listener's own
+    /// choice clears the mark, so a later artwork pass leaves it alone.
+    pub fn set_cover_generated(&self, id: &str, generated: bool) -> Result<()> {
+        self.open()?
+            .execute(
+                "UPDATE imported_playlists SET cover_generated = ? WHERE playlist_id = ?",
+                params![i64::from(generated), id],
+            )
+            .context("cannot remember how a playlist cover was made")?;
+        Ok(())
+    }
+
+    /// Writes the pictures and lengths a second artwork pass found for rows that had none. Only
+    /// the named rows change, in one transaction, so a list cannot be read half-updated.
+    pub fn set_entry_art(&self, id: &str, changes: &[EntryArt]) -> Result<()> {
+        if changes.is_empty() {
+            return Ok(());
+        }
+        let mut connection = self.open()?;
+        let transaction = connection
+            .transaction()
+            .context("cannot update the imported artwork")?;
+        for change in changes {
+            match (change.cover.as_deref(), change.duration) {
+                (Some(cover), Some(duration)) => transaction.execute(
+                    "UPDATE imported_entries SET cover = ?, duration_ms = ?
+                     WHERE playlist_id = ? AND position = ?",
+                    params![
+                        cover,
+                        duration.as_millis().min(i64::MAX as u128) as i64,
+                        id,
+                        i64::from(change.position)
+                    ],
+                ),
+                (Some(cover), None) => transaction.execute(
+                    "UPDATE imported_entries SET cover = ? WHERE playlist_id = ? AND position = ?",
+                    params![cover, id, i64::from(change.position)],
+                ),
+                (None, Some(duration)) => transaction.execute(
+                    "UPDATE imported_entries SET duration_ms = ?
+                     WHERE playlist_id = ? AND position = ?",
+                    params![
+                        duration.as_millis().min(i64::MAX as u128) as i64,
+                        id,
+                        i64::from(change.position)
+                    ],
+                ),
+                (None, None) => continue,
+            }
+            .context("cannot update an imported entry")?;
+        }
+        transaction
+            .commit()
+            .context("cannot update the imported artwork")?;
+        Ok(())
+    }
+
     pub fn add(&self, id: &str, track_id: &str) -> Result<()> {
         let connection = self.open()?;
         let position: i64 = connection
@@ -507,6 +577,7 @@ fn stored(row: &rusqlite::Row<'_>) -> rusqlite::Result<Stored> {
         name: row.get(1)?,
         modified_at: row.get(2)?,
         cover: row.get::<_, Option<String>>(3)?.map(PathBuf::from),
+        cover_generated: row.get::<_, Option<i64>>(13)?.unwrap_or_default() != 0,
         imported,
     })
 }

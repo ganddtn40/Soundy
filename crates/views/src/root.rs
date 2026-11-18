@@ -39,8 +39,8 @@ use crate::shared::widevine::WidevinePrompt;
 use crate::shells::Shell;
 use crate::shells::workspace::Workspace;
 use crate::{
-    Adaptive, ArtistView, DetailView, EqualizerView, FullscreenView, GenreView, HistoryView,
-    HomeView, LibraryView, LoginView, SettingsView, SongView, UserView,
+    Adaptive, ArtistView, DetailView, DiscoverView, EqualizerView, FullscreenView, GenreView,
+    HistoryView, HomeView, LibraryView, LoginView, SettingsView, SongView, UserView,
 };
 
 /// How much smaller than its size the fullscreen player starts as it opens, zooming up to fill
@@ -68,6 +68,7 @@ struct Screens {
     playlist_detail: Option<Entity<Detail>>,
     search: Entity<SearchView>,
     genres: Entity<Genres>,
+    discover: Entity<DiscoverView>,
     genre: Option<Entity<GenreView>>,
     genre_detail: Option<Entity<GenreDetails>>,
     /// The settings pages' view, whose search the settings header draws.
@@ -277,6 +278,7 @@ impl Root {
         })
         .detach();
         let genres = cx.new(|cx| Genres::new(session.clone(), io.clone(), cx));
+        let discover = cx.new(|cx| DiscoverView::new(genres.clone(), cx));
         let search = cx.new(|cx| {
             SearchView::new(
                 queries,
@@ -418,6 +420,7 @@ impl Root {
                 playlist_detail: None,
                 search,
                 genres,
+                discover,
                 genre: None,
                 genre_detail: None,
                 settings,
@@ -714,7 +717,11 @@ impl Root {
                 let history = Sonora::global(cx).history.clone();
                 Box::new(move |cx| matches!(history.read(cx).state(), HistoryState::Loading))
             }
-            Destination::Library(_) => {
+            Destination::Discover => {
+                let discover = self.screens.discover.clone();
+                Box::new(move |cx| discover.read(cx).is_loading(cx))
+            }
+            Destination::Library(_) | Destination::Favorites | Destination::Downloads => {
                 let session = Sonora::global(cx).session.clone();
                 let streaming = shelf(Shelf::Streaming);
                 let local = shelf(Shelf::Local);
@@ -760,10 +767,15 @@ impl Root {
                 let history = Sonora::global(cx).history.clone();
                 history.update(cx, |history, cx| history.reload(cx));
             }
-            Destination::Library(_) => library.update(cx, |library, cx| {
-                library.reload(Shelf::Streaming, cx);
-                library.reload(Shelf::Local, cx);
-            }),
+            Destination::Discover => self
+                .screens
+                .discover
+                .update(cx, |discover, cx| discover.refresh(cx)),
+            Destination::Library(_) | Destination::Favorites | Destination::Downloads => library
+                .update(cx, |library, cx| {
+                    library.reload(Shelf::Streaming, cx);
+                    library.reload(Shelf::Local, cx);
+                }),
             Destination::Album(id) => {
                 if let Some(detail) = self.screens.album_detail.clone() {
                     detail.update(cx, |detail, cx| detail.refresh(cx));
@@ -1011,11 +1023,33 @@ impl Root {
         let content: AnyView = match destination {
             Destination::Fullscreen => return,
             Destination::Home => self.screens.home.clone().into(),
+            Destination::Discover => {
+                self.screens
+                    .discover
+                    .update(cx, |discover, cx| discover.open(cx));
+                self.screens.discover.clone().into()
+            }
             Destination::History => {
                 let history = self.screens.history.clone();
                 history.update(cx, |history, cx| history.refresh(cx));
                 toolbar = Some(history.read(cx).toolbar());
                 history.into()
+            }
+            Destination::Favorites => {
+                self.screens
+                    .library
+                    .update(cx, |library, cx| library.show_filtered(true, false, cx));
+                let library = self.screens.library.clone();
+                toolbar = Some(library.read(cx).toolbar());
+                library.into()
+            }
+            Destination::Downloads => {
+                self.screens
+                    .library
+                    .update(cx, |library, cx| library.show_filtered(false, true, cx));
+                let library = self.screens.library.clone();
+                toolbar = Some(library.read(cx).toolbar());
+                library.into()
             }
             Destination::Library(tab) => {
                 self.screens

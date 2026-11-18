@@ -76,7 +76,7 @@ pub fn register(lingers: bool, cx: &mut App) {
                     Destination::Album(id) | Destination::Playlist(id) => {
                         library.refresh(Shelf::of(&id), cx)
                     }
-                    Destination::Library(_) => {
+                    Destination::Library(_) | Destination::Favorites | Destination::Downloads => {
                         library.refresh(Shelf::Streaming, cx);
                         library.refresh(Shelf::Local, cx);
                     }

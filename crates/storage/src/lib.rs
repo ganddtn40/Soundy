@@ -14,8 +14,12 @@ mod tests {
     use super::*;
 
     fn columns(connection: &Connection) -> Vec<String> {
+        columns_of(connection, "imported_entries")
+    }
+
+    fn columns_of(connection: &Connection, table: &str) -> Vec<String> {
         connection
-            .prepare("PRAGMA table_info(imported_entries)")
+            .prepare(&format!("PRAGMA table_info({table})"))
             .unwrap()
             .query_map([], |row| row.get(1))
             .unwrap()
@@ -82,6 +86,66 @@ mod tests {
                 .any(|column| column == "external_url")
         );
     }
+
+    #[test]
+    fn the_cache_database_opens_without_the_imported_tables() {
+        let dir = tempfile::tempdir().unwrap();
+        // The migration runs for every database; the cache schema has no imported tables,
+        // and asking it to add a column to one used to fail every cache read.
+        let cache = Cache::at(dir.path().join("cache.sqlite"));
+        cache.write("key", "value", 1).unwrap();
+        assert_eq!(
+            cache.read("key", |text| text.to_owned()).unwrap(),
+            Some("value".to_owned())
+        );
+    }
+
+    #[test]
+    fn an_old_imported_playlist_row_gains_the_generated_cover_marker() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("state.sqlite");
+        {
+            let connection = Connection::open(&path).unwrap();
+            connection
+                .execute_batch(
+                    "CREATE TABLE imported_playlists (
+                        playlist_id TEXT PRIMARY KEY,
+                        source TEXT NOT NULL,
+                        source_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        owner TEXT NOT NULL,
+                        source_url TEXT NOT NULL,
+                        cover_url TEXT,
+                        imported_at INTEGER NOT NULL,
+                        total INTEGER NOT NULL,
+                        duplicates INTEGER NOT NULL DEFAULT 0
+                    );
+                    INSERT INTO imported_playlists
+                        (playlist_id, source, source_id, description, owner, source_url,
+                         imported_at, total)
+                    VALUES ('list', 'csv', 'abc', '', '', '', 1000, 3);",
+                )
+                .unwrap();
+        }
+
+        let database = Database::at(path);
+        let connection = database.open().unwrap();
+        assert!(
+            columns_of(&connection, "imported_playlists")
+                .iter()
+                .any(|column| column == "cover_generated")
+        );
+        // An existing row is not retroactively called generated: its picture may be the
+        // listener's own, and a later artwork pass must not overwrite it.
+        let generated: i64 = connection
+            .query_row(
+                "SELECT cover_generated FROM imported_playlists",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(generated, 0);
+    }
 }
 
 const SCHEMA: &str = "
@@ -138,7 +202,8 @@ const SCHEMA: &str = "
         cover_url TEXT,
         imported_at INTEGER NOT NULL,
         total INTEGER NOT NULL,
-        duplicates INTEGER NOT NULL DEFAULT 0
+        duplicates INTEGER NOT NULL DEFAULT 0,
+        cover_generated INTEGER NOT NULL DEFAULT 0
     );
     CREATE UNIQUE INDEX IF NOT EXISTS imported_playlists_source
         ON imported_playlists (source, source_id);
@@ -220,24 +285,47 @@ impl Database {
     }
 }
 
-/// Adds the imported-entry columns a schema change introduced to an existing database. A fresh
-/// database already has them, so this is a no-op there.
+/// Adds the columns a schema change introduced to an existing database. A fresh database
+/// already has them, so this is a no-op there. Each column is added in place, so an old
+/// database keeps every row it had.
 fn ensure_import_columns(connection: &Connection) -> Result<()> {
+    add_missing_columns(connection, "imported_entries", &[("external_url", "TEXT")])?;
+    add_missing_columns(
+        connection,
+        "imported_playlists",
+        &[("cover_generated", "INTEGER NOT NULL DEFAULT 0")],
+    )
+}
+
+fn add_missing_columns(
+    connection: &Connection,
+    table: &str,
+    wanted: &[(&str, &str)],
+) -> Result<()> {
     let mut query = connection
-        .prepare("PRAGMA table_info(imported_entries)")
-        .context("cannot inspect the imported entries table")?;
-    let columns: Vec<String> = query
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .with_context(|| format!("cannot inspect the {table} table"))?;
+    let present: Vec<String> = query
         .query_map([], |row| row.get::<_, String>(1))
-        .context("cannot read the imported entries columns")?
+        .with_context(|| format!("cannot read the {table} columns"))?
         .collect::<rusqlite::Result<_>>()
-        .context("cannot read the imported entries columns")?;
-    if !columns.is_empty() && !columns.iter().any(|column| column == "external_url") {
+        .with_context(|| format!("cannot read the {table} columns"))?;
+    // This runs for every database this crate opens, and the cache database has neither
+    // imported table. An empty column list means the table is not here; the schema that
+    // creates it always creates the current columns, so there is nothing to add.
+    if present.is_empty() {
+        return Ok(());
+    }
+    for (column, definition) in wanted {
+        if present.iter().any(|name| name == column) {
+            continue;
+        }
         connection
             .execute(
-                "ALTER TABLE imported_entries ADD COLUMN external_url TEXT",
+                &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
                 [],
             )
-            .context("cannot add the external playlist link column")?;
+            .with_context(|| format!("cannot add the {column} column"))?;
     }
     Ok(())
 }

@@ -109,6 +109,17 @@ impl Genres {
         self.error.as_deref()
     }
 
+    /// Fetches the genres again, for a page's Refresh. A fetch already under way is left to
+    /// finish, since two sets of genres would race.
+    pub fn refresh(&mut self, cx: &mut Context<Self>) {
+        if self.loading {
+            return;
+        }
+        self.genres = Rc::new(Vec::new());
+        self.error = None;
+        self.load(cx);
+    }
+
     /// Fetches the genres unless they are loaded or loading. Before a sign-in it only marks them
     /// wanted, and the sign-in fetches them.
     pub fn load(&mut self, cx: &mut Context<Self>) {

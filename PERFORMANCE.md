@@ -15,75 +15,137 @@ projection. Re-run the commands below on your machine before comparing figures.
 ## Method
 
 1. Build with the release profile: `cargo build --release -p sonora`.
-2. Start `target\release\soundy.exe` and leave it on the default screen without playing anything.
-   Wait for the window and the first-run work to settle. Record the profile state with the
-   numbers; a signed-in profile with imported playlists is not the same as a fresh one.
-3. Measure the `soundy` process once a second and report the median, not the lowest sample. The
-   table uses a 45 second window after a 15 second settle.
-4. For playback, use a local file so no network buffering is involved, and set repeat one so the
-   track stays active for the whole window.
-5. Record the executable size with `Get-Item target\release\soundy.exe`.
-6. Record startup as the time from `Start-Process` to the first non-zero `MainWindowHandle`, not
-   from log timestamps.
+2. Start `target\release\soundy.exe`, leave the window restored at 936×648 and do not minimize it.
+   A minimized window lets Windows trim the working set and understates idle memory.
+3. Record the profile state with the numbers; a signed-in profile with imported playlists is not
+   the same as a fresh one. This run used a guest YouTube Music session with no local folders and
+   one imported playlist (`import-test`, five rows, four playable).
+4. Sample `Get-Process` once a second and report the settled figure, not the lowest sample. The
+   tables below use a 60-second window after the window has settled.
+5. For playback, play a provider stream for 60 seconds, then pause and sample again. Local-file
+   playback was not measured on this profile because it has no local folder configured.
+6. Record the executable size with `Get-Item target\release\soundy.exe`.
+7. Record startup as the time from `Start-Process` to the first non-zero `MainWindowHandle`, not
+   from log timestamps. Poll with a 5 ms sleep and take the median of three runs.
 
-The measurement script used for the table is in `scripts/measure-soundy.ps1`.
+The measurement script is in `scripts/measure-soundy.ps1`.
 
 ## Results
 
-Measured on Windows 11 Home 25H2 (build 26200), x64, with the `soundy` 1.0.0 release executable
-built from this tree on 18 November 2026. This is the final build, including the playlist importer.
-The profile was **not fresh**: YouTube Music was signed in, five imported playlists were present
-(one of them 1,000 rows) and a two-track local folder had been scanned. That is a realistic
-profile, but it carries more state than the earlier fresh-profile runs.
+Measured on Windows 11 x64 with the 1.0.0 release executable built from this tree on
+18 November 2026 (`soundy.exe`, 91,254,784 bytes,
+SHA-256 `FBEA4A63A1B6C4D5C1F8FAE4F12F751D1384C7D77A76B13ACFFD9DE8D81A8CCD`).
 
-Idle means the Home screen with nothing playing, sampled once a second for 45 seconds after a 15
-second settle. Playback means the Songs screen playing a 30-second local MP3 with embedded album
-art, followed by an 8-second local WAV, with repeat all on, sampled the same way. Startup is the
-median of three runs from `Start-Process` to the first non-zero `MainWindowHandle`.
+| State | Working set | Private commit | CPU over 60 s | Threads | Handles |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Fresh launch, Home, 5 s after start | 110.2 MB | 93.1 MB | — | — | — |
+| Fresh launch, Home, settled 60 s | 110.1 MB | 98.7 MB | 0.344 s (≈0.6% of one core) | 42 | 1,312 |
+| Playing a YouTube Music stream (130 kbps AAC) | 119.9 MB | 99.4 MB | 1.969 s (≈3.3% of one core) | 41 | 1,316 |
+| Paused after that stream | 119.9 MB | 105.2 MB | 0.391 s (≈0.7% of one core) | 41 | 1,316 |
 
-| Metric | Idle | Playback |
-| --- | --- | --- |
-| Median resident set (RSS) | 111.7 MB (45 samples, peak 111.7 MB) | 128.3 MB (peak 132.3 MB) |
-| Median private working set | 100.0 MB | 102.4 MB |
-| Median CPU | 0.00% | 0.13% |
-| Startup to first window | 193 ms median (192–245 ms across 3 runs) | — |
-| `soundy.exe` | 90,669,056 bytes (86.47 MiB) | — |
+Startup to first visible window, three cold launches of the same binary: **237 ms, 195 ms,
+213 ms** (median 213 ms). The window appears before the provider home request resolves; the
+shelves fill in afterwards without blocking input.
+
+The working set is flat across the 60-second samples (±0.2 MB), which is the useful signal for a
+leak: no growth appeared while idle or while streaming. The private commit moved between 93 and
+105 MB depending on which artwork and stream buffers were live, then stayed flat.
 
 ### Against the target
 
-The brief asked for idle resident memory below 100 MB. **Soundy does not meet that target on
-Windows 11: idle RSS measured 111.7 MB.** The number is reported as measured, not rounded down.
+The brief asked for idle memory below 100 MB "where realistic". The result is split:
 
-The private working set — the memory committed to the process rather than shared with DLLs and the
-GPU driver — measured 100.0 MB, so it sits at the target rather than comfortably under it. The RSS
-figure does not support a sub-100 MB claim today.
-
-What the measurements do show:
-
-- Idle CPU is effectively zero: every one of the 45 samples rounded to 0.00%. The app does not
-  poll or redraw while nothing changes.
-- Startup is fast: the window handle exists 192–245 ms after `CreateProcess` (median 193 ms), with
-  no WebView2 process spawned for the default local/YouTube Music path.
-- Playback adds about 17 MB of RSS and about 0.13% of one core for local files, mostly the decoded
-  cover, the spectrum tap and the position updates. This is the cost with the cover on screen; the
-  process falls back toward the idle figure once playback stops.
-- Turning blur off (`{"appearance":{"blur":false,"blur_window":false}}`) changed median RSS by about
-  1 MB (110.6 MB vs 109.8 MB in an earlier pair of runs) and changed CPU not at all, so backdrop
-  blur is not what keeps the process above 100 MB.
+- **Private commit is under 100 MB** when idle (98.7 MB fresh, 93.1 MB shortly after launch).
+- **Working set is about 110 MB**, so the literal 100 MB resident target is missed by roughly
+  10 MB.
 
 The gap is the baseline cost of GPUI rendering through `wgpu` on DX12: the swapchain, the shader
-and pipeline caches, and the GPU driver's allocations all count toward the process. Reaching
-sub-100 MB RSS would need a smaller renderer or a different windowing stack, not tuning of Soundy's
-own data structures. The honest summary is: CPU, startup and playback costs meet the brief; idle
-memory misses the resident-set target by roughly 12 MB.
+and pipeline caches, font and image atlases, and the GPU driver's allocations all count toward
+the process. It is not the importer, the database or the library. Reaching sub-100 MB resident
+would need a smaller renderer or a different windowing stack, not tuning of Soundy's own data
+structures.
+
+CPU is close to the renderer's floor: 0.6% of one core averaged over a minute while idle, and
+about 3.3% while decoding and playing a stream, not a polling loop. Startup is fast because
+there is no WebView2 process and no JavaScript boot for the default local/provider path.
+
+An earlier run of a different build and profile reported 111.7 MB idle RSS with a 100.0 MB
+private working set and a 193 ms median startup. Those numbers are superseded by the table above;
+they are kept here only so older notes are not mistaken for current measurements.
+
+## What keeps it bounded
+
+### Artwork cache (`crates/ui/src/artwork.rs`)
+
+- 16 MB byte budget and 256-item cap, with at least one screenful kept for scroll-back.
+- At most 8 loads pending at once, 2 decoders, and a prefetched cover may occupy only half of the
+  pending slots, so a cover on screen is never starved by off-screen prefetch.
+- Decoded images are bounded to a 4096 px longest edge; large provider covers are resized down
+  rather than held at full resolution.
+- One palette per picture, capped at 4096 tint entries, so the fullscreen player's background
+  colour does not require re-analysing artwork every frame.
+
+Every screen shares this one cache: home shelves, search, recents, albums, artists, playlists,
+the queue, the right panel, the player bar and the fullscreen player. A cover is decoded once.
+
+### Import and enrichment (`crates/music/src/enrich.rs`, `collage.rs`)
+
+- At most 160 album lookups and 80 track lookups per import, with 4 concurrent requests.
+- 12-second request timeout and a 6 MB cap per downloaded cover.
+- Rows already carrying provider artwork are not looked up again; remaining rows are grouped by
+  album so one fetch can serve several tracks.
+- A provider that refuses or throttles is disabled for the rest of that import by a circuit
+  breaker, instead of retrying every row.
+- Collage sources are at most four distinct album pictures, and the 2×2/3/2/1 collage is written
+  once as JPEG rather than kept as decoded bitmaps.
+
+### Database (`crates/storage/src/lib.rs`)
+
+Indexed query paths rather than table scans:
+
+- `plays_scope_time` for recents and statistics windows.
+- `playlist_tracks_order` for ordered playlist reads.
+- `imported_playlists_source` (unique) for import identity and re-import.
+- `imported_entries_order` for ordered imported rows.
+
+The import writes in one transaction per playlist. The state database on this profile is small;
+the artwork cache lives on disk under `%LOCALAPPDATA%\soundy\artwork`, and generated playlist
+covers under `%LOCALAPPDATA%\soundy\playlist-covers`.
+
+### Lists and screens
+
+- Song, album, artist and import lists are virtualized: only visible rows are built and their
+  covers requested.
+- Screens are lazily constructed and reuse the shared `Genres` and provider entities; opening
+  Discover does not re-fetch genres the search page already has.
+- No polling timer runs when the app is idle. The CPU samples above are redraw and compositor
+  work, not background requests.
+
+## Reproducing
+
+```powershell
+# Start from a restored 936×648 window; never maximize with ShowWindow.
+$p = Start-Process .\target\release\soundy.exe -PassThru
+Start-Sleep -Seconds 60
+$p.Refresh()
+"working=$([math]::Round($p.WorkingSet64/1MB,1)) MB private=$([math]::Round($p.PrivateMemorySize64/1MB,1)) MB"
+
+$before = $p.CPU
+Start-Sleep -Seconds 60
+$p.Refresh()
+"cpu over 60 s = $([math]::Round($p.CPU - $before,3)) s"
+```
+
+For startup, poll `MainWindowHandle` after `Start-Process` with a 5 ms sleep and stop the clock
+when it becomes non-zero.
 
 ## Notes and limits
 
-- GPUI renders through `wgpu`, and the GPU driver's memory is not part of the process's resident
-  set. Compare the process's own RSS, not Task Manager's GPU tab.
-- The first minute after launch includes provider and library initialization; the idle sample is
-  taken after that work settles.
-- A blurred backdrop and the rotating vinyl sweep only run in fullscreen while a track plays.
-  They do not run on the default workspace screen or while playback is paused.
-- No upstream baseline was captured before the fork was rebranded. The table measures Soundy
-  itself; it does not claim an improvement over Sonora that was never measured.
+- The profile is realistic but not a fresh-install minimum: it carries one imported playlist and
+  a guest provider session.
+- The measurements are process-level. Shared DLL pages and the GPU driver's own allocations are
+  counted in the working set but not the private commit.
+- No long-duration soak test beyond the 60-second windows is claimed here; the flat samples show
+  no short-term growth, not a proof about multi-hour sessions.
+- Figures are for this machine and this binary. Rebuilding with a different GPU driver, Windows
+  build or feature set will move them.

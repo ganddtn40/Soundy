@@ -314,13 +314,18 @@ pub(crate) fn dim<F>(cell: &Cell<F>, value: impl Into<SharedString>, muted: Hsla
     said(line(cell, Some(muted)), Location::caller(), value.into())
 }
 
-/// A track length in tabular digits, so the column reads as a monospace strip.
+/// A track length in tabular digits, so the column reads as a monospace strip. A source that
+/// gave no length shows a dash: `0:00` would claim the recording is empty.
 #[track_caller]
 pub(crate) fn length<F>(cell: &Cell<F>, value: Duration, muted: Hsla) -> AnyElement {
+    let text = match value.is_zero() {
+        true => SharedString::from("–"),
+        false => clock(value),
+    };
     said(
         line(cell, Some(muted)).font_features(tabular()),
         Location::caller(),
-        clock(value),
+        text,
     )
 }
 

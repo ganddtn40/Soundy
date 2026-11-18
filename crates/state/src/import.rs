@@ -61,6 +61,14 @@ pub struct ImportReport {
     pub duplicates: u32,
     /// Rows the list carried that could not be read as a track.
     pub skipped: usize,
+    /// Rows that now have a picture, whether the export brought it or it was found.
+    pub artwork: usize,
+    /// Rows that can still show a picture and have none, which is what a retry can change.
+    pub missing_art: usize,
+    /// Rows whose picture or missing length an enrichment lookup supplied.
+    pub enriched: usize,
+    /// Whether a collage or a drawn card became the playlist's own cover.
+    pub collage: bool,
     /// When the import ran, in seconds since the epoch.
     pub imported_at: i64,
 }
@@ -87,6 +95,18 @@ impl ImportReport {
             unmatched: Vec::new(),
             duplicates: data.duplicates,
             skipped: data.skipped,
+            artwork: data
+                .entries
+                .iter()
+                .filter(|entry| entry.cover.is_some())
+                .count(),
+            missing_art: data
+                .entries
+                .iter()
+                .filter(|entry| entry.cover.is_none() && displayable(entry.status))
+                .count(),
+            enriched: 0,
+            collage: false,
             imported_at: data.imported_at,
         };
         for entry in &data.entries {
@@ -105,6 +125,15 @@ impl ImportReport {
     }
 }
 
+/// Whether a row can show artwork at all. An external link or an unavailable row never will,
+/// so a retry must not offer to find one for it.
+fn displayable(status: ImportStatus) -> bool {
+    matches!(
+        status,
+        ImportStatus::Available | ImportStatus::Personal | ImportStatus::Preview
+    )
+}
+
 /// Where an import has got to. The dialog reads this rather than being told, so a redraw for
 /// any other reason never loses its place.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -112,6 +141,8 @@ pub enum Stage {
     Idle,
     Fetching,
     Matching,
+    /// Looking up the pictures and missing lengths the list did not carry.
+    Enriching,
     Saving,
     Done,
     Failed,
@@ -181,7 +212,7 @@ impl Import {
     pub fn active(&self) -> bool {
         matches!(
             self.stage,
-            Stage::Fetching | Stage::Matching | Stage::Saving
+            Stage::Fetching | Stage::Matching | Stage::Enriching | Stage::Saving
         )
     }
 
@@ -235,6 +266,113 @@ impl Import {
         }
         self.cancel.store(true, Ordering::Relaxed);
         cx.notify();
+    }
+
+    /// Whether the last result still has rows without a picture, or rows whose length the
+    /// source never gave, so another look could change something.
+    pub fn can_retry_artwork(&self) -> bool {
+        self.stage == Stage::Done
+            && self
+                .report
+                .as_deref()
+                .is_some_and(|report| report.missing_art > 0)
+    }
+
+    /// Looks again for the pictures and missing lengths of the playlist the last import saved.
+    /// Only the saved rows are read, so nothing is matched or written a second time; the
+    /// playlist's own generated cover is rebuilt when the pass finds more art, and a picture
+    /// the listener chose is left alone. Answers nothing while another import is running.
+    pub fn retry_artwork(&mut self, cx: &mut Context<Self>) {
+        if self.active() {
+            return;
+        }
+        let Some(report) = self.report.clone() else {
+            return;
+        };
+        let Some(local) = self.session.read(cx).local_client() else {
+            return;
+        };
+        let id = report.playlist_id.clone();
+        let cancel = self.cancel.clone();
+        cancel.store(false, Ordering::Relaxed);
+        self.stage = Stage::Enriching;
+        self.read.store(0, Ordering::Relaxed);
+        self.total.store(0, Ordering::Relaxed);
+        self.shown = (0, 0);
+        cx.notify();
+
+        let io = Io::global(cx);
+        let library = self.library.clone();
+        let catalog = self.session.read(cx).catalog(music::LOCAL_PLAYLIST_PREFIX);
+
+        self.task = Some(cx.spawn(async move |this, cx| {
+            let refreshed = join(io.spawn({
+                let local = local.clone();
+                let id = id.clone();
+                let cancel = cancel.clone();
+                async move { local.refresh_imported_art(&id, &cancel).await }
+            }))
+            .await;
+
+            let refresh = match refreshed {
+                Ok(refresh) => refresh,
+                Err(error) => {
+                    this.update(cx, |this, cx| {
+                        // The playlist as saved is still whole, so the result is kept and the
+                        // failure is only logged. A retry that cannot reach a catalogue has
+                        // found nothing; it has not lost anything.
+                        log::warn!("import: the artwork retry could not run: {error:#}");
+                        this.stage = Stage::Done;
+                        cx.notify();
+                    })
+                    .ok();
+                    return;
+                }
+            };
+
+            let cover = join(io.spawn({
+                let local = local.clone();
+                let id = id.clone();
+                async move {
+                    local
+                        .playlist(&id)
+                        .await
+                        .map(|detail| detail.playlist.cover)
+                }
+            }))
+            .await
+            .ok()
+            .flatten();
+
+            this.update(cx, |this, cx| {
+                this.stage = Stage::Done;
+                if let Some(report) = this.report.as_deref().cloned() {
+                    let mut report = report;
+                    if let Some(refresh) = &refresh {
+                        report.artwork = report.artwork.saturating_add(refresh.covers);
+                        report.missing_art = refresh.missing;
+                        report.enriched += refresh.covers + refresh.durations;
+                        report.collage |= refresh.collage;
+                    }
+                    if cover.is_some() {
+                        report.cover = cover;
+                    }
+                    this.report = Some(Arc::new(report));
+                }
+                if let Some(catalog) = catalog {
+                    let changed = id.clone();
+                    // The task runs on the pool; dropping its handle only means nobody waits
+                    // for the page cache to be cleared before the dialog shows the result.
+                    drop(io.spawn(async move { catalog.invalidate_playlist(&changed).await }));
+                }
+                library.update(cx, |library, cx| {
+                    library.imported_playlist_replaced(&id, cx);
+                });
+                cx.notify();
+                cx.emit(ImportEvent::Changed);
+            })
+            .ok();
+        }));
     }
 
     /// Starts importing a Spotify playlist link or URI. This is the only path that can use a
@@ -468,7 +606,7 @@ impl Import {
                     }
                 })
                 .await;
-            let (playlist, local_matches) = match computed {
+            let (mut playlist, local_matches) = match computed {
                 Ok(value) => value,
                 Err(error) => {
                     this.update(cx, |this, cx| {
@@ -661,6 +799,54 @@ impl Import {
                 return;
             }
 
+            // An export usually carries names and lengths but no picture; a pasted list may
+            // carry neither the picture nor the length. Rows are grouped by album, so this is
+            // a few dozen lookups for a large list rather than one per song. A Spotify link
+            // already brought its own artwork and is left alone.
+            let mut enrichment = music::enrich::Report::default();
+            if matches!(playlist.source.as_str(), "csv" | "manual") {
+                this.update(cx, |this, cx| {
+                    this.stage = Stage::Enriching;
+                    this.read.store(0, Ordering::Relaxed);
+                    this.total.store(0, Ordering::Relaxed);
+                    this.shown = (0, 0);
+                    cx.notify();
+                })
+                .ok();
+
+                let enricher = music::enrich::Enricher::public();
+                let entries = playlist.entries.clone();
+                let cancelled = cancel.clone();
+                let done = read.clone();
+                let all = total.clone();
+                let computed = io
+                    .spawn(async move {
+                        let mut entries = entries;
+                        let progress = |done_at: usize, total_at: usize| {
+                            done.store(done_at, Ordering::Relaxed);
+                            all.store(total_at, Ordering::Relaxed);
+                        };
+                        let report = enricher.enrich(&mut entries, &cancelled, &progress).await;
+                        (entries, report)
+                    })
+                    .await;
+                match computed {
+                    Ok((entries, report)) => {
+                        playlist.entries = entries;
+                        enrichment = report;
+                    }
+                    Err(error) => {
+                        log::warn!("import: the artwork lookups could not run: {error}");
+                    }
+                }
+            }
+
+            if cancel.load(Ordering::Relaxed) {
+                this.update(cx, |this, cx| this.fail(ImportFailure::Cancelled, cx))
+                    .ok();
+                return;
+            }
+
             this.update(cx, |this, cx| {
                 this.stage = Stage::Saving;
                 cx.notify();
@@ -693,6 +879,40 @@ impl Import {
                 }
             };
 
+            // A playlist imported from a list has no picture of its own yet. The local client
+            // builds one from the first four albums, or draws the emerald card when the list
+            // brought none, and keeps it as the playlist's own cover so the header, list and
+            // player agree. A link import already carries the service's cover and keeps it.
+            let mut collage = false;
+            let mut own_cover = None;
+            if data.cover_url.is_none() {
+                match join(io.spawn({
+                    let local = local.clone();
+                    let id = playlist_id.clone();
+                    async move { local.build_import_cover(&id).await }
+                }))
+                .await
+                {
+                    Ok(built) => collage = built,
+                    Err(error) => log::warn!("import: cannot build the playlist cover: {error:#}"),
+                }
+                if collage {
+                    own_cover = join(io.spawn({
+                        let local = local.clone();
+                        let id = playlist_id.clone();
+                        async move {
+                            local
+                                .playlist(&id)
+                                .await
+                                .map(|detail| detail.playlist.cover)
+                        }
+                    }))
+                    .await
+                    .ok()
+                    .flatten();
+                }
+            }
+
             // The page read before the save is now out of date, and a second import of the
             // same source replaces the playlist under the same id. Drop the cached page so
             // the page opens on the rows this import wrote, and let an open page read them.
@@ -704,7 +924,13 @@ impl Import {
                     .ok();
             }
 
-            let report = Arc::new(ImportReport::of(&data, playlist_id));
+            let mut report = ImportReport::of(&data, playlist_id);
+            report.enriched = enrichment.enriched();
+            report.collage = collage;
+            if own_cover.is_some() {
+                report.cover = own_cover;
+            }
+            let report = Arc::new(report);
             this.update(cx, |this, cx| {
                 this.stage = Stage::Done;
                 this.report = Some(report);
@@ -850,6 +1076,8 @@ mod tests {
 
     #[test]
     fn a_report_counts_each_status_and_lists_only_unplayable_rows() {
+        let mut first = entry(0, ImportStatus::Available);
+        first.cover = Some("https://art.example/one.jpg".to_owned());
         let data = ImportedPlaylistData {
             source: "m3u".to_owned(),
             source_id: "list".to_owned(),
@@ -857,7 +1085,7 @@ mod tests {
             source_url: "file:///list.m3u".to_owned(),
             imported_at: 1_000,
             entries: vec![
-                entry(0, ImportStatus::Available),
+                first,
                 entry(1, ImportStatus::Personal),
                 entry(2, ImportStatus::Preview),
                 entry(3, ImportStatus::External),
@@ -878,6 +1106,10 @@ mod tests {
         assert_eq!(report.unavailable, 1);
         assert_eq!(report.duplicates, 2);
         assert_eq!(report.skipped, 1);
+        assert_eq!(report.artwork, 1);
+        assert_eq!(report.missing_art, 2);
+        assert_eq!(report.enriched, 0);
+        assert!(!report.collage);
         assert_eq!(
             report
                 .unmatched

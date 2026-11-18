@@ -174,6 +174,9 @@ pub struct SourceEntry {
     pub duration: Duration,
     pub cover: Option<String>,
     pub isrc: Option<String>,
+    /// The year the release came out, when the export named a release date. It is kept for
+    /// artwork and metadata matching only; a row never claims a date its source did not give.
+    pub release_year: Option<i32>,
     pub url: Option<String>,
     /// A local file an M3U named. It is matched by path before title and artist are considered.
     pub local_path: Option<PathBuf>,
@@ -389,12 +392,17 @@ pub fn parse_m3u(bytes: &[u8], folder: &Path, name: &str) -> Result<SourcePlayli
     })
 }
 
-/// Reads a CSV with `Title`, `Artist`, `Album` and `Duration` columns. The header may be in any
-/// order or case; a headerless file is read in that order. Quoted fields, commas and line breaks
-/// inside quotes are understood. A row with no title is counted as skipped, never invented.
+/// Reads a CSV playlist. The header may be in any order or case and may use the column names
+/// Spotify, Exportify, Soundiiz, TuneMyMusic and a hand-made sheet write: `Track Name`, `Artist
+/// Name(s)`, `Album Name`, `Track Duration (ms)`, `Album Image URL`, `ISRC`, `Track URI`, `Added
+/// At` and `Release Date` all map to their field. Comma, semicolon and tab files are read, with
+/// or without a byte order mark. A headerless file is read in the classic
+/// `Title,Artist,Album,Duration` order. A row with no title is counted as skipped, never
+/// invented; a missing duration stays unknown rather than becoming zero.
 pub fn parse_csv(bytes: &[u8], name: &str) -> Result<SourcePlaylist, ImportFailure> {
     let text = decode(bytes);
-    let rows = csv_rows(&text);
+    let delimiter = Delimiter::of(&text);
+    let rows = csv_rows(&text, delimiter);
     let mut rows = rows
         .into_iter()
         .filter(|row| row.iter().any(|cell| !cell.trim().is_empty()));
@@ -406,25 +414,59 @@ pub fn parse_csv(bytes: &[u8], name: &str) -> Result<SourcePlaylist, ImportFailu
     let mut entries = Vec::new();
     let mut skipped = 0;
     let mut read = |row: &[String]| {
-        let (title, artists, album, duration) = match &header {
-            Some(header) => (
-                cell(row, header.title),
-                cell(row, header.artists),
-                cell(row, header.album),
-                cell(row, header.duration),
-            ),
-            None => (cell(row, 0), cell(row, 1), cell(row, 2), cell(row, 3)),
-        };
-        let title = title.trim();
+        let title = match &header {
+            Some(header) => cell(row, header.title),
+            None => cell(row, 0),
+        }
+        .trim();
         if title.is_empty() {
             skipped += 1;
             return;
         }
+
+        let (artists, album, duration, cover, isrc, source, url, added_at, release) = match &header
+        {
+            Some(header) => (
+                cell(row, header.artists),
+                cell(row, header.album),
+                (cell(row, header.duration), header.unit),
+                cell(row, header.cover),
+                cell(row, header.isrc),
+                cell(row, header.source),
+                cell(row, header.url),
+                cell(row, header.added_at),
+                cell(row, header.release),
+            ),
+            None => (
+                cell(row, 1),
+                cell(row, 2),
+                (cell(row, 3), Unit::Seconds),
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+            ),
+        };
+
+        let (source_id, source_url) = match spotify_track(source) {
+            (Some(id), url) => (Some(id), url),
+            // A `Track URL` column may hold the Spotify page instead of an id column.
+            _ => spotify_track(url),
+        };
+        let url = source_url.or_else(|| web_url(url));
         entries.push(SourceEntry {
+            id: source_id,
             title: title.to_owned(),
             artists: artists.trim().to_owned(),
             album: album.trim().to_owned(),
-            duration: parse_duration(duration).unwrap_or_default(),
+            duration: duration_value(duration.0, duration.1),
+            cover: web_url(cover),
+            isrc: non_empty(isrc),
+            release_year: release_year(release),
+            url,
+            added_at: crate::iso_8601_to_epoch(non_empty(added_at).as_deref()),
             ..Default::default()
         });
     };
@@ -588,36 +630,203 @@ fn cell(row: &[String], slot: usize) -> &str {
     row.get(slot).map(String::as_str).unwrap_or_default()
 }
 
+/// How a CSV column separates cells. A sheet and an export disagree on this often enough that
+/// the first row decides it before any cell is read.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Delimiter {
+    Comma,
+    Semicolon,
+    Tab,
+}
+
+impl Delimiter {
+    /// The delimiter the first line uses most, ignoring separators inside quoted cells.
+    fn of(text: &str) -> Self {
+        let mut counts = [0_usize; 3];
+        let mut quoted = false;
+        for letter in text.chars() {
+            match letter {
+                '"' => quoted = !quoted,
+                '\n' | '\r' if !quoted => break,
+                ',' if !quoted => counts[0] += 1,
+                ';' if !quoted => counts[1] += 1,
+                '\t' if !quoted => counts[2] += 1,
+                _ => {}
+            }
+        }
+        match (counts[0], counts[1], counts[2]) {
+            (comma, semicolon, tab) if tab > comma && tab > semicolon => Self::Tab,
+            (comma, semicolon, _) if semicolon > comma => Self::Semicolon,
+            _ => Self::Comma,
+        }
+    }
+
+    fn letter(self) -> char {
+        match self {
+            Self::Comma => ',',
+            Self::Semicolon => ';',
+            Self::Tab => '\t',
+        }
+    }
+}
+
+/// Whether a duration column counts seconds or milliseconds. Exportify writes
+/// `Track Duration (ms)`; a hand-made sheet writes `3:45` or a whole number of seconds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Unit {
+    Seconds,
+    Milliseconds,
+}
+
 #[derive(Clone, Copy)]
 struct Header {
     title: usize,
     artists: usize,
     album: usize,
     duration: usize,
+    unit: Unit,
+    cover: usize,
+    isrc: usize,
+    source: usize,
+    url: usize,
+    added_at: usize,
+    release: usize,
 }
 
-fn csv_header(row: &[String]) -> Option<Header> {
-    let mut header = Header {
+impl Header {
+    const MISSING: Self = Self {
         title: usize::MAX,
         artists: usize::MAX,
         album: usize::MAX,
         duration: usize::MAX,
+        unit: Unit::Seconds,
+        cover: usize::MAX,
+        isrc: usize::MAX,
+        source: usize::MAX,
+        url: usize::MAX,
+        added_at: usize::MAX,
+        release: usize::MAX,
     };
-    for (slot, value) in row.iter().enumerate() {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "title" | "track title" => header.title = slot,
-            "artist" | "artists" => header.artists = slot,
-            "album" => header.album = slot,
-            "duration" | "length" | "time" => header.duration = slot,
-            _ => {}
+}
+
+/// The lowercase, punctuation-normalized form a header is compared in. A byte order mark left
+/// in front of the first header cell and the underscores some exports use are removed.
+fn header_name(value: &str) -> String {
+    let cleaned = value
+        .trim_start_matches('\u{feff}')
+        .to_lowercase()
+        .replace('_', " ");
+    let mut name = String::with_capacity(cleaned.len());
+    let mut space = false;
+    for letter in cleaned.chars() {
+        if letter.is_alphanumeric() || letter == '(' || letter == ')' {
+            name.push(letter);
+            space = false;
+        } else if !space && !name.is_empty() {
+            name.push(' ');
+            space = true;
         }
     }
-    (header.title != usize::MAX).then_some(header)
+    name.trim().to_owned()
+}
+
+fn find_column(names: &[String], candidates: &[&str]) -> usize {
+    candidates
+        .iter()
+        .find_map(|candidate| names.iter().position(|name| name == candidate))
+        .unwrap_or(usize::MAX)
+}
+
+fn csv_header(row: &[String]) -> Option<Header> {
+    let names: Vec<String> = row.iter().map(|value| header_name(value)).collect();
+    let mut header = Header::MISSING;
+    header.title = find_column(
+        &names,
+        &["track name", "title", "song title", "track title"],
+    );
+    if header.title == usize::MAX {
+        return None;
+    }
+    // `Artist Name(s)` is the credited line; `Album Artist` is only a fallback for a sheet
+    // that does not carry one.
+    header.artists = find_column(
+        &names,
+        &[
+            "artist name(s)",
+            "artist name",
+            "artist names",
+            "artists",
+            "artist",
+            "artist(s)",
+            "creator",
+            "album artist",
+        ],
+    );
+    header.album = find_column(&names, &["album name", "album"]);
+    let milliseconds = [
+        "track duration (ms)",
+        "duration (ms)",
+        "duration ms",
+        "length (ms)",
+        "time (ms)",
+    ];
+    match find_column(&names, &milliseconds) {
+        index if index != usize::MAX => {
+            header.duration = index;
+            header.unit = Unit::Milliseconds;
+        }
+        _ => {
+            header.duration =
+                find_column(&names, &["track duration", "duration", "length", "time"]);
+        }
+    }
+    header.cover = find_column(
+        &names,
+        &[
+            "album image url",
+            "album cover url",
+            "album cover",
+            "cover url",
+            "cover art",
+            "artwork url",
+            "artwork",
+            "image url",
+            "cover",
+            "image",
+        ],
+    );
+    header.isrc = find_column(&names, &["isrc", "isrc code", "isrcs"]);
+    header.source = find_column(
+        &names,
+        &[
+            "track uri",
+            "spotify id",
+            "spotifyid",
+            "spotify - id",
+            "track id",
+            "id",
+        ],
+    );
+    header.url = find_column(&names, &["track url", "external url", "url", "link"]);
+    header.added_at = find_column(&names, &["added at", "date added", "added"]);
+    header.release = find_column(
+        &names,
+        &["release date", "album release date", "release year", "year"],
+    );
+    // A headerless list may begin with a title that reads like a column name. If the cell in
+    // the duration column is a length, the row is data and the file has no header.
+    if header.duration != usize::MAX
+        && !duration_value(cell(row, header.duration), header.unit).is_zero()
+    {
+        return None;
+    }
+    Some(header)
 }
 
 /// A small CSV reader. It returns one row per record, with quoted cells unescaped and embedded
 /// newlines kept. It deliberately accepts a final row without a newline.
-fn csv_rows(text: &str) -> Vec<Vec<String>> {
+fn csv_rows(text: &str, delimiter: Delimiter) -> Vec<Vec<String>> {
+    let separator = delimiter.letter();
     let mut rows = Vec::new();
     let mut row = Vec::new();
     let mut cell = String::new();
@@ -631,8 +840,11 @@ fn csv_rows(text: &str) -> Vec<Vec<String>> {
             }
             (true, '"') => quoted = false,
             (true, letter) => cell.push(letter),
-            (false, '"') if cell.is_empty() => quoted = true,
-            (false, ',') => row.push(std::mem::take(&mut cell)),
+            (false, '"') if cell.trim().is_empty() => {
+                cell.clear();
+                quoted = true;
+            }
+            (false, letter) if letter == separator => row.push(std::mem::take(&mut cell)),
             (false, '\r') if chars.peek() == Some(&'\n') => {
                 chars.next();
                 row.push(std::mem::take(&mut cell));
@@ -650,6 +862,78 @@ fn csv_rows(text: &str) -> Vec<Vec<String>> {
         rows.push(row);
     }
     rows
+}
+
+/// A non-blank cell, trimmed, or nothing. Empty cells in an export are written as `""` and
+/// sometimes as a stray space.
+fn non_empty(value: &str) -> Option<String> {
+    let value = value.trim();
+    (!value.is_empty()).then(|| value.to_owned())
+}
+
+/// An HTTP(S) artwork or page URL. A cell that says `None` or names a local path is not one.
+fn web_url(value: &str) -> Option<String> {
+    let value = value.trim();
+    (value.starts_with("https://") || value.starts_with("http://")).then(|| value.to_owned())
+}
+
+/// The Spotify track id and its canonical page from an export's `Track URI`, `Spotify - id` or
+/// `open.spotify.com/track/…` cell. A non-Spotify URL is left to the plain URL column.
+fn spotify_track(value: &str) -> (Option<String>, Option<String>) {
+    let value = value.trim();
+    let id = value
+        .strip_prefix("spotify:track:")
+        .or_else(|| {
+            let (_, rest) = value.split_once("open.spotify.com/track/")?;
+            Some(rest)
+        })
+        .map(|rest| {
+            rest.split(['?', '#', '/'])
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_owned()
+        })
+        .filter(|id| {
+            (10..=64).contains(&id.len()) && id.bytes().all(|byte| byte.is_ascii_alphanumeric())
+        });
+    match id {
+        Some(id) => {
+            let url = format!("https://open.spotify.com/track/{id}");
+            (Some(id), Some(url))
+        }
+        None => (None, web_url(value)),
+    }
+}
+
+/// The year a release date names, keeping only a plausible four-digit year.
+fn release_year(value: &str) -> Option<i32> {
+    let value = value.trim();
+    let digits: String = value.chars().take_while(char::is_ascii_digit).collect();
+    digits
+        .get(..4)
+        .and_then(|year| year.parse().ok())
+        .filter(|year| (1900..=2100).contains(year))
+}
+
+/// A duration cell in the unit its header declared. A clock reading (`3:45`) is always a clock,
+/// whatever the column is called.
+fn duration_value(value: &str, unit: Unit) -> Duration {
+    let value = value.trim();
+    if value.is_empty() {
+        return Duration::ZERO;
+    }
+    if value.contains(':') {
+        return parse_duration(value).unwrap_or_default();
+    }
+    match unit {
+        Unit::Seconds => parse_duration(value).unwrap_or_default(),
+        Unit::Milliseconds => value
+            .parse::<u64>()
+            .or_else(|_| value.parse::<f64>().map(|value| value.round() as u64))
+            .map(Duration::from_millis)
+            .unwrap_or_default(),
+    }
 }
 
 /// Reads `3:45`, `1:03:45` or a whole number of seconds. A missing or unreadable duration is
@@ -1052,6 +1336,71 @@ mod tests {
         assert_eq!(playlist.entries.len(), 2);
         assert_eq!(playlist.skipped, 1);
         assert_eq!(playlist.entries[1].title, "Two");
+    }
+
+    #[test]
+    fn reads_an_exportify_csv_with_artwork_ids_and_millisecond_durations() {
+        let csv = "\u{feff}\"Track Name\",\"Artist Name(s)\",\"Album Name\",\"Track Duration (ms)\",\"Album Image URL\",\"ISRC\",\"Track URI\",\"Added At\",\"Release Date\"\n\
+                   \"Hardwired\",\"Rameses B\",\"Hardwired\",\"302000\",\"https://i.scdn.co/image/abc\",\"GB2LD1700001\",\"spotify:track:4uLU6hMCjMI75M1A2tKUQC\",\"2024-05-04T10:11:12Z\",\"2017-09-22\"\n";
+        let playlist = parse_csv(csv.as_bytes(), "Exportify").unwrap();
+        let entry = &playlist.entries[0];
+        assert_eq!(entry.title, "Hardwired");
+        assert_eq!(entry.artists, "Rameses B");
+        assert_eq!(entry.album, "Hardwired");
+        assert_eq!(entry.duration, Duration::from_secs(302));
+        assert_eq!(entry.cover.as_deref(), Some("https://i.scdn.co/image/abc"));
+        assert_eq!(entry.isrc.as_deref(), Some("GB2LD1700001"));
+        assert_eq!(entry.id.as_deref(), Some("4uLU6hMCjMI75M1A2tKUQC"));
+        assert_eq!(
+            entry.url.as_deref(),
+            Some("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC")
+        );
+        assert_eq!(entry.added_at, Some(1_714_817_472));
+        assert_eq!(entry.release_year, Some(2017));
+    }
+
+    #[test]
+    fn reads_semicolon_and_tab_exports_and_a_spotify_web_link() {
+        let semicolons = parse_csv(
+            b"Track Name;Artist Name(s);Album Name;Duration\nSong;Artist;Album;3:45\n",
+            "Sheet",
+        )
+        .unwrap();
+        assert_eq!(semicolons.entries[0].title, "Song");
+        assert_eq!(semicolons.entries[0].duration, Duration::from_secs(225));
+
+        let tabs = parse_csv(
+            "Track Name\tArtist Name(s)\tAlbum Name\tTrack Duration (ms)\nSong\tArtist\tAlbum\t201000\n"
+                .as_bytes(),
+            "Sheet",
+        )
+        .unwrap();
+        assert_eq!(tabs.entries[0].duration, Duration::from_secs(201));
+
+        let linked = parse_csv(
+            b"Title,Artist,Track URL\nSong,Artist,https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC\n",
+            "Links",
+        )
+        .unwrap();
+        assert_eq!(
+            linked.entries[0].id.as_deref(),
+            Some("4uLU6hMCjMI75M1A2tKUQC")
+        );
+        assert_eq!(
+            linked.entries[0].url.as_deref(),
+            Some("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC")
+        );
+        assert!(linked.entries[0].cover.is_none());
+    }
+
+    #[test]
+    fn keeps_a_missing_export_duration_unknown_instead_of_zero_as_a_fact() {
+        let playlist = parse_csv(
+            b"Track Name,Artist Name(s),Album Name,Track Duration (ms)\nSong,Artist,Album,\n",
+            "Sheet",
+        )
+        .unwrap();
+        assert_eq!(playlist.entries[0].duration, Duration::ZERO);
     }
 
     #[test]

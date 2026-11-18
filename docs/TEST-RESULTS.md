@@ -11,7 +11,7 @@ Command:
 cargo test --workspace
 ```
 
-Result: **673 passed, 0 failed, 20 ignored** across 13 test binaries, plus doc-tests (0 tests).
+Result: **691 passed, 0 failed, 21 ignored** across 13 test binaries with tests, plus doc-tests (0 tests).
 
 | Crate / binary | Tests | Result |
 | --- | ---: | --- |
@@ -19,18 +19,19 @@ Result: **673 passed, 0 failed, 20 ignored** across 13 test binaries, plus doc-t
 | `i18n` | 8 | pass |
 | `icons` | 1 | pass |
 | `input` | 5 | pass |
-| `music` | 321 | pass (20 ignored) |
+| `music` | 336 | pass (21 ignored) |
 | `sonora` (binary) | 15 | pass |
 | `state` | 110 | pass |
-| `storage` | 2 | pass |
+| `storage` | 4 | pass |
 | `ui` | 74 | pass |
 | `ui` accessibility tree | 32 | pass |
-| `views` | 57 | pass |
+| `views` | 58 | pass |
 | `webview` | 4 | pass |
 | `widevine` | 13 | pass |
 
-The 20 ignored `music` tests are the live-network suite (`crates/music/src/live_tests`), which
-needs real provider credentials and is skipped by default.
+The 21 ignored `music` tests are the live-network suite (`crates/music/src/live_tests`) plus the live
+iTunes artwork lookup, which need real provider credentials or the public catalogue and are skipped
+by default. The live iTunes lookup was run separately and passed (see below).
 
 `cargo fmt --all -- --check` passes. `cargo build --release -p sonora` completes with no errors.
 
@@ -53,10 +54,24 @@ needs real provider credentials and is skipped by default.
   same playlist by `(source, source_id)` and replaces rows inside one transaction.
 - Audius: response parsing and strict recording equality, plus two live HTTP checks that were
   run separately (see below).
+- CSV artwork and metadata: Spotify `Album Image URL`, Soundiiz and TuneMyMusic headers, `ISRC`,
+  `Track URI`, `Track ID`, `Added At`, release years, millisecond durations, semicolon and tab
+  delimiters, byte-order marks and headerless files.
+- Enrichment: exact title and primary artist, duration within tolerance, album fallback when the
+  list gave no length, refusal of remix/live/other-artist hits, album grouping, request caps, and
+  a provider that refuses or throttles being disabled for the rest of the import.
+- Collage: 4/3/2/1-tile compositions, distinct pictures only, JPEG output, decode bounds and the
+  emerald fallback card.
+- Cover ownership: a generated collage is rebuilt by a retry, while a listener-chosen picture is
+  kept; `cover_generated` survives the database round trip.
+- Artwork retry: `missing_art` counts only rows that can display a picture, and the retry button
+  is hidden when only external or unavailable rows lack one.
+- Navigation: Settings ends the sidebar order and the three groups do not overlap, so a row can
+  never be drawn twice.
 
 ## Manual verification, release build
 
-The release binary `target\release\soundy.exe` (90,669,056 bytes, built 18 November 2026) was
+The release binary `target\release\soundy.exe` (91,254,784 bytes, built 18 November 2026) was
 launched on Windows 11 and driven with real mouse and keyboard input. The dialog is reached
 through **+ → Import playlist…** on the Playlists screen. Provider matching ran against the
 signed-in YouTube Music account. Every row count below was also checked in
@@ -76,6 +91,25 @@ signed-in YouTube Music account. Every row count below was also checked in
 | Offline: app started with `HTTP_PROXY`, `HTTPS_PROXY` and `ALL_PROXY` pointed at a dead port, then a two-row list pasted | import completed locally: 2 tracks kept, 0 playable, 2 Unavailable. No fake match, no hang |
 | External catalogue badge shows a link and opens it | pass |
 | Idle after import | 45 one-second samples, median CPU 0.00%, no repeated requests in the log |
+
+### Unified build screens (release binary)
+
+The unified 1.0.0 build was launched at 936×648 and driven with real clicks and keystrokes. The
+same rows were checked against `%LOCALAPPDATA%\soundy\state.sqlite` and the cover files on disk.
+
+| Screen / state | Result |
+| --- | --- |
+| Home | Quick picks plus the stated empty state when the provider sends no shelves: “Nothing on your provider's home page” and a working “Browse genres” action to Discover |
+| Playlists | `import-test` listed with its 2×2 collage and “5 tracks” |
+| Playlist detail | 2×2 collage header, “5 songs • 12m 44s”, four track covers, `3:20`, `3:23`, `2:47`, `3:14`, and a dash for the row the export never measured |
+| Favorites | hero “Favorites”, “0 songs”, “No favorites yet” (not the folder prompt) |
+| Downloads | hero “Downloads”, “0 songs”, “Nothing downloaded yet” (not the folder prompt) |
+| Discover | provider genre grid with cover plates (Chill, Commute, Energize, Feel good, …) |
+| Settings | last sidebar row under its divider, opening General/Appearance/Lyrics/Playback/Integrations/Keybinds |
+| Search | best match plus grouped results, each with a cover and a real duration |
+| Recents | history rows with covers, relative played times and durations |
+| Right panel | Lyrics for the playing track; Queue with History, Now playing and Up next, including the external row’s placeholder and no `0:00` |
+| Fullscreen player | opens from the player-bar button and `F`; large artwork, warm artwork-derived background, lyrics, seek and full transport; `Escape` leaves |
 
 ### Regressions found during manual testing
 
@@ -108,9 +142,9 @@ Built on 18 November 2026 from this tree with `scripts\windows\build-soundy-inst
 
 | Artifact | Size | SHA-256 |
 | --- | ---: | --- |
-| `target\release\soundy.exe` | 90,669,056 bytes | `D854C17723D89F0C2D6B81EE749DF7D2003DC3D7CAEE465772178E17832A6062` |
-| `dist\Soundy-1.0.0-Setup.exe` | 23,960,099 bytes | `6D220B890FBA59721CD2E4364C0EB16F1634FB6E107064301736EDB402BE206E` |
-| `dist\Soundy-1.0.0-Portable.zip` | 32,921,721 bytes | `139480B08CAA8EBDEEBDE3E00975883153F39ACE63D5B0639C446817E736DA7B` |
+| `target\release\soundy.exe` | 91,254,784 bytes | `FBEA4A63A1B6C4D5C1F8FAE4F12F751D1384C7D77A76B13ACFFD9DE8D81A8CCD` |
+| `dist\Soundy-1.0.0-Setup.exe` | 24,081,066 bytes | `6E426749118A891081F7450233980F993345C0E9C8F63EFD7D636455DAE47412` |
+| `dist\Soundy-1.0.0-Portable.zip` | 33,107,367 bytes | `0EEC254CAFE60E60FCB818CAEBF20684B5F412F8900AE4ED31FDDE246D1559B9` |
 
 Both the installed executable and `dist\Soundy-1.0.0-Portable\soundy.exe` hash to the release
 binary above. The setup file reports version 1.0.0 and product Soundy.
@@ -118,14 +152,18 @@ binary above. The setup file reports version 1.0.0 and product Soundy.
 The installer was also executed, not just compiled: silent install to a temporary directory
 returned 0, produced `soundy.exe` with the matching hash, plus `LICENSE`, `THIRD-PARTY.md` and the
 uninstaller. The uninstaller returned 0 and removed the install directory and Start Menu shortcut.
-The portable ZIP was unpacked and its `soundy.exe` launched and restored the library.
+The portable ZIP was unpacked and its `soundy.exe` launched and restored the library; it carries
+`README.md` and `PERFORMANCE.md` beside the licence and notices.
 
 ## Performance
 
-Final-build figures are in `PERFORMANCE.md`: 111.7 MB median idle RSS, 100.0 MB private working
-set, 0.00% median idle CPU, 193 ms median startup, and 128.3 MB median RSS while playing local
-files. The measurement profile had YouTube Music signed in and five imported playlists, so it is
-not a fresh-profile minimum.
+Final-build figures are in `PERFORMANCE.md`. On the shipped binary at 936×648, with one imported
+playlist and a guest YouTube Music session: a fresh launch settles at **110.1 MB working set /
+98.7 MB private commit**, using **0.344 s of CPU per 60 s idle** (≈0.6% of one core). Streaming
+uses **119.9 MB / 99.4 MB**, and the window becomes visible **213 ms** after launch (median of
+three cold starts). The working set therefore misses the 100 MB resident target by about 10 MB,
+while the private commit is under it. Local-file playback was not measured on this profile
+because it has no local folder; the 60-second idle and stream figures are flat, showing no leak.
 
 ## Live checks
 

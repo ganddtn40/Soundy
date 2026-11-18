@@ -51,10 +51,23 @@ dialog (views)  ->  state::Import  ->  music::import parsers
                         |
                         +-- active provider search (music trait)
                         +-- music::audius::Catalogue (Audius, optional Jamendo)
+                        +-- music::enrich (Deezer, then iTunes: metadata and artwork)
+                        +-- music::collage (2x2/3/2/1-tile playlist cover)
                         +-- local.save_import (music::local)
                                  |
                                  +-- storage::state.sqlite
 ```
+
+- Enrichment runs after matching has settled: rows are grouped by album, covers already known are
+  reused, and at most 160 album and 80 track lookups are made per import. A hit needs the title,
+  the primary artist and the duration (or the album when there is no length), so a remix, live
+  take or cover is refused. A provider that refuses or throttles the client is disabled for the
+  rest of that import instead of being retried row by row.
+- The playlist cover is built from distinct track pictures and written under
+  `%LOCALAPPDATA%\soundy\playlist-covers`. The database records whether the cover was generated,
+  so a later retry rebuilds a generated cover and never replaces one the listener chose.
+- Artwork found by enrichment is cached under `%LOCALAPPDATA%\soundy\artwork`; the UI's image cache
+  is separate, bounded at 16 MB / 256 pictures / 8 pending loads.
 
 - Parsing and file reads run on the blocking pool.
 - Local matching runs on the blocking pool with a bounded ISRC lookup set.
@@ -82,4 +95,5 @@ network request. Playback of a **Full playback** row uses the stored track id; *
 There is no Soundy-operated server. Provider credentials stay in local storage; play history
 and cached tracks stay on disk. The importer sends a search query to the active provider and to
 Audius only for rows that still need matching, and to Jamendo only when the listener configured
-a client id. A local file or pasted list is never uploaded.
+a client id. Artwork enrichment sends only the row's title, artist and album to Deezer and, when
+Deezer has no confident hit, to iTunes. A local file or pasted list is never uploaded.

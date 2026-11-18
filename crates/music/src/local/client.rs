@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
+use std::sync::atomic::Ordering;
 
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
@@ -17,7 +18,7 @@ use crate::{
 
 use super::index::Index;
 use super::scan::Scanned;
-use super::store::{Starred, Store, Stored};
+use super::store::{EntryArt, Starred, Store, Stored};
 use super::{m3u, tags, wire};
 
 const COVERS: usize = 4;
@@ -71,6 +72,35 @@ impl LocalClient {
             scanned: RwLock::new(scanned),
             store: Store::new(database),
             index,
+        }
+    }
+
+    /// Writes `image` as the playlist's own cover and records who it came from: `generated`
+    /// when the library drew it from the rows, so a later artwork pass may rebuild it, and
+    /// not when the listener chose it. The file it replaces is deleted with its row.
+    fn write_cover(&self, playlist_id: &str, image: Option<&[u8]>, generated: bool) -> Result<()> {
+        self.store.one(playlist_id)?;
+        let written = match image {
+            Some(image) => {
+                let jpeg = cover::square_jpeg(image, COVER_LIMITS)?;
+                let path = cover_path(playlist_id);
+                let folder = path.parent().context("cannot place a playlist cover")?;
+                std::fs::create_dir_all(folder).context("cannot create the covers folder")?;
+                std::fs::write(&path, jpeg).context("cannot write the playlist cover")?;
+                Some(path)
+            }
+            None => None,
+        };
+        match self.store.set_cover(playlist_id, written.as_deref()) {
+            Ok(previous) => {
+                discard(previous);
+                self.store.set_cover_generated(playlist_id, generated)?;
+                Ok(())
+            }
+            Err(error) => {
+                discard(written);
+                Err(error)
+            }
         }
     }
 
@@ -519,28 +549,117 @@ impl MusicApi for LocalClient {
     /// Keeps the cover as a JPEG in Sonora's data folder, named afresh on every change so an
     /// image cache keyed by the path never shows the old one.
     async fn set_playlist_cover(&self, playlist_id: &str, image: Option<&[u8]>) -> Result<()> {
-        self.store.one(playlist_id)?;
-        let written = match image {
-            Some(image) => {
-                let jpeg = cover::square_jpeg(image, COVER_LIMITS)?;
-                let path = cover_path(playlist_id);
-                let folder = path.parent().context("cannot place a playlist cover")?;
-                std::fs::create_dir_all(folder).context("cannot create the covers folder")?;
-                std::fs::write(&path, jpeg).context("cannot write the playlist cover")?;
-                Some(path)
-            }
-            None => None,
+        self.write_cover(playlist_id, image, false)
+    }
+
+    /// Keeps a cover the library drew from the playlist's own tracks, so a later artwork pass
+    /// may rebuild it. The listener's own choice always wins over one of these.
+    async fn set_generated_cover(&self, playlist_id: &str, image: &[u8]) -> Result<()> {
+        self.write_cover(playlist_id, Some(image), true)
+    }
+
+    /// Draws the playlist's own cover from the first four albums among its rows, or the emerald
+    /// card when the list brought no art at all. A picture the listener chose is never replaced.
+    async fn build_import_cover(&self, playlist_id: &str) -> Result<bool> {
+        let stored = self.store.one(playlist_id)?;
+        let Some(imported) = stored.imported.as_ref() else {
+            return Ok(false);
         };
-        match self.store.set_cover(playlist_id, written.as_deref()) {
-            Ok(previous) => {
-                discard(previous);
-                Ok(())
-            }
-            Err(error) => {
-                discard(written);
-                Err(error)
+        // A link import already carries the service's own picture.
+        if imported.cover_url.is_some() {
+            return Ok(false);
+        }
+        if stored.cover.is_some() && !stored.cover_generated {
+            return Ok(false);
+        }
+        let entries = self.store.entries(playlist_id)?;
+        let urls = crate::collage::sources(&entries);
+        let enricher = crate::enrich::Enricher::public();
+        let mut tiles = Vec::new();
+        for url in urls {
+            if let Some(bytes) = enricher.cover_bytes(&url).await {
+                tiles.push(bytes);
             }
         }
+        let art = crate::collage::collage(&tiles)
+            .unwrap_or_else(|_| crate::collage::fallback(&stored.name));
+        if art.is_empty() {
+            return Ok(false);
+        }
+        self.write_cover(playlist_id, Some(&art), true)?;
+        Ok(true)
+    }
+
+    /// Fills the pictures and missing lengths of a saved imported playlist, then rebuilds its
+    /// generated cover when the pass found new art. Rows are grouped by album by the enricher,
+    /// so this costs a few dozen lookups rather than one per song.
+    async fn refresh_imported_art(
+        &self,
+        playlist_id: &str,
+        cancel: &std::sync::atomic::AtomicBool,
+    ) -> Result<Option<crate::enrich::Refresh>> {
+        let stored = self.store.one(playlist_id)?;
+        if stored.imported.is_none() {
+            return Ok(None);
+        }
+        let entries = self.store.entries(playlist_id)?;
+        if entries.is_empty() {
+            return Ok(None);
+        }
+        let mut sources: Vec<crate::import::SourceEntry> = entries
+            .iter()
+            .map(|entry| crate::import::SourceEntry {
+                title: entry.title.clone(),
+                artists: entry.artists.clone(),
+                album: entry.album.clone(),
+                duration: entry.duration,
+                cover: entry.cover.clone(),
+                ..Default::default()
+            })
+            .collect();
+        let enricher = crate::enrich::Enricher::public();
+        let report = enricher.enrich(&mut sources, cancel, &|_, _| {}).await;
+
+        let mut changes = Vec::new();
+        for (entry, source) in entries.iter().zip(sources.iter()) {
+            if entry.cover == source.cover && entry.duration == source.duration {
+                continue;
+            }
+            changes.push(EntryArt {
+                position: entry.position,
+                cover: (entry.cover != source.cover)
+                    .then(|| source.cover.clone())
+                    .flatten(),
+                duration: (entry.duration != source.duration)
+                    .then_some(source.duration)
+                    .filter(|duration| !duration.is_zero()),
+            });
+        }
+        self.store.set_entry_art(playlist_id, &changes)?;
+
+        let missing = entries
+            .iter()
+            .zip(sources.iter())
+            .filter(|(entry, source)| {
+                source.cover.is_none()
+                    && matches!(
+                        entry.status,
+                        ImportStatus::Available | ImportStatus::Personal | ImportStatus::Preview
+                    )
+            })
+            .count();
+        let stopped = cancel.load(Ordering::Relaxed);
+        let collage = if !stopped && (report.covers > 0 || stored.cover.is_none()) {
+            self.build_import_cover(playlist_id).await?
+        } else {
+            false
+        };
+        Ok(Some(crate::enrich::Refresh {
+            covers: report.covers,
+            durations: report.durations,
+            collage,
+            missing,
+        }))
     }
 
     async fn add_track_to_playlist(&self, playlist_id: &str, track_id: &str) -> Result<()> {
@@ -1003,6 +1122,65 @@ mod tests {
         assert!(ids.contains(&"local:0"));
         assert!(ids.contains(&"local:1"));
         assert!(ids.contains(&"local:2"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn a_generated_cover_is_rebuilt_but_a_listeners_own_picture_is_kept() {
+        let dir = std::env::temp_dir().join(format!("sonora-test-{}", fastrand::u64(..)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let db = Database::at(dir.join("state.sqlite"));
+        let index = Index::new(storage::Cache::at(dir.join("cache.sqlite")));
+        let scanned = Scanned {
+            tracks: vec![],
+            albums: vec![],
+            portraits: HashMap::new(),
+            artists: vec![],
+        };
+        let client = LocalClient::new(scanned, db.clone(), index);
+
+        // A pasted list with no picture at all still gets a drawn card, so an imported
+        // playlist never shows a broken image.
+        let data = ImportedPlaylistData {
+            source: "manual".to_owned(),
+            source_id: "pasted".to_owned(),
+            name: "Pasted list".to_owned(),
+            imported_at: 1_000,
+            entries: (0..3)
+                .map(|position| ImportedEntry {
+                    position,
+                    title: format!("Song {position}"),
+                    artists: "Artist".to_owned(),
+                    duration: Duration::from_secs(180),
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        };
+        let id = client.save_import(&data).await.unwrap();
+        // The list query feeds the library and sidebar, so it must return every column a
+        // single-row read does; it once missed the generated-cover marker.
+        let listed = client.store.list().unwrap();
+        assert!(listed.iter().any(|row| row.id == id));
+        assert!(client.build_import_cover(&id).await.unwrap());
+        let generated = client.playlist(&id).await.unwrap().playlist.cover;
+        let generated = generated.expect("the card became the playlist's cover");
+        assert!(generated.starts_with("file://"));
+        assert!(client.store.one(&id).unwrap().cover_generated);
+
+        // Drawing it again is allowed, since the library made this picture.
+        assert!(client.build_import_cover(&id).await.unwrap());
+
+        // A picture the listener chose is not overwritten by a later artwork pass.
+        client
+            .set_playlist_cover(&id, Some(&crate::collage::fallback("mine")))
+            .await
+            .unwrap();
+        assert!(!client.store.one(&id).unwrap().cover_generated);
+        assert!(!client.build_import_cover(&id).await.unwrap());
+        let chosen = client.playlist(&id).await.unwrap().playlist.cover;
+        assert_ne!(chosen, Some(generated));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

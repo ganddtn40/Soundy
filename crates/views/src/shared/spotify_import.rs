@@ -555,13 +555,24 @@ impl SpotifyImport {
                 )
             }
             ImportStage::Matching => t!("import-progress-matching-unknown"),
+            ImportStage::Enriching if total > 0 => {
+                t!(
+                    "import-progress-enriching",
+                    read = read as i64,
+                    total = total as i64
+                )
+            }
+            ImportStage::Enriching => t!("import-progress-enriching-unknown"),
             ImportStage::Saving => t!("import-progress-saving"),
             _ => t!("import-progress-link"),
         };
-        let metadata = match self.source {
-            Source::Link => t!("import-metadata-spotify"),
-            Source::File => t!("import-metadata-file"),
-            Source::Paste => t!("import-metadata-paste"),
+        let metadata = match stage {
+            ImportStage::Enriching => t!("import-metadata-artwork"),
+            _ => match self.source {
+                Source::Link => t!("import-metadata-spotify"),
+                Source::File => t!("import-metadata-file"),
+                Source::Paste => t!("import-metadata-paste"),
+            },
         };
 
         div()
@@ -597,8 +608,8 @@ impl SpotifyImport {
                     .child(
                         div()
                             .flex()
-                            .items_center()
-                            .justify_between()
+                            .flex_col()
+                            .gap_1()
                             .text_size(theme.text(Text::Small))
                             .text_color(theme.muted_foreground)
                             .child(metadata)
@@ -656,6 +667,15 @@ impl SpotifyImport {
                 t!("import-duplicates", count = report.duplicates as i64),
                 theme.muted_foreground,
             ));
+        }
+        if report.artwork > 0 {
+            counts.push((
+                t!("import-artwork-count", count = report.artwork as i64),
+                theme.muted_foreground,
+            ));
+        }
+        if report.collage {
+            counts.push((t!("import-collage"), theme.primary));
         }
         if report.skipped > 0 {
             counts.push((
@@ -898,6 +918,18 @@ impl Render for SpotifyImport {
                     .ghost()
                     .label(t!("spotify-import-another"))
                     .on_click(cx.listener(|this, _, window, cx| this.again(window, cx))),
+            );
+        }
+        if !active && imports.read(cx).can_retry_artwork() {
+            let imports = imports.clone();
+            actions.push(
+                Button::new("import-retry-artwork")
+                    .ghost()
+                    .icon("icons/refresh-cw.svg")
+                    .label(t!("import-retry-artwork"))
+                    .on_click(cx.listener(move |_, _, _, cx| {
+                        imports.update(cx, |import, cx| import.retry_artwork(cx));
+                    })),
             );
         }
         if let Some(report) = report.filter(|_| !active) {

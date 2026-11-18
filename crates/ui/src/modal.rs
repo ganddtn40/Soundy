@@ -386,6 +386,7 @@ impl RenderOnce for Modal {
                         this.child(
                             div()
                                 .flex()
+                                .flex_wrap()
                                 .flex_none()
                                 .justify_end()
                                 .gap_2()

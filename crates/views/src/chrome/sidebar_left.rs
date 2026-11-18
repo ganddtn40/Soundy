@@ -28,23 +28,17 @@ use crate::shared::playlist_editor::{Edit, PlaylistEditor};
 /// The one drag list the pinned section keeps, so a pin dropped anywhere in it lands in order.
 const PINS: &str = "sidebar-pins";
 
-/// The sidebar's navigation rows in order: the entry that can hide each, its icon and where it goes.
-/// Recents and then Settings sit right under Search, and the four library rows after them each
-/// open one page of the merged streaming and local library. Settings lives in the account menu of
-/// the title bar and shows here only when added. It opens on the settings page last visited
-/// rather than on the one named here.
-pub(crate) const NAV: [(NavEntry, &str, Destination); 8] = [
+/// The sidebar keeps its rows in three groups: the top-level pages, the library's own pages,
+/// and the settings row under them, so Settings always ends the navigation exactly as the
+/// layout calls for. The entry that can hide each row, its icon and where it goes sit together.
+pub(crate) const NAV: [(NavEntry, &str, Destination); 11] = [
     (NavEntry::Home, "icons/house.svg", Destination::Home),
     (NavEntry::Search, "icons/search.svg", Destination::Search),
+    (NavEntry::Discover, "icons/radio.svg", Destination::Discover),
     (
         NavEntry::History,
         "icons/rotate-ccw-clock.svg",
         Destination::History,
-    ),
-    (
-        NavEntry::Settings,
-        "icons/settings.svg",
-        Destination::Settings(SettingsPage::Providers),
     ),
     (
         NavEntry::Songs,
@@ -66,7 +60,44 @@ pub(crate) const NAV: [(NavEntry, &str, Destination); 8] = [
         LibraryTab::Playlists.icon(),
         Destination::Library(LibraryTab::Playlists),
     ),
+    (
+        NavEntry::Downloads,
+        "icons/download.svg",
+        Destination::Downloads,
+    ),
+    (
+        NavEntry::Favorites,
+        "icons/heart.svg",
+        Destination::Favorites,
+    ),
+    (
+        NavEntry::Settings,
+        "icons/settings.svg",
+        Destination::Settings(SettingsPage::Providers),
+    ),
 ];
+
+/// How many rows the top group and the library group hold, in `NAV` order.
+const TOP: std::ops::Range<usize> = 0..4;
+const LIBRARY: std::ops::Range<usize> = 4..10;
+const SETTINGS: std::ops::Range<usize> = 10..11;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn settings_ends_the_navigation_and_the_groups_do_not_overlap() {
+        assert_eq!(NAV[SETTINGS.start].0, NavEntry::Settings);
+        assert_eq!(SETTINGS.end, NAV.len());
+        assert!(TOP.end <= LIBRARY.start);
+        assert!(LIBRARY.end <= SETTINGS.start);
+        assert_eq!(
+            NAV.iter().filter(|row| row.0 == NavEntry::Settings).count(),
+            1
+        );
+    }
+}
 
 const MIN_WIDTH: Pixels = px(160.);
 const MAX_WIDTH: Pixels = px(400.);
@@ -327,11 +358,12 @@ impl SidebarLeft {
                 .filter(|index| entry_shown(NAV[*index].0, self.settings.read(cx)))
                 .collect()
         };
-        let top = shown(0..4, cx);
-        let library = shown(4..NAV.len(), cx);
+        let top = shown(TOP, cx);
+        let library = shown(LIBRARY, cx);
+        let settings = shown(SETTINGS, cx);
         let mut rows = Vec::new();
         if self.folded() {
-            for (group, indices) in [top, library]
+            for (group, indices) in [top, library, settings]
                 .into_iter()
                 .filter(|indices| !indices.is_empty())
                 .enumerate()
@@ -353,8 +385,14 @@ impl SidebarLeft {
             for index in library {
                 rows.push(self.nav(index, cx));
             }
-            rows.push(self.gap(cx));
         }
+        if !settings.is_empty() {
+            rows.push(self.divider(cx));
+            for index in settings {
+                rows.push(self.nav(index, cx));
+            }
+        }
+        rows.push(self.gap(cx));
         rows
     }
 

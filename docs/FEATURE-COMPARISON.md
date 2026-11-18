@@ -2,7 +2,8 @@
 
 This matrix compares the shipped Soundy 1.0.0 build with the upstream Sonora project it is
 forked from, and checks each capability the unified-desktop brief asked for. The last column is
-the requirement, not a claim about another product.
+the requirement, not a claim about another product. The feature-by-feature audit of Monochrome
+Desktop, including every item deliberately not integrated, is in `MONOCHROME-PARITY.md`.
 
 Legend: **Yes** — present and exercised in this build. **Same** — inherited unchanged from
 Sonora. **Partial** — present with a stated limit. **No** — not present.
@@ -22,7 +23,16 @@ Sonora. **Partial** — present with a stated limit. **No** — not present.
 | Smart playlists | Yes | Yes | Yes | Rule editor with boolean and order rules |
 | Import from Spotify link | Partial | No | Yes | With an existing authorized Spotify session; without one, a clear `TracklistUnavailable` result and file/paste fallbacks |
 | Import M3U/M3U8 | Yes | Partial | Yes | Local paths, `file://`, relative paths, HTTP entries as external links |
-| Import CSV | Yes | No | Yes | `Title`, `Artist`, `Album`, `Duration`, any column order |
+| Import CSV | Yes | No | Yes | Spotify/Exportify/Soundiiz/TuneMyMusic exports, comma/semicolon/tab, BOM, artwork URLs, ISRC, URIs, dates, ms durations and headerless files |
+| Artwork enrichment | Yes | No | Yes | Deezer public API first, iTunes fallback; strict title + artist + duration/album matching; blocked providers disabled for the import |
+| Generated playlist covers | Yes | No | Yes | 2×2/3/2/1-tile collage from distinct track art, cached, marked generated so a listener's own cover is kept |
+| Artwork on every surface | Yes | Partial | Yes | Playlist headers, rows, player bar, fullscreen, queue, search, albums, artists, recents and picks share one bounded cache |
+| Import retry | Yes | No | Yes | Re-runs enrichment for saved rows; hidden when only unplayable rows lack art; never overwrites a chosen cover |
+| Unknown duration display | Yes | Partial | Yes | A dash, never a fabricated `0:00` |
+| Discover screen | Yes | Partial | Yes | Genre browse over the shared `Genres` entity |
+| Favorites / Downloads destinations | Yes | Partial | Yes | Sidebar rows open Songs narrowed by `filter-favorites` / `filter-downloaded` with named empty states |
+| Settings in the sidebar | Yes | Yes | Yes | Last row of the navigation, hideable like the others |
+| Podcasts | No | No | Documented unsupported | No wired provider exposes a podcast catalogue; no dead nav row is shipped |
 | Import pasted list | Yes | No | Yes | `Artist - Title` or pipe-separated columns |
 | Match imported rows to local files | Yes | No | Yes | Exact path, title/artist/album/length, ISRC tie-break |
 | Match imported rows to the active provider | Yes | No | Yes | Exact recording only; no remix/live substitution |
@@ -32,7 +42,7 @@ Sonora. **Partial** — present with a stated limit. **No** — not present.
 | Keep unplayable rows | Yes | No | Yes | Read-only imported playlist retains every row |
 | Lyrics | Yes | Yes | Yes | LRCLIB, Musixmatch, NetEase, Kugou, local LRC, romanization |
 | Equalizer | Yes | Yes | Yes | Bands, profiles, per-device rules |
-| Loudness normalisation | Yes | Yes | Yes | Applied by the shared engine |
+| Loudness normalisation | Partial | Yes | Yes | Tag and provider gains are applied by the shared engine; there is no pre-amp or album/track mode selector |
 | Downloads / offline | Yes | Yes | Yes | Encrypted played-track cache and explicit downloads |
 | Scrobbling | Yes | Yes | Yes | Last.fm, Libre.fm, ListenBrainz, Maloja |
 | Discord presence | Yes | Yes | Yes | Off by default |
@@ -43,8 +53,8 @@ Sonora. **Partial** — present with a stated limit. **No** — not present.
 | Windows installer | Yes | Yes | Yes | Inno Setup, `dist\Soundy-1.0.0-Setup.exe` |
 | Portable build | Yes | No | If practical | `dist\Soundy-1.0.0-Portable.zip` |
 | Code signing | No | Upstream policy | No certificate | Unsigned local build; SmartScreen may warn |
-| Idle memory below 100 MB | No | Not measured here | Yes | 111.7 MB RSS measured; see `PERFORMANCE.md` |
-| Idle CPU near zero | Yes | Not measured here | Yes | 0.00% median measured |
+| Idle memory below 100 MB | No | Not measured here | Yes | 110.1 MB working set, 98.7 MB private commit; resident target missed, commit under it. See `PERFORMANCE.md` |
+| Idle CPU near zero | Yes | Not measured here | Yes | 0.344 s of CPU per 60 s idle (≈0.6% of one core) |
 | No background polling | Yes | Yes | Yes | No polling loops; import progress timer only while active |
 
 ## What "unified" means in this build

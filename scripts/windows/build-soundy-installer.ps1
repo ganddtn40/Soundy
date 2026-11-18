@@ -42,13 +42,16 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # The portable build is the same executable with the licence and notices beside it, so it can
-# be unpacked anywhere and run without an install.
+# be unpacked anywhere and run without an install. PERFORMANCE.md ships with it because the
+# README links to it; the rest of docs/ stays in the source checkout.
 $portable = Join-Path $outputPath "Soundy-$env:SOUNDY_VERSION-Portable"
+if (Test-Path $portable) { Remove-Item $portable -Recurse -Force }
 New-Item -ItemType Directory -Force $portable | Out-Null
 Copy-Item $source.Path (Join-Path $portable "soundy.exe") -Force
 Copy-Item (Join-Path $root "COPYING") (Join-Path $portable "LICENSE") -Force
 Copy-Item (Join-Path $root "THIRD-PARTY.md") (Join-Path $portable "THIRD-PARTY.md") -Force
 Copy-Item (Join-Path $root "README.md") (Join-Path $portable "README.md") -Force
+Copy-Item (Join-Path $root "PERFORMANCE.md") (Join-Path $portable "PERFORMANCE.md") -Force
 Compress-Archive -Path (Join-Path $portable "*") -DestinationPath (Join-Path $outputPath "Soundy-$env:SOUNDY_VERSION-Portable.zip") -Force
 
 Write-Output "installer: $(Join-Path $outputPath "$env:SOUNDY_SETUP.exe")"

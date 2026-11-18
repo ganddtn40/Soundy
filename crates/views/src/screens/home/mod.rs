@@ -11,7 +11,7 @@ use gpui::{
 use i18n::t;
 use music::GenreItem;
 use state::{Home, Network, Playback, Sonora};
-use ui::{ActiveTheme as _, Lazy, Mode, Popup, Scrollbar, Scroller};
+use ui::{ActiveTheme as _, Button, Lazy, Mode, Popup, Scrollbar, Scroller, Vacancy};
 
 use crate::shared::cells;
 use crate::shared::picks::{Picks, Shape};
@@ -172,6 +172,34 @@ impl HomeView {
             .into_any_element(),
         )
     }
+
+    /// What the page says when the provider answered with no shelves at all. That is not a
+    /// failure - a guest or a provider without a home feed simply has nothing for this page -
+    /// so it says so and points at Discover, which always lists the provider's genres.
+    fn empty(&self, _cx: &Context<Self>) -> AnyElement {
+        div()
+            .flex()
+            .flex_1()
+            .items_center()
+            .justify_center()
+            .py(px(48.))
+            .child(
+                Vacancy::new(t!("home-empty"))
+                    .detail(t!("home-empty-detail"))
+                    .icon("icons/radio.svg")
+                    .action(
+                        Button::new("home-empty-discover")
+                            .outline()
+                            .label(t!("home-empty-browse"))
+                            .icon("icons/radio.svg")
+                            .on_click(|_, _, cx| {
+                                router::navigate(router::Destination::Discover, cx)
+                            }),
+                    )
+                    .spoken("home-empty"),
+            )
+            .into_any_element()
+    }
 }
 
 impl Render for HomeView {
@@ -205,6 +233,7 @@ impl Render for HomeView {
         let sections = self.home.read(cx).sections();
         let feeding = self.home.read(cx).is_feeding();
         let width = self.width;
+        let bare = sections.is_empty() && !feeding;
         let shelves = self
             .shelves
             .update(cx, |shelves, cx| match sections.is_empty() && feeding {
@@ -223,6 +252,7 @@ impl Render for HomeView {
                     .flex_col()
                     .gap_8()
                     .child(ui::held("home-quick-picks", picks))
+                    .when(bare, |this| this.child(self.empty(cx)))
                     .children(shelves),
             )
             .when_some(context_menu, |this, menu| this.child(menu))

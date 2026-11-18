@@ -418,6 +418,7 @@ fn entry(item: Item) -> SourceEntry {
         duration: Duration::from_millis(track.duration_ms.unwrap_or_default()),
         cover,
         isrc: track.external_ids.and_then(|ids| ids.isrc),
+        release_year: None,
         url: track.external_urls.and_then(|urls| urls.spotify),
         local_path: None,
         playable,

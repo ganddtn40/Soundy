@@ -5,12 +5,14 @@ mod audio;
 pub mod audius;
 pub mod binimum;
 mod calendar;
+pub mod collage;
 pub mod connect;
 pub mod cover;
 pub mod credentials;
 pub mod deezer;
 pub mod drm;
 pub mod engine;
+pub mod enrich;
 pub mod equalizer;
 pub mod escape;
 pub mod import;
@@ -49,6 +51,7 @@ pub mod youtube;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
@@ -286,6 +289,29 @@ pub trait MusicApi: Send + Sync {
     /// Only a provider whose capabilities list `playlist_covers` answers.
     async fn set_playlist_cover(&self, _playlist_id: &str, _image: Option<&[u8]>) -> Result<()> {
         anyhow::bail!("this provider cannot change a playlist's cover")
+    }
+
+    /// Keeps a cover the library drew from the playlist's own tracks, so a later artwork pass
+    /// may rebuild it. Only the local provider, which keeps imported lists, answers.
+    async fn set_generated_cover(&self, _playlist_id: &str, _image: &[u8]) -> Result<()> {
+        anyhow::bail!("this provider cannot keep a generated playlist cover")
+    }
+
+    /// Builds an imported playlist's own cover from the artwork of its rows, or the drawn card
+    /// when it has none, and answers whether it wrote one. Only the local provider answers.
+    async fn build_import_cover(&self, _playlist_id: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    /// Looks again for the pictures and missing lengths of a playlist imported from a list,
+    /// then rebuilds its generated cover. A provider that does not keep imported playlists
+    /// answers `None`.
+    async fn refresh_imported_art(
+        &self,
+        _playlist_id: &str,
+        _cancel: &AtomicBool,
+    ) -> Result<Option<crate::enrich::Refresh>> {
+        Ok(None)
     }
 
     /// Reads one playlist's smart rules and edit bookkeeping. Only a provider whose

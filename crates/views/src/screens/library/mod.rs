@@ -13,25 +13,6 @@ use crate::shared::menus::{ItemMenu, liked_menu, new_playlist_menu};
 use crate::shared::playlist_editor::{Edit, PlaylistEditor};
 use crate::shared::spotify_import::SpotifyImport;
 
-use gpui::accesskit::Role;
-use gpui::prelude::*;
-use gpui::{
-    AnyElement, App, Context, ElementId, Entity, FontWeight, MouseButton, Pixels, Point, Render,
-    ScrollHandle, SharedString, WeakEntity, Window, div, point, px, relative,
-};
-use i18n::t;
-use music::{Arrival, Shape, Track};
-use router::{Destination, LibraryTab, navigate};
-use state::{
-    Addition, AppSettings, DownloadsChanged, Library, LibraryPart, LibraryState, Network, Origin,
-    Playback, Scan, Shelf, Sonora,
-};
-use ui::{
-    ActiveTheme as _, Button, Card, Deck, FilterChange, LEADING, Mode, Pin, Pinnable, Popovers,
-    Popup, Scrollbar, Scroller, Sort, SortAxis, TableDelegate, TableEvent, TableSource, TableState,
-    Text, Vacancy, Viewport, heading, quantize, runtime, scrolled, snapped, table,
-};
-
 use crate::shared::album_grid::{AlbumTiles, CardGrid, TileLook};
 use crate::shared::blend::{self, Joined};
 use crate::shared::hero::{HeroMetaStrip, HeroPlayButton, PageHero};
@@ -42,7 +23,25 @@ use crate::shared::tracks::{
 use crate::shared::{cards, cells, local, page, trouble};
 use albums::{AlbumField, AlbumSource};
 use artists::{ArtistField, ArtistSource};
+use gpui::accesskit::Role;
+use gpui::prelude::*;
+use gpui::{
+    AnyElement, App, Context, ElementId, Entity, FontWeight, MouseButton, Pixels, Point, Render,
+    ScrollHandle, SharedString, WeakEntity, Window, div, point, px, relative,
+};
+use i18n::t;
+use music::{Arrival, Shape, Track};
 use playlists::{PlaylistField, PlaylistSource};
+use router::{Destination, LibraryTab, navigate};
+use state::{
+    Addition, AppSettings, DownloadsChanged, Library, LibraryPart, LibraryState, Network, Origin,
+    Playback, Scan, Shelf, Sonora,
+};
+use ui::{
+    ActiveTheme as _, Button, Card, Deck, FilterChange, LEADING, Listing as _, Mode, Pin, Pinnable,
+    Popovers, Popup, Scrollbar, Scroller, Sort, SortAxis, TableDelegate, TableEvent, TableSource,
+    TableState, Text, Vacancy, Viewport, heading, quantize, runtime, scrolled, snapped, table,
+};
 
 impl From<LibraryTab> for Section {
     fn from(tab: LibraryTab) -> Self {
@@ -196,6 +195,14 @@ impl Tracks for ShelfTracks {
     }
 }
 
+/// Which sidebar row opened the songs page. The filter itself lives in the table; this only
+/// keeps the page's name when the list is empty, where the filter chip has no rows to sit on.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Narrowed {
+    Favorites,
+    Downloads,
+}
+
 /// Whether a section is still waiting for rows from either shelf.
 fn loading(library: &Entity<Library>, section: Section, cx: &App) -> bool {
     blend::waiting(library.read(cx), section.part(), cx)
@@ -209,6 +216,9 @@ pub struct LibraryView {
     playback_status: PlaybackStatus,
     /// The listed duration is reused until the song table rebuilds its rows.
     duration: Cell<Option<(u64, Duration)>>,
+    /// Which sidebar row opened the songs page, so its title and empty state still name the
+    /// destination even when there is not a single row for the filter to be offered on.
+    opened_as: Option<Narrowed>,
     section: Section,
     views: [Mode; 4],
     width: Pixels,
@@ -437,6 +447,7 @@ impl LibraryView {
             playback,
             playback_status: current_playback,
             duration: Cell::new(None),
+            opened_as: None,
             section: Section::Songs,
             views,
             width,
@@ -539,8 +550,13 @@ impl LibraryView {
     /// Whether there is nothing to list at all: no streaming account and no local folder. A scan
     /// in flight is not that: a folder is only recorded once its scan lands, so the setup screen
     /// would otherwise cover the whole of the first import, which is the longest one there is.
+    /// Imported playlists are kept by the local provider without a folder, so a section that has
+    /// rows is never asked to configure one. Favorites and Downloads are named destinations with
+    /// their own empty state, so they never turn into a folder prompt either.
     fn unconfigured(&self, cx: &App) -> bool {
-        self.lead(cx).local()
+        self.opened_as.is_none()
+            && self.table(self.section).row_count(cx) == 0
+            && self.lead(cx).local()
             && Sonora::global(cx).session.read(cx).local_paths().is_empty()
             && Scan::global(cx).read(cx).progress().is_none()
     }
@@ -578,6 +594,22 @@ impl LibraryView {
         let table = self.table(self.section);
         if table.row_count(cx) > 0 {
             return None;
+        }
+        // The sidebar rows name their own emptiness, which "No matches" would not explain.
+        if let Some(narrowed) = self.opened_as {
+            let downloads_empty = Sonora::global(cx).downloads.read(cx).is_empty();
+            let (id, caption) = match narrowed {
+                Narrowed::Favorites => ("library-no-favorites", t!("library-no-favorites")),
+                Narrowed::Downloads if downloads_empty => {
+                    ("library-no-downloads", t!("library-no-downloads"))
+                }
+                Narrowed::Downloads => ("library-no-matches", t!("library-no-matches")),
+            };
+            return Some(
+                Vacancy::new(caption)
+                    .icon(self.section.glyph(self.shape(cx)))
+                    .spoken(id),
+            );
         }
         if table.filtering(cx) {
             return Some(Vacancy::new(t!("library-no-matches")).spoken("library-no-matches"));
@@ -653,6 +685,7 @@ impl LibraryView {
     }
 
     pub fn select(&mut self, section: Section, cx: &mut Context<Self>) {
+        self.opened_as = None;
         if self.section != section {
             self.scrollbar
                 .read(cx)
@@ -665,6 +698,31 @@ impl LibraryView {
             self.table(section).set_width(self.width, cx);
         }
         cx.notify();
+    }
+
+    /// Opens the songs page narrowed to the sidebar's Favorites or Downloads row. Any narrowing
+    /// left by the other row is cleared first, so the two never stack into an empty list.
+    pub fn show_filtered(&mut self, favorites: bool, downloads: bool, cx: &mut Context<Self>) {
+        self.select(Section::Songs, cx);
+        self.filter(FilterChange::Reset, cx);
+        if favorites {
+            self.filter(FilterChange::Flag("filter-favorites", true), cx);
+            self.opened_as = Some(Narrowed::Favorites);
+        }
+        if downloads {
+            self.filter(FilterChange::Flag("filter-downloaded", true), cx);
+            self.opened_as = Some(Narrowed::Downloads);
+        }
+        cx.notify();
+    }
+
+    /// Whether the songs table is narrowed by the flag filter `key`, which lets the page title
+    /// name what the sidebar row opened.
+    fn songs_narrowed_to(&self, key: &str, cx: &App) -> bool {
+        self.songs
+            .filters(cx)
+            .iter()
+            .any(|filter| matches!(filter, ui::Filter::Flag(axis) if axis.key == key && axis.on))
     }
 
     /// The viewport of a table that opens the page with no header above it. `lead` is the space
@@ -724,13 +782,23 @@ impl LibraryView {
             strip = strip.text(runtime(duration));
         }
         let liked = self.liked_only(cx);
-        let (title, icon, eyebrow) = match liked {
-            true => (
+        let favorites = self.opened_as == Some(Narrowed::Favorites)
+            || self.songs_narrowed_to("filter-favorites", cx);
+        let downloads = self.opened_as == Some(Narrowed::Downloads)
+            || self.songs_narrowed_to("filter-downloaded", cx);
+        let (title, icon, eyebrow) = match (favorites, downloads, liked) {
+            (true, _, _) => (
+                t!("nav-favorites"),
+                "icons/heart-filled.svg",
+                t!("nav-library"),
+            ),
+            (false, true, _) => (t!("nav-downloads"), "icons/download.svg", t!("nav-library")),
+            (false, false, true) => (
                 t!("library-liked-songs"),
                 "icons/heart-filled.svg",
                 t!("detail-playlist"),
             ),
-            false => (t!("nav-songs"), LibraryTab::Songs.icon(), t!("nav-library")),
+            (false, false, false) => (t!("nav-songs"), LibraryTab::Songs.icon(), t!("nav-library")),
         };
 
         PageHero::new("library-hero", title)
@@ -1472,6 +1540,15 @@ impl Tooled for LibraryView {
 impl LibraryView {
     fn filter(&mut self, change: FilterChange, cx: &mut Context<Self>) {
         self.cards_dirty = true;
+        // A narrowing the listener took off in the toolbar no longer names the page.
+        if matches!(&change, FilterChange::Reset)
+            || matches!(
+                &change,
+                FilterChange::Flag("filter-favorites" | "filter-downloaded", false)
+            )
+        {
+            self.opened_as = None;
+        }
         let section = self.section;
         self.table(section).filter(change, cx);
         self.persist(section, cx);

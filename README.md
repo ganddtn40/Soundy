@@ -43,6 +43,10 @@ the project it comes from.
   pasted track list. A Spotify link is read only through an existing Spotify session; without
   one the app says so and points at the file and paste paths instead of scraping. See
   [docs/IMPORTER.md](./docs/IMPORTER.md).
+- **One integrated library** - Discover browses the provider's genres, Favorites and Downloads
+  open the Songs library under those filters, and imported playlists get provider-matched
+  artwork and a generated 2×2 cover. Every screen shares one artwork cache. See
+  [docs/MONOCHROME-PARITY.md](./docs/MONOCHROME-PARITY.md).
 - **Lower idle work** - no polling loops or timers are added; appearance defaults keep
   backdrop blur and motion available, and both can be turned off in Settings.
 
@@ -125,9 +129,13 @@ recording is never substituted. The full behaviour, file formats and privacy not
 
 ## Documentation
 
+These links are relative to the source checkout. The portable ZIP carries `README.md` and
+`PERFORMANCE.md`; the other documents stay with the source tree.
+
 - [docs/IMPORTER.md](./docs/IMPORTER.md) - sources, formats, matching and the Spotify limit
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - crates, the import path and threading
 - [docs/FEATURE-COMPARISON.md](./docs/FEATURE-COMPARISON.md) - this build against upstream
+- [docs/MONOCHROME-PARITY.md](./docs/MONOCHROME-PARITY.md) - every Monochrome feature and its real status here
 - [docs/KNOWN-LIMITATIONS.md](./docs/KNOWN-LIMITATIONS.md) - limits stated plainly
 - [docs/LICENSE-REPORT.md](./docs/LICENSE-REPORT.md) - dependency and licence summary
 - [docs/TEST-RESULTS.md](./docs/TEST-RESULTS.md) - what was run and what passed
@@ -136,11 +144,13 @@ recording is never substituted. The full behaviour, file formats and privacy not
 ## Performance
 
 Soundy targets an idle resident set below 100 MB and near-zero idle CPU. **The CPU goal is met;
-the memory goal is not.** On Windows 11 x64 the final release build idles at 111.7 MB resident
-with a 100.0 MB private working set, with a median idle CPU of 0.00% and a 193 ms median startup,
-while closing the memory gap would need a smaller renderer than GPUI's `wgpu` baseline. The
-measured figures, the method and the profile caveats are in [PERFORMANCE.md](./PERFORMANCE.md).
-Nothing in this repository claims a measurement that was not taken on a real run.
+the memory goal is half met.** The shipped release build settles at 110.1 MB working set with a
+98.7 MB private commit, uses 0.344 s of CPU per idle minute (≈0.6% of one core), and shows its
+window 213 ms after launch (median of three cold starts). Streaming measures 119.9 MB working /
+99.4 MB private. Private commit is under 100 MB; resident memory is about 10 MB over, and closing
+that gap would need a smaller renderer than GPUI's `wgpu` baseline. The measured figures, method
+and profile caveats are in [PERFORMANCE.md](./PERFORMANCE.md). Nothing in this repository claims a
+measurement that was not taken on a real run.
 
 ## Attribution and licence
 

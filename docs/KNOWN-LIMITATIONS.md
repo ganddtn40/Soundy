@@ -91,14 +91,63 @@ not implement an arbitrary internet-radio player, so the URL opens externally.
 - Cancelling is checked between requests and before the database write. A request already in
   flight is allowed to finish or time out first.
 
+## Features Monochrome has that Soundy does not
+
+The full list is in [MONOCHROME-PARITY.md](./MONOCHROME-PARITY.md). The user-visible ones worth
+stating here:
+
+- No Info or Related tab in the right panel; it carries Lyrics, Queue and, in a Sonora Session,
+  Members.
+- No command palette, no local crossfade setting, no playback speed, no sleep timer, no mono /
+  crossfeed / stereo-width controls and no binaural or spatial DSP. Spotify's own crossfade
+  preference is the only crossfade path.
+- No waveform seekbar and no per-row quality badge.
+- Downloads stay in Soundy's encrypted offline cache. There is no "export to my music folder"
+  pipeline, filename template or CUE/NFO/M3U sidecar writer.
+- No Monochrome account, cloud sync, community playlist service, listening-party protocol,
+  AOTY pages or unreleased tracker. None of those services exist for this build to call.
+- No podcast catalogue. The wired providers do not expose one, so the sidebar has no Podcasts row
+  rather than a row that opens an empty page.
+
+## Artwork and catalogue limits
+
+- Deezer's public API can throttle or refuse a client. When it does, it is disabled for the rest of
+  that import and iTunes is used; if both refuse, rows keep their placeholder and the retry button
+  remains available for rows that can display art.
+- Artwork found by title/artist/duration is the provider's release art, not necessarily the exact
+  pressing named in the export. The match rules prevent a different recording, not a different
+  edition of the same recording.
+- Album grouping means one cover can be reused for several rows. That is intentional for a
+  playlist collage; it is not a claim that every row came from that album.
+- A generated collage is rebuilt when a retry finds more art, unless the listener chose a cover.
+  There is no separate "regenerate collage" button.
+
 ## Application and packaging
 
-### Idle memory misses the 100 MB target
+### Output device switching is not in the fullscreen player
 
-Measured idle RSS is 111.7 MB on Windows 11 x64, with a 100.0 MB private working set. The CPU,
-startup and playback targets are met. See `PERFORMANCE.md` for the method and the raw numbers.
-The profile held five imported playlists and a signed-in YouTube Music session, so the figure is
-not a fresh-profile minimum. The gap is the GPUI/`wgpu` baseline, not the importer.
+The fullscreen player carries the transport, seek, volume, shuffle/repeat, lyrics and queue. The
+output device list lives in **Settings → Sound**; it is not duplicated in the fullscreen corner,
+which has room for four icon buttons at 936×648. Picking a device is one settings visit away and
+does not stop playback. This is a deliberate layout choice, not a hidden control.
+
+### Idle working set misses the 100 MB target
+
+The shipped binary settles at **110.1 MB working set with a 98.7 MB private commit** when idle at
+936×648, measured over 60 seconds on a profile with one imported playlist and a guest YouTube
+Music session. Private commit is under the 100 MB target; resident memory is about 10 MB over
+it. Streaming measured 119.9 MB working / 99.4 MB private. The gap is the GPUI/`wgpu` window,
+font and image atlases, not the importer or database. Both figures were flat across the sample,
+so this is a baseline, not a leak. See `PERFORMANCE.md` for the method and raw numbers, and note
+that the older 111.7 MB figure was from a different build and profile.
+
+### New labels fall back to English outside en-US
+
+The unified build adds 23 interface strings: the Discover, Favorites and Downloads destinations,
+the Home empty state, the Discover page, and the importer's enrichment, artwork and retry labels.
+Only `en-US` carries translations for them in this release. The i18n layer falls back to English
+per key, so no screen shows a missing-key marker or a blank label, but those labels stay English
+in the other 17 locales. Translating them is a strings-only change for a later patch.
 
 ### The binary is unsigned
 
