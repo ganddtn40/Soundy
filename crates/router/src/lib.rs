@@ -26,14 +26,13 @@ impl LibraryTab {
     }
 }
 
-/// A row the sidebar can hide from Settings. The four library pages are rows of their own,
-/// each opening its page of the merged streaming and local library. History and Settings also
-/// sit in the account menu, and their rows can be hidden from Settings like any other.
+/// A row the sidebar can hide from Settings. The five library pages are rows of their own,
+/// each opening its page of the merged streaming and local library. History also sits in the
+/// account menu, and its row can be hidden from Settings like any other.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NavEntry {
     Home,
     Search,
-    Discover,
     Songs,
     Albums,
     Artists,
@@ -41,17 +40,14 @@ pub enum NavEntry {
     Downloads,
     Favorites,
     History,
-    Settings,
     Pins,
 }
 
 impl NavEntry {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 10] = [
         Self::Home,
         Self::Search,
-        Self::Discover,
         Self::History,
-        Self::Settings,
         Self::Songs,
         Self::Albums,
         Self::Artists,
@@ -65,7 +61,6 @@ impl NavEntry {
         match self {
             Self::Home => "home",
             Self::Search => "search",
-            Self::Discover => "discover",
             Self::Songs => "songs",
             Self::Albums => "albums",
             Self::Artists => "artists",
@@ -73,7 +68,6 @@ impl NavEntry {
             Self::Downloads => "downloads",
             Self::Favorites => "favorites",
             Self::History => "history",
-            Self::Settings => "settings",
             Self::Pins => "sidebar-pins",
         }
     }
@@ -82,7 +76,6 @@ impl NavEntry {
         match self {
             Self::Home => "nav-home",
             Self::Search => "nav-search",
-            Self::Discover => "nav-discover",
             Self::Songs => "nav-songs",
             Self::Albums => "nav-albums",
             Self::Artists => "nav-artists",
@@ -90,14 +83,12 @@ impl NavEntry {
             Self::Downloads => "nav-downloads",
             Self::Favorites => "nav-favorites",
             Self::History => "nav-history",
-            Self::Settings => "nav-settings",
             Self::Pins => "nav-pinned",
         }
     }
 
     /// Whether the row stays out of the sidebar until the listener adds it, rather than showing
-    /// until hidden. Every row is a regular one now that Settings sits at the foot of the
-    /// navigation.
+    /// until hidden. Every row is a regular one today.
     pub fn optional(self) -> bool {
         false
     }
@@ -405,7 +396,7 @@ impl From<&ui::Pin> for Destination {
 
 impl Destination {
     /// Whether the sidebar row leading to `self` is lit while `other` is open. Every settings page
-    /// lights the one Settings row, and every other row is lit only on its own page.
+    /// groups together, and every other row is lit only on its own page.
     pub fn same_section(&self, other: &Destination) -> bool {
         (self.in_settings() && other.in_settings()) || self == other
     }

@@ -15,8 +15,7 @@ use gpui::{
 use gpui::{Window, div, px};
 use music::Shape;
 use router::{
-    Destination, LibraryTab, NavEntry, Navigation, NavigationEvent, SettingsPage, navigate,
-    open_settings,
+    Destination, LibraryTab, NavEntry, Navigation, NavigationEvent, navigate, open_settings,
 };
 use state::{AppSettings, Leaving, Library, Origin, PinSort, Pins, Playback, Shelf, Sonora};
 
@@ -28,13 +27,12 @@ use crate::shared::playlist_editor::{Edit, PlaylistEditor};
 /// The one drag list the pinned section keeps, so a pin dropped anywhere in it lands in order.
 const PINS: &str = "sidebar-pins";
 
-/// The sidebar keeps its rows in three groups: the top-level pages, the library's own pages,
-/// and the settings row under them, so Settings always ends the navigation exactly as the
-/// layout calls for. The entry that can hide each row, its icon and where it goes sit together.
-pub(crate) const NAV: [(NavEntry, &str, Destination); 11] = [
+/// The sidebar keeps its rows in two groups: the top-level pages and the library's own pages.
+/// Settings opens from the title bar, so it takes no row of its own. The entry that can hide
+/// each row, its icon and where it goes sit together.
+pub(crate) const NAV: [(NavEntry, &str, Destination); 9] = [
     (NavEntry::Home, "icons/house.svg", Destination::Home),
     (NavEntry::Search, "icons/search.svg", Destination::Search),
-    (NavEntry::Discover, "icons/radio.svg", Destination::Discover),
     (
         NavEntry::History,
         "icons/rotate-ccw-clock.svg",
@@ -70,32 +68,21 @@ pub(crate) const NAV: [(NavEntry, &str, Destination); 11] = [
         "icons/heart.svg",
         Destination::Favorites,
     ),
-    (
-        NavEntry::Settings,
-        "icons/settings.svg",
-        Destination::Settings(SettingsPage::Providers),
-    ),
 ];
 
 /// How many rows the top group and the library group hold, in `NAV` order.
-const TOP: std::ops::Range<usize> = 0..4;
-const LIBRARY: std::ops::Range<usize> = 4..10;
-const SETTINGS: std::ops::Range<usize> = 10..11;
+const TOP: std::ops::Range<usize> = 0..3;
+const LIBRARY: std::ops::Range<usize> = 3..9;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn settings_ends_the_navigation_and_the_groups_do_not_overlap() {
-        assert_eq!(NAV[SETTINGS.start].0, NavEntry::Settings);
-        assert_eq!(SETTINGS.end, NAV.len());
-        assert!(TOP.end <= LIBRARY.start);
-        assert!(LIBRARY.end <= SETTINGS.start);
-        assert_eq!(
-            NAV.iter().filter(|row| row.0 == NavEntry::Settings).count(),
-            1
-        );
+    fn the_navigation_groups_cover_every_row_without_overlap() {
+        assert_eq!(TOP.start, 0);
+        assert_eq!(TOP.end, LIBRARY.start);
+        assert_eq!(LIBRARY.end, NAV.len());
     }
 }
 
@@ -360,10 +347,9 @@ impl SidebarLeft {
         };
         let top = shown(TOP, cx);
         let library = shown(LIBRARY, cx);
-        let settings = shown(SETTINGS, cx);
         let mut rows = Vec::new();
         if self.folded() {
-            for (group, indices) in [top, library, settings]
+            for (group, indices) in [top, library]
                 .into_iter()
                 .filter(|indices| !indices.is_empty())
                 .enumerate()
@@ -383,12 +369,6 @@ impl SidebarLeft {
         if !library.is_empty() {
             rows.push(self.section("sidebar-library", cx));
             for index in library {
-                rows.push(self.nav(index, cx));
-            }
-        }
-        if !settings.is_empty() {
-            rows.push(self.divider(cx));
-            for index in settings {
                 rows.push(self.nav(index, cx));
             }
         }

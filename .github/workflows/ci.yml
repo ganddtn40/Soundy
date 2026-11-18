@@ -8,16 +8,12 @@ on:
     paths-ignore:
       - "**/*.md"
       - .github/ISSUE_TEMPLATE/**
-      - .github/triage/**
       - .github/labeler.yml
-      - .coderabbit.yaml
   pull_request:
     paths-ignore:
       - "**/*.md"
       - .github/ISSUE_TEMPLATE/**
-      - .github/triage/**
       - .github/labeler.yml
-      - .coderabbit.yaml
   workflow_dispatch:
 
 # A pull request event handled after the merge resolves github.ref to the base branch, so
@@ -39,9 +35,7 @@ jobs:
   # ways and share nothing but the setup.
   check:
     name: ${{ matrix.name }}
-    if: >-
-      !startsWith(github.head_ref, 'release/') &&
-      !contains(github.event.head_commit.message, 'from sonorahq/release/')
+    if: "!startsWith(github.head_ref, 'release/')"
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
@@ -113,9 +107,7 @@ jobs:
   # A push to main runs them too, only to save the cache every pull request starts from.
   platforms:
     name: clippy on ${{ matrix.target }}
-    if: >-
-      !startsWith(github.head_ref, 'release/') &&
-      !contains(github.event.head_commit.message, 'from sonorahq/release/')
+    if: "!startsWith(github.head_ref, 'release/')"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -153,9 +145,7 @@ jobs:
 
   build:
     name: ${{ matrix.target }}
-    if: >-
-      github.event_name != 'pull_request' &&
-      !contains(github.event.head_commit.message, 'from sonorahq/release/')
+    if: github.event_name != 'pull_request'
     runs-on: ${{ matrix.os }}
     env:
       RUSTC_WRAPPER: sccache

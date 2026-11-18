@@ -9,13 +9,13 @@ generated notices are in [`THIRD-PARTY.md`](../THIRD-PARTY.md); this page is the
 | --- | --- |
 | Project licence | GNU General Public License v3.0 or later (`COPYING`) |
 | Upstream | Sonora, <https://github.com/sonorahq/sonora>, GPL-3.0-or-later |
-| Fork changes | Identity, emerald Liquid Glass theme, Windows packaging, disabled self-update and install reporting, playlist importer |
+| Soundy changes | Identity, emerald Liquid Glass theme, Windows packaging, disabled self-update and install reporting, playlist importer |
 | Corresponding source | This tree plus the revisions pinned in `Cargo.lock` |
 | Bundled code-signing certificate | None |
-| Proprietary components | None added by this fork |
+| Proprietary components | None added by Soundy |
 
-Soundy is a GPL fork. Redistributing the binary requires the corresponding source and the
-notices; the installer and portable ZIP include `LICENSE` and `THIRD-PARTY.md`.
+Soundy is a GPL-licensed project. Redistributing the binary requires the corresponding source and
+the notices; the installer and portable ZIP include `LICENSE` and `THIRD-PARTY.md`.
 
 ## Dependency inventory
 

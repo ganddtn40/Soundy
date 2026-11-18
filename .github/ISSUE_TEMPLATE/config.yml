@@ -2,5 +2,5 @@ blank_issues_enabled: false
 
 contact_links:
   - name: Questions and general chat
-    url: https://discord.gg/a8N8Tx23rV
-    about: Ask in the Discord server. Issues are for bugs and feature requests.
+    url: https://github.com/ganddtn40/soundy/discussions
+    about: Ask in Discussions. Issues are for bugs and feature requests.

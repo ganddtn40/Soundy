@@ -1,16 +1,16 @@
 # Contributing to Soundy
 
-Soundy is a fork of [Sonora](https://github.com/sonorahq/sonora). The fork keeps the native
-GPUI player, the provider integrations and the upstream architecture, and changes the identity,
-theme, packaging and runtime defaults. Read the upstream
-[vision](https://sonorahq.org/docs/vision) and [roadmap](https://sonorahq.org/docs/roadmap) for
-the parts that still apply. Open an issue before a large change, especially one that touches
-provider behaviour or the renderer.
+Soundy is maintained by [ganddtn40](https://github.com/ganddtn40) and built on the Sonora
+codebase. It keeps the native GPUI player, provider integrations and upstream architecture,
+and adds its own identity, theme, packaging and runtime defaults.
 
-## What this fork accepts
+Open an issue before a large change, especially one that touches provider behaviour or the
+renderer. Small, focused pull requests are reviewed faster than broad rewrites.
+
+## What Soundy accepts
 
 - Fixes that keep the player lightweight: idle CPU, memory, startup and binary size.
-- Real provider, playback, lyric and accessibility fixes that work for every platform the code
+- Real provider, playback, lyric and accessibility fixes that work on every platform the code
   already supports.
 - Visual changes that stay within the emerald Liquid Glass direction described in the README.
 - Documentation and packaging that keep the GPL and third-party attribution intact.
@@ -35,10 +35,10 @@ cargo build --release -p sonora
 ```
 
 The executable is `target\release\soundy.exe`; the installer and its output land in `dist\`.
-The crate is still named `sonora` because the fork keeps the upstream package layout; the
+The crate is still named `sonora` because the project keeps the upstream package layout; the
 binary target is `soundy`.
 
-Use Nix where available on Linux and macOS. The upstream dev shell has the native dependencies:
+Use Nix where available on Linux and macOS:
 
 ```sh
 nix develop          # or: direnv allow
@@ -47,8 +47,8 @@ cargo run --locked --package sonora
 
 Without Nix you need rustup, a C++ compiler, `cmake`, `pkg-config`, `mold`, and the development
 packages for ALSA, D-Bus, fontconfig, libxkbcommon, libxcb, libX11 and SQLite. Running it also
-needs a Vulkan driver. These are the upstream requirements; they are not packaged by this fork
-yet.
+needs a Vulkan driver. These requirements are inherited from the Sonora codebase and are not
+packaged by Soundy yet.
 
 For hot reload, the upstream workflow still works:
 
@@ -71,10 +71,9 @@ the tests. If it affects idle work, record the numbers before and after with
 `scripts/measure-soundy.ps1` and update `PERFORMANCE.md` with the real values. Do not claim a
 memory, CPU or startup figure that was not measured.
 
-Open pull requests against the `soundy` branch. Commits follow
-[Conventional Commits](https://www.conventionalcommits.org/) with no body, and user-facing
-changes should be mentioned under `## [Unreleased]` in `CHANGELOG.md` without implementation
-detail.
+Open pull requests against `main`. Commits follow
+[Conventional Commits](https://www.conventionalcommits.org/), and user-facing changes should be
+mentioned under `## [Unreleased]` in `CHANGELOG.md` without implementation detail.
 
 ## Translations
 
@@ -91,15 +90,8 @@ their name from their tooltip, and list rows expose position and size of set. Ru
 `cargo test -p ui --test a11y_tree` and extend it when you add a primitive. New composed screens
 also need a manual pass with a screen reader before merge.
 
-## AI
-
-Use whatever tools you like, but you must understand, review and test what you submit. Pull
-request descriptions, issues and discussion replies must be your own words. A generated summary
-of a small change is fine, and so is AI proofreading or translation of text you wrote.
-Contributions that ignore this may be closed without comment.
-
 ## License
 
 Soundy is GPL-3.0-or-later, the same license as Sonora, and your contributions are licensed
 under the same terms. Keep the copyright notices of the upstream authors. The Soundy name, icon
-set and theme changes are additions of this fork.
+set and theme changes are additions of this project.

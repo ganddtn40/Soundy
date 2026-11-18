@@ -1,23 +1,33 @@
 <div align="center">
 
-<img src="./.github/readme-icon.svg" alt="" width="60" height="60">
+<img src="./.github/readme-icon.svg" alt="Soundy" width="72" height="72">
 
 <h1>Soundy</h1>
 
-### A lightweight native music player
+### A fast, native music player for Windows
+
+**Local files and streaming, one library, no browser engine.**
+
+[![Latest release](https://img.shields.io/github/v/release/ganddtn40/soundy?style=flat-square&color=10b981)](https://github.com/ganddtn40/soundy/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/ganddtn40/soundy/total?style=flat-square&color=10b981)](https://github.com/ganddtn40/soundy/releases)
+[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-10b981?style=flat-square)](./COPYING)
+[![Platform](https://img.shields.io/badge/platform-Windows%2011%20x64-0078D4?style=flat-square)](#requirements)
+[![Built with Rust](https://img.shields.io/badge/built%20with-Rust-000000?style=flat-square&logo=rust)](https://www.rust-lang.org)
+
+[Download](#download) · [Features](#features) · [Build from source](#build-from-source) · [Documentation](#documentation)
 
 </div>
 
-Soundy is a Windows-first desktop music player written in Rust with
-[GPUI](https://github.com/zed-industries/zed). It plays local files and streams from the
-providers its upstream project supports, and it is built to stay small: no Electron, no
-WebView shell, no client-side JavaScript framework, and no background polling beyond what
-playback needs.
+Soundy is a desktop music player written in Rust and rendered with
+[GPUI](https://github.com/zed-industries/zed). It plays the music on your disk and streams from
+the providers it supports through one consistent library, without Electron, a WebView shell or a
+client-side JavaScript framework.
 
-Soundy is a fork of [Sonora](https://github.com/sonorahq/sonora), which supplies the player,
-provider integrations and the native UI toolkit. This fork changes the identity, the theme,
-packaging and the runtime defaults, and keeps the provider behaviour and GPL obligations of
-the project it comes from.
+The player is built to feel immediate: a cold start measured at 213 ms, around 0.3 seconds of
+CPU per idle minute, native window management and no background polling beyond what playback
+needs. Those are measured numbers from the release build, not targets.
+
+Soundy is designed, built and maintained by **[ganddtn40](https://github.com/ganddtn40)**.
 
 > [!IMPORTANT]
 > **Soundy is not a piracy tool.**
@@ -27,87 +37,117 @@ the project it comes from.
 > requires a valid subscription to play a track, Soundy requires one too. Features aimed at
 > ripping, downloading or redistributing protected streams are out of scope.
 
-## What this fork changes
+## Download
 
-- **Soundy identity** - window title, tray, notifications, application id
-  `app.soundy.player`, `soundy:` links, `soundy.exe`, icons and Windows installer.
-- **Emerald Liquid Glass** - near-black graphite surfaces (`#090A0C` / `#101114`), emerald
-  accents, frosted controls and the fullscreen player's ambient field. The fullscreen cover
-  is presented as a vinyl record with a slow reflective sweep, over a blurred copy of the
-  artwork.
-- **No self-update** - a Soundy build is never replaced by a Sonora release. Update checking
-  is off and the updater does not run.
-- **No install reporting** - upstream's optional install ping is disabled; Soundy has no
-  telemetry endpoint of its own.
-- **Playlist import without an account** - a Spotify link, an M3U/M3U8 or CSV file, or a
-  pasted track list. A Spotify link is read only through an existing Spotify session; without
-  one the app says so and points at the file and paste paths instead of scraping. See
-  [docs/IMPORTER.md](./docs/IMPORTER.md).
-- **One integrated library** - Discover browses the provider's genres, Favorites and Downloads
-  open the Songs library under those filters, and imported playlists get provider-matched
-  artwork and a generated 2×2 cover. Every screen shares one artwork cache. See
-  [docs/MONOCHROME-PARITY.md](./docs/MONOCHROME-PARITY.md).
-- **Lower idle work** - no polling loops or timers are added; appearance defaults keep
-  backdrop blur and motion available, and both can be turned off in Settings.
+Get the latest build from the [releases page](https://github.com/ganddtn40/soundy/releases/latest).
 
-Provider names, service links and the Discord application id still belong to Sonora and its
-providers. They are kept because they are the real services and credentials this player
-uses; they are not claimed as Soundy-owned.
+| Build | File | Notes |
+| --- | --- | --- |
+| Installer | `Soundy-1.0.0-Setup.exe` | Per-user install, Start menu shortcut, uninstaller |
+| Portable | `Soundy-1.0.0-Portable.zip` | Unpack anywhere and run `soundy.exe` |
 
-## Status
+Both are built from the same release binary. The executable is unsigned, so Windows SmartScreen
+may show a warning on first launch. Choose **More info**, then **Run anyway**.
 
-Windows 11 x64 is the primary target. The release build is tested locally; Linux and macOS
-sources remain in place because they come from the same codebase, but they are not packaged
-or released by this fork yet. There is no Soundy release server, package repository, AUR
-package, Flatpak repository or code-signing certificate at this point.
+### Requirements
 
-## Building on Windows
+- Windows 11 x64. This is the packaged and tested target.
+- A Vulkan-capable graphics driver, as required by GPUI.
+- No runtime, no .NET install and no WebView2 dependency.
+
+Linux and macOS build paths remain in the source tree, but Soundy does not publish packages for
+them yet.
+
+## Features
+
+**One library, local and streaming**
+
+- Songs, Albums, Artists, Playlists, Downloads and Favorites in a single sidebar.
+- Search with grouped results, best match and recent searches.
+- Artist, album, playlist and genre pages with a shared artwork cache.
+- Playback history and a queue that survives navigation.
+
+**A player that stays out of the way**
+
+- Gapless playback, crossfade where the provider supports it, and a real equalizer with
+  profiles and per-device rules.
+- Word-timed lyrics, a queue panel and a native spectrum visualizer.
+- Fullscreen now-playing view with the cover presented as a vinyl record over a blurred
+  artwork field.
+- Global media keys, tray controls and optional Discord rich presence.
+
+**Playlist import without an account**
+
+- A Spotify playlist link, an M3U/M3U8 or CSV file, or a pasted track list.
+- No Spotify account, Premium, OAuth or API key is required. A Spotify link is read through an
+  existing Spotify session when one exists; without one the dialog says so and offers the file
+  and paste paths instead of scraping.
+- Imported rows keep their order and duplicate counts, get provider-matched metadata and
+  artwork, and fall back to a generated 2x2 cover.
+
+**Quiet by default**
+
+- No telemetry, no installation counter and no update checker.
+- No Soundy account and no Soundy server.
+- Settings, playback state and caches live under `%APPDATA%\soundy` and `%LOCALAPPDATA%\soundy`.
+
+## Screenshots
+
+<div align="center">
+
+| Home | Now playing |
+| --- | --- |
+| ![Home](./docs/screenshots/home.png) | ![Now playing](./docs/screenshots/now-playing.png) |
+
+| Library | Playlist |
+| --- | --- |
+| ![Library](./docs/screenshots/library.png) | ![Playlist](./docs/screenshots/playlist.png) |
+
+</div>
+
+Screenshots are from the 1.0.0 release build at 1280x800.
+
+## Build from source
+
+### Windows
 
 Prerequisites:
 
 - Rust stable with the MSVC toolchain
-- Visual Studio Build Tools with the C++ workload (including CMake)
+- Visual Studio Build Tools with the C++ workload, including CMake
 - Inno Setup 6, for the installer only
 
-From a Developer PowerShell:
+From a Developer PowerShell in the repository root:
 
 ```powershell
 cargo build --release -p sonora
 ```
 
-The executable is `target\release\soundy.exe`. To build the installer:
+The executable is `target\release\soundy.exe`. To build the installer and portable ZIP:
 
 ```powershell
 .\scripts\windows\build-soundy-installer.ps1
 ```
 
-The installer and portable output land in `dist\`. The executable is unsigned; Windows may
-show a SmartScreen warning for a locally built binary.
+Both land in `dist\`. The crate is still named `sonora` because the project keeps the upstream
+package layout; the binary target is `soundy`.
 
-### Other platforms
+### Linux and macOS
 
-The workspace keeps the Linux and macOS build paths. Use the upstream
-[build documentation](https://sonorahq.org/docs) for platform packages, then run the same
-`cargo build --release -p sonora` command. The resulting executable is named `soundy` on
-Unix. The Flatpak manifest under `flatpak/` builds the Soundy binary and app id; it is a
-source recipe, not a published repository.
+The workspace keeps the Linux and macOS build paths. Use Nix where available:
 
-## Data and logs
+```sh
+nix develop          # or: direnv allow
+cargo run --locked --package sonora
+```
 
-Soundy keeps its data in the platform's usual application directories under `soundy`:
-
-- Windows: `%APPDATA%\soundy` and `%LOCALAPPDATA%\soundy`
-- macOS: `~/Library/Application Support/soundy` and `~/Library/Caches/soundy`
-- Linux: `$XDG_CONFIG_HOME/soundy` and `$XDG_CACHE_HOME/soundy`
-
-`SOUNDY_LOG` sets the log filter. `SOUNDY_BLUR=0` turns backdrop blur off for a renderer that
-cannot afford it. The legacy `SONORA_*` names are still read for settings that predate the
-rename.
+Without Nix you need rustup, a C++ compiler, `cmake`, `pkg-config`, `mold`, and the development
+packages for ALSA, D-Bus, fontconfig, libxkbcommon, libxcb, libX11 and SQLite. Running it also
+needs a Vulkan driver.
 
 ## Playlist import
 
-**+ → Import playlist…** on the Playlists screen opens one dialog with three sources. None of
-them needs a Spotify account, Premium, OAuth, an API key or a paid service.
+**+ -> Import playlist** on the Playlists screen opens one dialog with three sources.
 
 | Source | Accepts | Account needed |
 | --- | --- | --- |
@@ -115,53 +155,51 @@ them needs a Spotify account, Premium, OAuth, an API key or a paid service.
 | M3U or CSV file | `.m3u`, `.m3u8`, `.csv`, `.txt` | None |
 | Pasted list | One track per line, `Artist - Title` or `Title \| Artist \| Album \| Duration` | None |
 
-The honest limit: Spotify does not publish a playlist's tracks to unauthenticated clients, and
-its terms forbid scraping the web player. Without an existing Spotify session a link is parsed
-locally and the dialog explains that the tracklist is unavailable, then offers **Choose a file**
-and **Paste a list**. No empty playlist is created and no success is faked.
+Every imported row keeps its position and duplicate count and ends with one honest status:
+**Full playback**, **Full playback (local)**, **Preview only**, **External playback** or
+**Unavailable**. Matching prefers your own files, then the active provider, then Audius (and
+Jamendo when `SOUNDY_JAMENDO_CLIENT_ID` is set); a different recording is never substituted.
+The full behaviour, formats and privacy notes are in [docs/IMPORTER.md](./docs/IMPORTER.md).
 
-Every imported row keeps its position and duplicate count and ends with one status: **Full
-playback**, **Full playback (local)**, **Preview only**, **External playback** (the badge opens
-the public catalogue page) or **Unavailable**. Matching prefers your own files, then the active
-provider, then Audius (and Jamendo when `SOUNDY_JAMENDO_CLIENT_ID` is set); a different
-recording is never substituted. The full behaviour, file formats and privacy notes are in
-[docs/IMPORTER.md](./docs/IMPORTER.md).
+## Performance
+
+The release build settles at **110.1 MB** working set with a **98.7 MB** private commit, uses
+**0.344 s** of CPU per idle minute (about 0.6% of one core), and shows its window **213 ms**
+after launch (median of three cold starts). Streaming measures 119.9 MB working / 99.4 MB
+private.
+
+The memory target is below 100 MB. Private commit meets it; resident memory is about 10 MB over,
+and closing that gap would need a smaller renderer than GPUI's `wgpu` baseline. The method and
+profile caveats are in [PERFORMANCE.md](./PERFORMANCE.md). No figure in this repository is
+claimed without a real measurement.
 
 ## Documentation
 
-These links are relative to the source checkout. The portable ZIP carries `README.md` and
-`PERFORMANCE.md`; the other documents stay with the source tree.
-
 - [docs/IMPORTER.md](./docs/IMPORTER.md) - sources, formats, matching and the Spotify limit
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - crates, the import path and threading
-- [docs/FEATURE-COMPARISON.md](./docs/FEATURE-COMPARISON.md) - this build against upstream
-- [docs/MONOCHROME-PARITY.md](./docs/MONOCHROME-PARITY.md) - every Monochrome feature and its real status here
+- [docs/FEATURE-COMPARISON.md](./docs/FEATURE-COMPARISON.md) - this build against Sonora
+- [docs/MONOCHROME-PARITY.md](./docs/MONOCHROME-PARITY.md) - Monochrome features and their real status
 - [docs/KNOWN-LIMITATIONS.md](./docs/KNOWN-LIMITATIONS.md) - limits stated plainly
 - [docs/LICENSE-REPORT.md](./docs/LICENSE-REPORT.md) - dependency and licence summary
 - [docs/TEST-RESULTS.md](./docs/TEST-RESULTS.md) - what was run and what passed
 - [PERFORMANCE.md](./PERFORMANCE.md) - idle memory, CPU and startup measurements
 
-## Performance
+## Contributing
 
-Soundy targets an idle resident set below 100 MB and near-zero idle CPU. **The CPU goal is met;
-the memory goal is half met.** The shipped release build settles at 110.1 MB working set with a
-98.7 MB private commit, uses 0.344 s of CPU per idle minute (≈0.6% of one core), and shows its
-window 213 ms after launch (median of three cold starts). Streaming measures 119.9 MB working /
-99.4 MB private. Private commit is under 100 MB; resident memory is about 10 MB over, and closing
-that gap would need a smaller renderer than GPUI's `wgpu` baseline. The measured figures, method
-and profile caveats are in [PERFORMANCE.md](./PERFORMANCE.md). Nothing in this repository claims a
-measurement that was not taken on a real run.
+Bug reports and feature requests go to [Issues](https://github.com/ganddtn40/soundy/issues).
+General questions and show-and-tell go to
+[Discussions](https://github.com/ganddtn40/soundy/discussions). Read
+[CONTRIBUTING.md](./CONTRIBUTING.md) before a large pull request.
 
 ## Attribution and licence
 
-Soundy is distributed under the **GNU General Public License v3.0 or later**, the same licence
-as Sonora. See [COPYING](./COPYING) and [THIRD-PARTY.md](./THIRD-PARTY.md).
+Soundy is distributed under the **GNU General Public License v3.0 or later**. See
+[COPYING](./COPYING) and [THIRD-PARTY.md](./THIRD-PARTY.md).
 
-The original project and its authors are credited at
-[sonorahq/sonora](https://github.com/sonorahq/sonora). The Soundy name, icon set and theme
-changes are additions of this fork. The icon libraries, fonts and Rust crates bundled by the
-upstream project keep their own licences; the third-party notices are included in the
-installer and in the source tree.
+Soundy builds on [Sonora](https://github.com/sonorahq/sonora), which supplies the player engine,
+provider integrations and native UI toolkit. The upstream copyright notices and GPL obligations
+are preserved. The Soundy identity, emerald theme, focused sidebar, importer experience and
+Windows packaging are this project's work.
 
 Upstream credits that still apply:
 
@@ -170,7 +208,11 @@ Upstream credits that still apply:
 - [ytmusic-rs](https://github.com/sonorahq/ytmusic-rs) for YouTube Music
 - The lyric, metadata and audio-decoding projects listed in [THIRD-PARTY.md](./THIRD-PARTY.md)
 
+Provider names, service links and the Discord application id belong to Sonora and its
+providers. They are kept because they are the real services and credentials this player uses;
+they are not claimed as Soundy-owned.
+
 ## Code signing
 
-This fork has no code-signing certificate. Upstream Sonora's SignPath signing policy applies
-to binaries built and signed by the Sonora project, not to builds made from this tree.
+Soundy has no code-signing certificate. Sonora's SignPath signing policy applies to binaries
+built and signed by the Sonora project, not to builds made from this tree.

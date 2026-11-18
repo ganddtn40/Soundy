@@ -1,7 +1,7 @@
 # Feature comparison
 
 This matrix compares the shipped Soundy 1.0.0 build with the upstream Sonora project it is
-forked from, and checks each capability the unified-desktop brief asked for. The last column is
+built from, and checks each capability the unified-desktop brief asked for. The last column is
 the requirement, not a claim about another product. The feature-by-feature audit of Monochrome
 Desktop, including every item deliberately not integrated, is in `MONOCHROME-PARITY.md`.
 

@@ -28,7 +28,7 @@ Soundy has no Tauri, no JavaScript runtime, no embedded web UI and no second pla
 | Monochrome feature | Monochrome source | Soundy status | Soundy location / notes |
 | --- | --- | --- | --- |
 | One-window desktop shell | `src-tauri`, `index.html` | **Native** | GPUI window; `crates/sonora`, `crates/views` |
-| Left sidebar navigation | `index.html` sidebar, `js/router.js` | **Native** | `crates/views/src/chrome/sidebar_left.rs`; Home, Search, Discover, Recents, Songs, Albums, Artists, Playlists, Downloads, Favorites, Settings |
+| Left sidebar navigation | `index.html` sidebar, `js/router.js` | **Native** | `crates/views/src/chrome/sidebar_left.rs`; Home, Search, Recents, Songs, Albums, Artists, Playlists, Downloads, Favorites. Settings opens from the title bar |
 | Collapsible sidebar / icon rail | `themeStore.js`, sidebar CSS | **Native** | Sidebar width drag, fold and persisted state in `state::Settings` |
 | Hide or show individual nav rows | `Show … in Sidebar` settings | **Native** | Settings → Entries (`crates/views/src/screens/settings/general.rs`); every row is regular and hideable |
 | Pinned playlists/albums/artists | `renderPinnedItems`, `pinned` state | **Native** | `crates/state/src/pins.rs`, drag list in `sidebar_left.rs` |
@@ -217,6 +217,6 @@ The parity work that landed in this build is not a reskin. These are the concret
 - Live importer check: `dist/import-test.csv`, five rows, Deezer artwork, 2×2 collage, one
   external row, statuses persisted.
 - Manual UI pass: restored 936×648 window, imported playlist header, track covers, Favorites,
-  Downloads, Discover, Settings placement, fullscreen player and right panel.
+  Downloads, Discover, Settings through the title bar, fullscreen player and right panel.
 - Limits and provider blocks: `KNOWN-LIMITATIONS.md`; packaging and measured memory:
   `PERFORMANCE.md`.

@@ -25,7 +25,7 @@ const DEVELOPER_URL: &str = "https://github.com/ganddtn40";
 /// miss once a week, which refreshes it without polling and without a request on every launch.
 const DEVELOPER_AVATAR: &str = "https://github.com/ganddtn40.png?size=200&week=";
 const LICENSE_URL: &str = "https://www.gnu.org/licenses/gpl-3.0.html";
-const SOURCE_URL: &str = "https://github.com/sonorahq/sonora";
+const SOURCE_URL: &str = "https://github.com/ganddtn40/soundy";
 
 /// The avatar URL for this week, so a changed picture reaches the card within a week while the
 /// HTTP cache answers every launch in between.

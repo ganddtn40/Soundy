@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   # A report nobody can act on. The clock only runs while the context is still missing, and
-  # the triage workflow takes the label off the moment the reporter supplies it.
+  # supplying the missing details takes the label off again.
   unanswered:
     runs-on: ubuntu-latest
 

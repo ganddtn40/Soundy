@@ -66,12 +66,12 @@ by default. The live iTunes lookup was run separately and passed (see below).
   kept; `cover_generated` survives the database round trip.
 - Artwork retry: `missing_art` counts only rows that can display a picture, and the retry button
   is hidden when only external or unavailable rows lack one.
-- Navigation: Settings ends the sidebar order and the three groups do not overlap, so a row can
-  never be drawn twice.
+- Navigation: the two sidebar groups cover every row without overlap, so a row can never be
+  drawn twice.
 
 ## Manual verification, release build
 
-The release binary `target\release\soundy.exe` (91,254,784 bytes, built 18 November 2026) was
+The release binary `target\release\soundy.exe` (91,252,736 bytes, built 19 November 2026) was
 launched on Windows 11 and driven with real mouse and keyboard input. The dialog is reached
 through **+ → Import playlist…** on the Playlists screen. Provider matching ran against the
 signed-in YouTube Music account. Every row count below was also checked in
@@ -105,7 +105,7 @@ same rows were checked against `%LOCALAPPDATA%\soundy\state.sqlite` and the cove
 | Favorites | hero “Favorites”, “0 songs”, “No favorites yet” (not the folder prompt) |
 | Downloads | hero “Downloads”, “0 songs”, “Nothing downloaded yet” (not the folder prompt) |
 | Discover | provider genre grid with cover plates (Chill, Commute, Energize, Feel good, …) |
-| Settings | last sidebar row under its divider, opening General/Appearance/Lyrics/Playback/Integrations/Keybinds |
+| Settings | title-bar gear, opening General/Appearance/Lyrics/Playback/Integrations/Keybinds |
 | Search | best match plus grouped results, each with a cover and a real duration |
 | Recents | history rows with covers, relative played times and durations |
 | Right panel | Lyrics for the playing track; Queue with History, Now playing and Up next, including the external row’s placeholder and no `0:00` |

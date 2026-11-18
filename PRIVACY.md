@@ -2,7 +2,7 @@
 
 Soundy is a local desktop application. It does not run a Soundy-operated account service, does
 not include analytics, crash reporting, advertising or an installation counter, and does not
-send telemetry to the project that produced this fork.
+send telemetry to the project.
 
 This build has no server of its own. The only network requests it makes are the ones a feature
 you use needs, and they go to the service that feature belongs to.
@@ -48,8 +48,8 @@ device in Spotify's apps and sends Spotify a device name and a device identifier
 name includes the computer's hostname, as in `Soundy (my-laptop)`; it can be changed or Spotify
 Connect can be turned off in Settings.
 
-Provider credentials are stored locally. Soundy does not send them to the project that produced
-this fork, because there is no such server to send them to.
+Provider credentials are stored locally. Soundy does not send them to the project, because there
+is no project server to send them to.
 
 ## Third-party services
 
@@ -59,7 +59,5 @@ held by them; use the service's own account controls for that.
 
 ## Changes
 
-Material changes to this policy will be published in this repository. Because this fork has no
-public release channel or hosted service, there is no separate Soundy privacy contact. Questions
-about the code can be raised in the upstream Sonora repository, which is where the shared source
-lives: <https://github.com/sonorahq/sonora>.
+Material changes to this policy will be published in this repository. Questions about the code
+can be raised at <https://github.com/ganddtn40/soundy/issues>.

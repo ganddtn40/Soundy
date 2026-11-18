@@ -52,6 +52,9 @@ Copy-Item (Join-Path $root "COPYING") (Join-Path $portable "LICENSE") -Force
 Copy-Item (Join-Path $root "THIRD-PARTY.md") (Join-Path $portable "THIRD-PARTY.md") -Force
 Copy-Item (Join-Path $root "README.md") (Join-Path $portable "README.md") -Force
 Copy-Item (Join-Path $root "PERFORMANCE.md") (Join-Path $portable "PERFORMANCE.md") -Force
+Copy-Item (Join-Path $root "CONTRIBUTING.md") (Join-Path $portable "CONTRIBUTING.md") -Force
+Copy-Item (Join-Path $root "CHANGELOG.md") (Join-Path $portable "CHANGELOG.md") -Force
+Copy-Item (Join-Path $root "docs") (Join-Path $portable "docs") -Recurse -Force
 Compress-Archive -Path (Join-Path $portable "*") -DestinationPath (Join-Path $outputPath "Soundy-$env:SOUNDY_VERSION-Portable.zip") -Force
 
 Write-Output "installer: $(Join-Path $outputPath "$env:SOUNDY_SETUP.exe")"
