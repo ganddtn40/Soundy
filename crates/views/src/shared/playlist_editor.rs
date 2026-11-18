@@ -342,8 +342,8 @@ impl Render for PlaylistEditor {
                         Button::new("import-spotify-playlist")
                             .ghost()
                             .small()
-                            .icon("icons/spotify.svg")
-                            .tooltip("menu-import-from-spotify")
+                            .icon("icons/download.svg")
+                            .tooltip("menu-import-playlist")
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.close(window, cx);
                                 SpotifyImport::open(window, cx);

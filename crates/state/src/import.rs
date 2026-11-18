@@ -1,36 +1,55 @@
-//! One import of a playlist from another service, and the playlist it becomes in the
-//! library.
+//! One import of a playlist from a link, a list file or a pasted list, and the playlist it
+//! becomes in the library.
 //!
-//! The screen owns the text field; this entity owns the work. Opening the dialog does nothing
-//! until Import is pressed, so an idle app makes no request at all. The fetch, the match against
-//! the listener's files and the write to the database run away from the UI thread, and only the
-//! counts they publish are read while they run.
+//! The dialog owns the text and the file choice; this entity owns the work. Opening the dialog
+//! does nothing until Import is pressed, so an idle app makes no request at all. Reading,
+//! matching and the database write run away from the UI thread, and only the counts they
+//! publish are read while they run. No path needs a Spotify account: a link with no authorized
+//! session reports that Spotify does not publish its tracklist and leaves the file and pasted
+//! list paths available.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::future::Future;
+use std::hash::{DefaultHasher, Hash as _, Hasher as _};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use gpui::{Context, EventEmitter, Task};
-use music::import::{ImportFailure, SpotifyLink, parse_spotify_link};
-use music::{ImportStatus, ImportedEntry, ImportedPlaylistData};
+use music::audius::Catalogue;
+use music::import::{
+    ImportFailure, MAX_IMPORT_BYTES, SourcePlaylist, SpotifyLink, match_local, parse_csv,
+    parse_m3u, parse_manual, parse_spotify_link, search_query, track_matches,
+};
+use music::{ImportStatus, ImportedEntry, ImportedPlaylistData, Track};
 
 use crate::{Io, Library, Session, Shelf, Sonora, join};
 
-/// How often the dialog is told the counts moved while the fetch runs. Nothing polls an idle
+/// How often the dialog is told the counts moved while the import runs. Nothing polls an idle
 /// import, and the count is only reported when it has changed.
 const PROGRESS_TICK: Duration = Duration::from_millis(180);
 /// A large playlist may need this many ISRC lookups for ambiguous local candidates. Past it the
 /// remaining candidates are matched by title, artist and length alone.
 const ISRC_READS: usize = 500;
+/// How many provider and catalogue lookups run at once. More only piles requests onto the same
+/// two services without making a large list finish sooner.
+const LOOKUPS: usize = 4;
+/// The most distinct search answers one import keeps. A playlist with more distinct songs than
+/// this still matches; it simply asks again rather than growing without a bound.
+const LOOKUP_CACHE: usize = 2048;
 
 /// What an import did, in the numbers the result screen shows.
 #[derive(Clone, Debug)]
 pub struct ImportReport {
     pub playlist_id: String,
+    /// `spotify`, `csv`, `m3u` or `manual`.
+    pub source: String,
     pub name: String,
     pub cover: Option<String>,
     pub source_url: String,
+    /// The source's own description, kept with the playlist and shown once on the result.
+    pub description: String,
     pub total: usize,
     pub available: usize,
     pub personal: usize,
@@ -40,6 +59,8 @@ pub struct ImportReport {
     /// The entries the listener cannot play, in their source order.
     pub unmatched: Vec<ImportedEntry>,
     pub duplicates: u32,
+    /// Rows the list carried that could not be read as a track.
+    pub skipped: usize,
     /// When the import ran, in seconds since the epoch.
     pub imported_at: i64,
 }
@@ -52,9 +73,11 @@ impl ImportReport {
     fn of(data: &ImportedPlaylistData, playlist_id: String) -> Self {
         let mut report = Self {
             playlist_id,
+            source: data.source.clone(),
             name: data.name.clone(),
             cover: data.cover_url.clone(),
             source_url: data.source_url.clone(),
+            description: data.description.clone(),
             total: data.entries.len(),
             available: 0,
             personal: 0,
@@ -63,6 +86,7 @@ impl ImportReport {
             unavailable: 0,
             unmatched: Vec::new(),
             duplicates: data.duplicates,
+            skipped: data.skipped,
             imported_at: data.imported_at,
         };
         for entry in &data.entries {
@@ -99,7 +123,7 @@ pub enum ImportEvent {
 
 pub struct Import {
     stage: Stage,
-    /// The counts the fetch has published, written by the network task.
+    /// The counts the fetch and match have published, written by the background task.
     read: Arc<AtomicUsize>,
     total: Arc<AtomicUsize>,
     /// What the dialog was last told, so a tick with no move notifies nobody.
@@ -177,7 +201,7 @@ impl Import {
         self.failure.as_ref()
     }
 
-    /// The link the last attempt used, so reopening the dialog can put it back.
+    /// The link or path the last attempt used, so reopening the dialog can put it back.
     pub fn link(&self) -> &str {
         &self.link
     }
@@ -213,14 +237,13 @@ impl Import {
         cx.notify();
     }
 
-    /// Starts importing `input`, a Spotify playlist link or URI. A second press while one runs
-    /// is ignored, so a repeated request never fetches the same playlist twice.
-    pub fn start(&mut self, input: &str, cx: &mut Context<Self>) {
+    /// Starts importing a Spotify playlist link or URI. This is the only path that can use a
+    /// Spotify session, and only when one is already authorized. Without it the dialog is told
+    /// why the tracklist is unavailable and the file/pasted-list paths remain usable.
+    pub fn start_link(&mut self, input: &str, cx: &mut Context<Self>) {
         if self.active() {
             return;
         }
-        self.clear();
-
         let link = match parse_spotify_link(input) {
             Ok(link) => link,
             Err(failure) => return self.fail(failure, cx),
@@ -231,8 +254,91 @@ impl Import {
             .client()
             .and_then(|client| client.spotify_web())
         else {
-            return self.fail(ImportFailure::SpotifyNotConnected, cx);
+            return self.fail(ImportFailure::TracklistUnavailable, cx);
         };
+        let label = input.trim().to_owned();
+        let id = link.id.clone();
+        self.start_with(
+            label,
+            move |cancel, read, total| async move {
+                let progress = move |seen: usize, all: usize| {
+                    read.store(seen, Ordering::Relaxed);
+                    total.store(all, Ordering::Relaxed);
+                };
+                web.playlist(&id, &cancel, &progress).await
+            },
+            cx,
+        );
+    }
+
+    /// Reads an M3U, M3U8, CSV or text list. The extension selects the parser; nothing is
+    /// guessed from the file's contents beyond that. The read and parse run on the blocking
+    /// pool.
+    pub fn start_file(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+        if self.active() {
+            return;
+        }
+        let label = path.display().to_string();
+        let io = Io::global(cx);
+        self.start_with(
+            label,
+            move |_, _, _| async move {
+                match io.spawn_blocking(move || load_file(&path)).await {
+                    Ok(parsed) => parsed,
+                    Err(error) => Err(ImportFailure::File(format!(
+                        "cannot read the playlist file: {error}"
+                    ))),
+                }
+            },
+            cx,
+        );
+    }
+
+    /// Reads tracks pasted from the clipboard, one per line. The content is hashed so importing
+    /// the same list twice updates the same local playlist instead of making a second copy.
+    pub fn start_manual(&mut self, text: &str, cx: &mut Context<Self>) {
+        if self.active() {
+            return;
+        }
+        let text = text.trim().to_owned();
+        if text.is_empty() {
+            return self.fail(ImportFailure::EmptySource, cx);
+        }
+        let io = Io::global(cx);
+        self.start_with(
+            "pasted track list".to_owned(),
+            move |_, _, _| async move {
+                match io
+                    .spawn_blocking(move || {
+                        let mut hasher = DefaultHasher::new();
+                        text.hash(&mut hasher);
+                        let mut playlist = parse_manual(&text, "Pasted track list")?;
+                        playlist.id = format!("manual:{:016x}", hasher.finish());
+                        playlist.description = "Imported from a pasted track list".to_owned();
+                        Ok(playlist)
+                    })
+                    .await
+                {
+                    Ok(parsed) => parsed,
+                    Err(error) => Err(ImportFailure::File(format!(
+                        "cannot read the pasted list: {error}"
+                    ))),
+                }
+            },
+            cx,
+        );
+    }
+
+    fn start_with<F, M>(&mut self, label: String, make: M, cx: &mut Context<Self>)
+    where
+        F: Future<Output = Result<SourcePlaylist, ImportFailure>> + Send + 'static,
+        M: FnOnce(Arc<AtomicBool>, Arc<AtomicUsize>, Arc<AtomicUsize>) -> F,
+    {
+        if self.active() {
+            return;
+        }
+        self.clear();
+
         let Some(local) = self.session.read(cx).local_client() else {
             return self.fail(
                 ImportFailure::Other(
@@ -241,10 +347,16 @@ impl Import {
                 cx,
             );
         };
+        let provider = self.session.read(cx).client();
 
-        self.link = input.trim().to_owned();
+        let cancel = self.cancel.clone();
+        let read = self.read.clone();
+        let total = self.total.clone();
+        cancel.store(false, Ordering::Relaxed);
+        let fetch = make(cancel.clone(), read.clone(), total.clone());
+
+        self.link = label;
         self.stage = Stage::Fetching;
-        self.cancel.store(false, Ordering::Relaxed);
         self.read.store(0, Ordering::Relaxed);
         self.total.store(0, Ordering::Relaxed);
         self.shown = (0, 0);
@@ -252,30 +364,12 @@ impl Import {
 
         let io = Io::global(cx);
         let library = self.library.clone();
-        let cancel = self.cancel.clone();
-        let read = self.read.clone();
-        let total = self.total.clone();
-        let playlist_id = link.id.clone();
+        // Imported playlists are always local ones, and their page may already be cached from
+        // before the import wrote them.
+        let catalog = self.session.read(cx).catalog(music::LOCAL_PLAYLIST_PREFIX);
 
         self.task = Some(cx.spawn(async move |this, cx| {
-            let fetched = io
-                .spawn({
-                    let web = web.clone();
-                    let id = playlist_id.clone();
-                    let cancel = cancel.clone();
-                    let read = read.clone();
-                    let total = total.clone();
-                    async move {
-                        web.playlist(&id, &cancel, &move |seen, all| {
-                            read.store(seen, Ordering::Relaxed);
-                            total.store(all, Ordering::Relaxed);
-                        })
-                        .await
-                    }
-                })
-                .await;
-
-            let playlist = match fetched {
+            let playlist = match io.spawn(fetch).await {
                 Ok(Ok(playlist)) => playlist,
                 Ok(Err(failure)) => {
                     this.update(cx, |this, cx| this.fail(failure, cx)).ok();
@@ -293,23 +387,29 @@ impl Import {
             this.update(cx, |this, cx| {
                 this.stage = Stage::Matching;
                 this.total.store(playlist.entries.len(), Ordering::Relaxed);
-                this.read.store(playlist.entries.len(), Ordering::Relaxed);
+                this.read.store(0, Ordering::Relaxed);
                 cx.notify();
             })
             .ok();
 
-            let local_tracks = join(io.spawn({
+            let local_tracks: Vec<Track> = match join(io.spawn({
                 let local = local.clone();
                 async move { local.all_tracks().await }
             }))
             .await
-            .unwrap_or_default();
+            {
+                Ok(tracks) => tracks,
+                Err(error) => {
+                    log::warn!("import: cannot read the local library: {error:#}");
+                    Vec::new()
+                }
+            };
 
-            // Only the recordings whose title and artist already agree need their ISRC read,
-            // and only when the lengths disagree. A library of thousands of files otherwise
-            // costs thousands of tag reads for an answer title and length already give.
+            // Only recordings whose title and artist already agree need an ISRC read, and only
+            // when the lengths disagree. A library of thousands of files otherwise costs
+            // thousands of tag reads for an answer title and length already give.
             let candidates: Vec<String> = {
-                let mut seen = std::collections::HashSet::new();
+                let mut seen = HashSet::new();
                 let mut ids = Vec::new();
                 for entry in &playlist.entries {
                     if entry.isrc.is_none() {
@@ -346,27 +446,30 @@ impl Import {
             .await
             .unwrap_or_default();
 
-            if cancel.load(Ordering::Relaxed) {
-                this.update(cx, |this, cx| this.fail(ImportFailure::Cancelled, cx))
-                    .ok();
-                return;
-            }
-
-            // Matching a large playlist against a large library is real work; it runs on the
-            // IO pool with the library it borrowed, so the window never waits for it.
-            let matched = io
-                .spawn(async move {
-                    let imported_at = now();
-                    playlist.into_import(
-                        &local_tracks,
-                        &mut |id| isrc.get(id).cloned(),
-                        |_| None,
-                        imported_at,
-                    )
+            // The local match is the expensive half of a large import, so it runs on the
+            // blocking pool rather than between network awaits on the window's thread. The
+            // answer also tells the network stage which rows need no lookup at all.
+            let computed = io
+                .spawn_blocking({
+                    let isrc = isrc;
+                    let local_tracks = local_tracks;
+                    let playlist = playlist;
+                    move || {
+                        let mut read = |id: &str| isrc.get(id).cloned();
+                        let local_matches: Vec<Option<String>> = playlist
+                            .entries
+                            .iter()
+                            .map(|entry| {
+                                match_local(entry, &local_tracks, &mut read)
+                                    .and_then(|track| track.id.clone())
+                            })
+                            .collect();
+                        (playlist, local_matches)
+                    }
                 })
                 .await;
-            let data = match matched {
-                Ok(data) => data,
+            let (playlist, local_matches) = match computed {
+                Ok(value) => value,
                 Err(error) => {
                     this.update(cx, |this, cx| {
                         this.fail(
@@ -379,11 +482,195 @@ impl Import {
                 }
             };
 
+            if cancel.load(Ordering::Relaxed) {
+                this.update(cx, |this, cx| this.fail(ImportFailure::Cancelled, cx))
+                    .ok();
+                return;
+            }
+
+            let mut provider_matches: Vec<Option<Track>> = vec![None; playlist.entries.len()];
+            let mut external_matches: Vec<Option<String>> = vec![None; playlist.entries.len()];
+            let mut provider_cache: HashMap<String, Vec<Track>> = HashMap::new();
+            let mut external_cache: HashMap<String, Option<String>> = HashMap::new();
+            let mut provider_up = provider.is_some();
+            let mut catalogues_up = playlist.source != "spotify";
+            let catalogues = Arc::new(Catalogue::public());
+            let searches = playlist.source != "spotify";
+
+            // A row that needs a search asks its provider and then a public catalogue. Rows are
+            // matched in chunks of LOOKUPS so a large playlist finishes in a fraction of the
+            // round trips without opening hundreds of sockets at once. Answers are returned to
+            // their own row, so a playlist keeps its order whatever order the network replies.
+            for start in (0..local_matches.len()).step_by(LOOKUPS) {
+                if cancel.load(Ordering::Relaxed) {
+                    this.update(cx, |this, cx| this.fail(ImportFailure::Cancelled, cx))
+                        .ok();
+                    return;
+                }
+                let end = (start + LOOKUPS).min(local_matches.len());
+                // A row with no credited artist and no ISRC cannot be told apart from an
+                // unrelated recording, so no provider or catalogue search can accept it; it
+                // stays an external or unavailable row without spending a request.
+                let positions = || {
+                    (start..end).filter(|&position| {
+                        searches
+                            && local_matches[position].is_none()
+                            && (!playlist.entries[position].artists.trim().is_empty()
+                                || playlist.entries[position].isrc.is_some())
+                    })
+                };
+
+                if provider_up && let Some(client) = provider.clone() {
+                    let mut pending: Vec<(usize, String)> = Vec::new();
+                    for position in positions() {
+                        let entry = &playlist.entries[position];
+                        let query = search_query(entry);
+                        match provider_cache.get(&query) {
+                            Some(results) => {
+                                provider_matches[position] = provider_match(entry, results);
+                            }
+                            None => pending.push((position, query)),
+                        }
+                    }
+                    let mut queries: Vec<String> = Vec::new();
+                    for (_, query) in &pending {
+                        if !queries.contains(query) {
+                            queries.push(query.clone());
+                        }
+                    }
+                    // The providers talk through tokio, whose reactor the window's executor does
+                    // not have; the searches run on the io runtime that owns the connections.
+                    let answers = match io
+                        .spawn(async move {
+                            futures::future::join_all(queries.into_iter().map(|query| {
+                                let client = client.clone();
+                                async move {
+                                    let result = client.search(&query).await;
+                                    (query, result)
+                                }
+                            }))
+                            .await
+                        })
+                        .await
+                    {
+                        Ok(answers) => answers,
+                        Err(error) => {
+                            log::debug!("import: the provider search could not run: {error}");
+                            provider_up = false;
+                            Vec::new()
+                        }
+                    };
+                    let mut found: HashMap<String, Vec<Track>> = HashMap::new();
+                    for (query, result) in answers {
+                        match result {
+                            Ok(results) => {
+                                if provider_cache.len() < LOOKUP_CACHE
+                                    || provider_cache.contains_key(&query)
+                                {
+                                    provider_cache.insert(query.clone(), results.clone());
+                                }
+                                found.insert(query, results);
+                            }
+                            Err(error) => {
+                                log::debug!("import: the active provider cannot search: {error:#}");
+                                provider_up = false;
+                            }
+                        }
+                    }
+                    for (position, query) in pending {
+                        provider_matches[position] = found.get(&query).and_then(|results| {
+                            provider_match(&playlist.entries[position], results)
+                        });
+                    }
+                }
+
+                if catalogues_up {
+                    let mut pending: Vec<(usize, String, music::import::SourceEntry)> = Vec::new();
+                    for position in positions() {
+                        if provider_matches[position].is_some() {
+                            continue;
+                        }
+                        let entry = &playlist.entries[position];
+                        let query = search_query(entry);
+                        match external_cache.get(&query) {
+                            Some(found) => external_matches[position] = found.clone(),
+                            None => pending.push((position, query, entry.clone())),
+                        }
+                    }
+                    let mut queries: Vec<(String, music::import::SourceEntry)> = Vec::new();
+                    for (_, query, entry) in &pending {
+                        if !queries.iter().any(|(known, _)| known == query) {
+                            queries.push((query.clone(), entry.clone()));
+                        }
+                    }
+                    let answers = match io
+                        .spawn({
+                            let catalogues = catalogues.clone();
+                            async move {
+                                futures::future::join_all(queries.into_iter().map(
+                                    |(query, entry)| {
+                                        let catalogues = catalogues.clone();
+                                        async move {
+                                            let found = catalogues.find(&entry).await;
+                                            (query, found)
+                                        }
+                                    },
+                                ))
+                                .await
+                            }
+                        })
+                        .await
+                    {
+                        Ok(answers) => answers,
+                        Err(error) => {
+                            log::debug!("import: the catalogue lookups could not run: {error}");
+                            catalogues_up = false;
+                            Vec::new()
+                        }
+                    };
+                    let mut found: HashMap<String, Option<String>> = HashMap::new();
+                    for (query, result) in answers {
+                        match result {
+                            Ok(url) => {
+                                if external_cache.len() < LOOKUP_CACHE
+                                    || external_cache.contains_key(&query)
+                                {
+                                    external_cache.insert(query.clone(), url.clone());
+                                }
+                                found.insert(query, url);
+                            }
+                            Err(error) => {
+                                log::debug!("import: public catalogue unavailable: {error:#}");
+                                catalogues_up = false;
+                            }
+                        }
+                    }
+                    for (position, query, _) in pending {
+                        if let Some(found) = found.get(&query) {
+                            external_matches[position] = found.clone();
+                        }
+                    }
+                }
+
+                read.store(end, Ordering::Relaxed);
+            }
+
+            if cancel.load(Ordering::Relaxed) {
+                this.update(cx, |this, cx| this.fail(ImportFailure::Cancelled, cx))
+                    .ok();
+                return;
+            }
+
             this.update(cx, |this, cx| {
                 this.stage = Stage::Saving;
                 cx.notify();
             })
             .ok();
+
+            // Every match is known now; assembling the rows only copies strings and runs on the
+            // window's thread without a wait.
+            let data =
+                playlist.into_import(&local_matches, &provider_matches, &external_matches, now());
 
             let saved = join(io.spawn({
                 let local = local.clone();
@@ -406,12 +693,26 @@ impl Import {
                 }
             };
 
+            // The page read before the save is now out of date, and a second import of the
+            // same source replaces the playlist under the same id. Drop the cached page so
+            // the page opens on the rows this import wrote, and let an open page read them.
+            let changed = playlist_id.clone();
+            if let Some(catalog) = catalog {
+                let id = changed.clone();
+                io.spawn(async move { catalog.invalidate_playlist(&id).await })
+                    .await
+                    .ok();
+            }
+
             let report = Arc::new(ImportReport::of(&data, playlist_id));
             this.update(cx, |this, cx| {
                 this.stage = Stage::Done;
                 this.report = Some(report);
                 this.failure = None;
-                library.update(cx, |library, cx| library.refresh(Shelf::Local, cx));
+                library.update(cx, |library, cx| {
+                    library.refresh(Shelf::Local, cx);
+                    library.imported_playlist_replaced(&changed, cx);
+                });
                 cx.notify();
                 cx.emit(ImportEvent::Changed);
             })
@@ -423,8 +724,11 @@ impl Import {
                 cx.background_executor().timer(PROGRESS_TICK).await;
                 let keep = this
                     .update(cx, |this, cx| {
-                        if this.stage != Stage::Fetching {
-                            return this.active();
+                        if !this.active() {
+                            return false;
+                        }
+                        if this.stage == Stage::Saving {
+                            return true;
                         }
                         let shown = (this.read(), this.total());
                         if shown != this.shown {
@@ -446,6 +750,7 @@ impl Import {
         self.failure = Some(failure);
         self.report = None;
         self.task = None;
+        self.ticker = None;
         cx.notify();
         cx.emit(ImportEvent::Changed);
     }
@@ -462,6 +767,58 @@ impl Import {
     }
 }
 
+/// The first answer from the active provider that is really the same recording. A preview-only
+/// or id-less result would give a row that cannot be played, so neither counts.
+fn provider_match(entry: &music::import::SourceEntry, results: &[Track]) -> Option<Track> {
+    results
+        .iter()
+        .find(|track| track.playable && track.id.is_some() && track_matches(entry, track))
+        .cloned()
+}
+
+/// Reads and parses one list file. The extension picks the parser; a `.txt` is a pasted list.
+fn load_file(path: &Path) -> Result<SourcePlaylist, ImportFailure> {
+    let name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "playlist".to_owned());
+    let extension = path
+        .extension()
+        .map(|extension| extension.to_string_lossy().to_ascii_lowercase())
+        .unwrap_or_default();
+    if !matches!(extension.as_str(), "m3u" | "m3u8" | "csv" | "txt" | "text") {
+        return Err(ImportFailure::UnsupportedFile(name));
+    }
+
+    let metadata = std::fs::metadata(path)
+        .map_err(|error| ImportFailure::File(format!("cannot read {name}: {error}")))?;
+    if metadata.len() > MAX_IMPORT_BYTES as u64 {
+        return Err(ImportFailure::FileTooLarge);
+    }
+    let bytes = std::fs::read(path)
+        .map_err(|error| ImportFailure::File(format!("cannot read {name}: {error}")))?;
+    let stem = path
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Imported playlist".to_owned());
+    let folder = path.parent().unwrap_or_else(|| Path::new("."));
+
+    let mut playlist = match extension.as_str() {
+        "m3u" | "m3u8" => parse_m3u(&bytes, folder, &stem)?,
+        "csv" => parse_csv(&bytes, &stem)?,
+        _ => {
+            let text = String::from_utf8_lossy(&bytes);
+            parse_manual(&text, &stem)?
+        }
+    };
+    let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    playlist.id = format!("file:{}", canonical.display());
+    playlist.source_url = format!("file://{}", canonical.display());
+    playlist.name = stem;
+    playlist.description = format!("Imported from {name}");
+    Ok(playlist)
+}
+
 fn now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -472,5 +829,141 @@ fn now() -> i64 {
 impl Sonora {
     pub fn import(&self) -> &gpui::Entity<Import> {
         &self.imports
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(position: u32, status: ImportStatus) -> ImportedEntry {
+        ImportedEntry {
+            position,
+            title: format!("Song {position}"),
+            artists: "Artist".to_owned(),
+            album: "Album".to_owned(),
+            duration: Duration::from_secs(180),
+            status,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn a_report_counts_each_status_and_lists_only_unplayable_rows() {
+        let data = ImportedPlaylistData {
+            source: "m3u".to_owned(),
+            source_id: "list".to_owned(),
+            name: "List".to_owned(),
+            source_url: "file:///list.m3u".to_owned(),
+            imported_at: 1_000,
+            entries: vec![
+                entry(0, ImportStatus::Available),
+                entry(1, ImportStatus::Personal),
+                entry(2, ImportStatus::Preview),
+                entry(3, ImportStatus::External),
+                entry(4, ImportStatus::Unavailable),
+            ],
+            duplicates: 2,
+            skipped: 1,
+            ..Default::default()
+        };
+        let report = ImportReport::of(&data, "local:list".to_owned());
+        assert_eq!(report.playlist_id, "local:list");
+        assert_eq!(report.total, 5);
+        assert_eq!(report.playable(), 2);
+        assert_eq!(report.available, 1);
+        assert_eq!(report.personal, 1);
+        assert_eq!(report.preview, 1);
+        assert_eq!(report.external, 1);
+        assert_eq!(report.unavailable, 1);
+        assert_eq!(report.duplicates, 2);
+        assert_eq!(report.skipped, 1);
+        assert_eq!(
+            report
+                .unmatched
+                .iter()
+                .map(|entry| entry.position)
+                .collect::<Vec<_>>(),
+            [2, 3, 4]
+        );
+    }
+
+    #[test]
+    fn reads_an_m3u_file_off_disk_and_names_it_after_the_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Road Trip.m3u8");
+        std::fs::write(
+            &path,
+            "#EXTM3U\n#EXTINF:225,Artist - Song One\none.mp3\n#EXTINF:180,Artist - Song Two\nC:\\Music\\two.flac\n",
+        )
+        .unwrap();
+
+        let playlist = load_file(&path).unwrap();
+        assert_eq!(playlist.source, "m3u");
+        assert_eq!(playlist.name, "Road Trip");
+        assert_eq!(playlist.description, "Imported from Road Trip.m3u8");
+        assert!(playlist.id.starts_with("file:"));
+        assert_eq!(playlist.entries.len(), 2);
+        assert_eq!(playlist.entries[0].title, "Song One");
+        assert_eq!(playlist.entries[0].duration, Duration::from_secs(225));
+        assert_eq!(playlist.entries[1].title, "Song Two");
+        assert_eq!(
+            playlist.entries[0].local_path.as_deref(),
+            Some(dir.path().join("one.mp3").as_path())
+        );
+    }
+
+    #[test]
+    fn reads_a_csv_file_off_disk_in_any_column_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Export.csv");
+        std::fs::write(
+            &path,
+            "Artist,Title,Album,Duration\nArtist One,Song One,Album One,3:45\n",
+        )
+        .unwrap();
+
+        let playlist = load_file(&path).unwrap();
+        assert_eq!(playlist.source, "csv");
+        assert_eq!(playlist.name, "Export");
+        assert_eq!(playlist.entries.len(), 1);
+        assert_eq!(playlist.entries[0].title, "Song One");
+        assert_eq!(playlist.entries[0].artists, "Artist One");
+        assert_eq!(playlist.entries[0].duration, Duration::from_secs(225));
+    }
+
+    #[test]
+    fn reads_a_text_file_as_a_pasted_list() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Notes.txt");
+        std::fs::write(&path, "Artist One - Song One\nSong Two | Artist Two\n").unwrap();
+
+        let playlist = load_file(&path).unwrap();
+        assert_eq!(playlist.source, "manual");
+        assert_eq!(playlist.name, "Notes");
+        assert_eq!(playlist.entries.len(), 2);
+        assert_eq!(playlist.entries[0].title, "Song One");
+        assert_eq!(playlist.entries[1].title, "Song Two");
+    }
+
+    #[test]
+    fn refuses_a_file_it_has_no_parser_for() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Audio.flac");
+        std::fs::write(&path, b"not really audio").unwrap();
+
+        assert_eq!(
+            load_file(&path),
+            Err(ImportFailure::UnsupportedFile("Audio.flac".to_owned()))
+        );
+    }
+
+    #[test]
+    fn refuses_a_list_with_no_tracks() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Empty.csv");
+        std::fs::write(&path, "Title,Artist\n").unwrap();
+
+        assert_eq!(load_file(&path), Err(ImportFailure::EmptySource));
     }
 }

@@ -1425,8 +1425,8 @@ impl Tooled for LibraryView {
 
         let import = (self.section == Section::Playlists).then(|| {
             Button::new("import-spotify-playlist")
-                .icon("icons/spotify.svg")
-                .tooltip("menu-import-from-spotify")
+                .icon("icons/download.svg")
+                .tooltip("menu-import-playlist")
                 .small()
                 .ghost()
                 .on_click(|_, window, cx| SpotifyImport::open(window, cx))

@@ -3656,6 +3656,13 @@ impl Library {
         ));
     }
 
+    /// Tells an open page that an imported playlist now holds a new set of rows under the same
+    /// id. A second import of the same source replaces it in place, so the page has to read it
+    /// again rather than keep the rows it was showing.
+    pub fn imported_playlist_replaced(&mut self, id: &str, cx: &mut Context<Self>) {
+        cx.emit(LibraryEvent::PlaylistChanged(id.to_owned()));
+    }
+
     /// Loads a shelf again from its provider. A shelf that is showing rows keeps them, each part
     /// until all of its new rows have arrived, and its old problems are dropped so the fresh rows
     /// can be snapshotted.

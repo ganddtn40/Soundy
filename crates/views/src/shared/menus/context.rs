@@ -1253,8 +1253,8 @@ pub(crate) fn playlist_menu(playlist: Playlist, playback: Entity<Playback>, cx: 
                     .on_click(move |_, _, cx| local::export_playlist(playlist.clone(), cx))
             }))
             .chain([
-                MenuItem::new("import-spotify-playlist", t!("menu-import-from-spotify"))
-                    .icon("icons/spotify.svg")
+                MenuItem::new("import-spotify-playlist", t!("menu-import-playlist"))
+                    .icon("icons/download.svg")
                     .on_click(|_, window, cx| SpotifyImport::open(window, cx)),
             ])
             .collect(),
@@ -1541,8 +1541,8 @@ pub(crate) fn new_playlist_menu(
                 .on_click(|_, _, cx| local::import_playlist(cx)),
         )
         .item(
-            MenuItem::new("import-spotify-playlist", t!("menu-import-from-spotify"))
-                .icon("icons/spotify.svg")
+            MenuItem::new("import-spotify-playlist", t!("menu-import-playlist"))
+                .icon("icons/download.svg")
                 .on_click(|_, window, cx| SpotifyImport::open(window, cx)),
         )
 }

@@ -7722,8 +7722,8 @@ version = "1.0.0"
 dependencies = [
  "anyhow",
  "dirs 7.0.0",
- "log",
  "rusqlite",
+ "tempfile",
 ]
 
 [[package]]

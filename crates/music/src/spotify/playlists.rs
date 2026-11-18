@@ -278,6 +278,7 @@ pub async fn playlist(session: &Session, playlist_id: &str) -> Result<PlaylistDe
         tracks,
         continuation: None,
         statuses: Vec::new(),
+        links: Vec::new(),
     })
 }
 

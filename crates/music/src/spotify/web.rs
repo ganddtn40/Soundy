@@ -17,7 +17,7 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use tokio::time::sleep;
 
-use crate::import::{ImportFailure, SpotifyEntry, SpotifyPlaylist};
+use crate::import::{ImportFailure, SourceEntry, SourcePlaylist};
 
 const BASE: &str = "https://api.spotify.com/v1";
 const PAGE: usize = 100;
@@ -86,7 +86,7 @@ impl Web {
         id: &str,
         cancel: &AtomicBool,
         progress: &(dyn Fn(usize, usize) + Send + Sync),
-    ) -> Result<SpotifyPlaylist, ImportFailure> {
+    ) -> Result<SourcePlaylist, ImportFailure> {
         let url = format!("{}/playlists/{}", self.base, id);
         let first: Body = self.get(&url, cancel).await?;
 
@@ -104,7 +104,7 @@ impl Web {
                 self.base, id
             );
             let body: Page = self.get(&url, cancel).await?;
-            let page: Vec<SpotifyEntry> = body.items.into_iter().map(entry).collect();
+            let page: Vec<SourceEntry> = body.items.into_iter().map(entry).collect();
             if page.is_empty() {
                 break;
             }
@@ -252,7 +252,7 @@ struct Body {
 }
 
 impl Body {
-    fn into_playlist(self, asked: &str) -> SpotifyPlaylist {
+    fn into_playlist(self, asked: &str) -> SourcePlaylist {
         let id = self.id.unwrap_or_else(|| asked.to_owned());
         let page = self.tracks.or_else(|| {
             // `/playlists/{id}` nests the entries under `tracks`; if a test or a future
@@ -271,7 +271,8 @@ impl Body {
             }
             None => (Vec::new(), 0),
         };
-        SpotifyPlaylist {
+        SourcePlaylist {
+            source: "spotify".to_owned(),
             id,
             name: self
                 .name
@@ -288,6 +289,7 @@ impl Body {
                 .and_then(|urls| urls.spotify)
                 .unwrap_or_else(|| format!("https://open.spotify.com/playlist/{asked}")),
             total,
+            skipped: 0,
             entries: items.into_iter().map(entry).collect(),
         }
     }
@@ -367,10 +369,10 @@ struct ExternalIds {
     isrc: Option<String>,
 }
 
-fn entry(item: Item) -> SpotifyEntry {
+fn entry(item: Item) -> SourceEntry {
     let local = item.is_local;
     let Some(track) = item.track else {
-        return SpotifyEntry {
+        return SourceEntry {
             title: "Unavailable track".to_owned(),
             local,
             added_at: crate::iso_8601_to_epoch(item.added_at.as_deref()),
@@ -408,7 +410,7 @@ fn entry(item: Item) -> SpotifyEntry {
         && !track.is_local
         && track.is_playable.unwrap_or(true)
         && track.id.is_some();
-    SpotifyEntry {
+    SourceEntry {
         id: track.id,
         title: track.name.unwrap_or_else(|| "Unavailable track".to_owned()),
         artists,
@@ -417,6 +419,7 @@ fn entry(item: Item) -> SpotifyEntry {
         cover,
         isrc: track.external_ids.and_then(|ids| ids.isrc),
         url: track.external_urls.and_then(|urls| urls.spotify),
+        local_path: None,
         playable,
         preview: track.preview_url.is_some(),
         local: local || track.is_local,

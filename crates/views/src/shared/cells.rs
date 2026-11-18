@@ -361,7 +361,12 @@ pub(crate) fn local_badge(row: usize) -> AnyElement {
 /// Where an imported playlist's row can be played, as a capsule beside its title. An imported
 /// row is kept in the list even when nothing can play it, so this is the one thing that says
 /// whether pressing it will do anything.
-pub(crate) fn import_status(row: usize, status: ImportStatus, cx: &App) -> AnyElement {
+pub(crate) fn import_status(
+    row: usize,
+    status: ImportStatus,
+    link: Option<SharedString>,
+    cx: &App,
+) -> AnyElement {
     let theme = cx.theme();
     let (label, tint, fill) = match status {
         ImportStatus::Available => (
@@ -403,6 +408,11 @@ pub(crate) fn import_status(row: usize, status: ImportStatus, cx: &App) -> AnyEl
         .text_size(theme.text(Text::Label))
         .line_height(theme.text(Text::Label))
         .text_color(tint)
+        .when_some(link, |badge, link| {
+            badge
+                .cursor_pointer()
+                .on_click(move |_, _, cx| cx.open_url(&link))
+        })
         .child(label)
         .into_any_element()
 }

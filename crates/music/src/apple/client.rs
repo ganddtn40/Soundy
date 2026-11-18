@@ -1889,6 +1889,7 @@ impl MusicApi for AppleClient {
             tracks,
             continuation,
             statuses: Vec::new(),
+            links: Vec::new(),
         })
     }
 

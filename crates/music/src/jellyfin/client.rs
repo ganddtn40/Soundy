@@ -1228,6 +1228,7 @@ impl MusicApi for JellyfinClient {
             tracks,
             continuation: None,
             statuses: Vec::new(),
+            links: Vec::new(),
         })
     }
 

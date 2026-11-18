@@ -1,24 +1,47 @@
-//! The dialog that imports a Spotify playlist into the library.
+//! The dialog that imports a playlist from a Spotify link, an M3U/CSV list or a pasted list.
 //!
-//! The dialog owns the field and the screen; the work lives in `state::Import`. Opening it
-//! makes no request: the fetch starts when Import is pressed, and everything the network and
-//! the database do runs away from the UI thread. While a fetch runs the dialog reads the
-//! counters the import publishes, so it redraws only when those counters move.
+//! The dialog owns the fields and the screen; the work lives in `state::Import`. Opening it
+//! makes no request: reading starts when Import is pressed, and everything the network and the
+//! database do runs away from the UI thread. A Spotify link is the only path that can use a
+//! Spotify session, and it is never required: a file or a pasted list imports with no account.
+
+use std::path::PathBuf;
 
 use gpui::prelude::*;
-use gpui::{App, Context, Entity, FocusHandle, Global, Render, SharedString, Window, div, px, svg};
+use gpui::{
+    App, Context, Entity, FocusHandle, Global, PathPromptOptions, Render, SharedString, Task,
+    Window, div, px, svg,
+};
 use i18n::t;
-use music::import::ImportFailure;
-use router::{Destination, SettingsPage, navigate};
+use music::import::{ImportFailure, MAX_IMPORT_BYTES, parse_manual};
+use router::{Destination, navigate};
 use state::{ImportReport, ImportStage, Sonora};
 use ui::{
     ActiveTheme as _, Artwork, Button, Dismiss, Field, Form, Input, Modal, Notice, Spinner, Submit,
-    Text,
+    TabBar, Text,
 };
 
 /// How many unmatched rows the result lists before it says the rest are not shown. A playlist
 /// of thousands is still readable; the modal scrolls through the list.
 const UNMATCHED_SHOWN: usize = 300;
+
+/// Where the track list comes from. The three are equal paths; none needs an account.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Source {
+    Link,
+    File,
+    Paste,
+}
+
+impl Source {
+    fn label(self) -> SharedString {
+        match self {
+            Self::Link => t!("import-source-link"),
+            Self::File => t!("import-source-file"),
+            Self::Paste => t!("import-source-paste"),
+        }
+    }
+}
 
 pub(crate) struct SpotifyImport {
     input: Entity<Input>,
@@ -26,6 +49,12 @@ pub(crate) struct SpotifyImport {
     restore: Option<FocusHandle>,
     open: bool,
     show_unmatched: bool,
+    source: Source,
+    file: Option<PathBuf>,
+    manual: Option<SharedString>,
+    manual_tracks: usize,
+    note: Option<SharedString>,
+    picking: Option<Task<()>>,
 }
 
 struct Installed(Entity<SpotifyImport>);
@@ -37,11 +66,17 @@ impl SpotifyImport {
         if cx.try_global::<Installed>().is_none() {
             let dialog = cx.new(|cx| {
                 let dialog = Self {
-                    input: cx.new(|cx| Input::new("spotify-import-placeholder", cx)),
+                    input: cx.new(|cx| Input::new("import-placeholder", cx)),
                     focus: cx.focus_handle(),
                     restore: None,
                     open: false,
                     show_unmatched: false,
+                    source: Source::Link,
+                    file: None,
+                    manual: None,
+                    manual_tracks: 0,
+                    note: None,
+                    picking: None,
                 };
                 // The import entity notifies as it moves, and a result that lands while the
                 // dialog is closed is ready when it opens again.
@@ -61,17 +96,15 @@ impl SpotifyImport {
 
     fn show(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let imports = Sonora::global(cx).imports.clone();
-        if !imports.read(cx).active() {
-            imports.update(cx, |import, cx| import.reset(cx));
-            self.input.update(cx, |input, cx| input.set_text("", cx));
-            self.show_unmatched = false;
+        if !imports.read(cx).active() && imports.read(cx).stage() == ImportStage::Idle {
+            self.clear(cx);
         }
         self.restore = window.focused(cx);
         self.open = true;
         if imports.read(cx).active() {
             window.focus(&self.focus, cx);
         } else {
-            self.input.update(cx, |input, cx| input.focus(window, cx));
+            self.focus_field(window, cx);
         }
         cx.notify();
     }
@@ -79,6 +112,7 @@ impl SpotifyImport {
     fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.open = false;
         self.show_unmatched = false;
+        self.picking = None;
         let imports = Sonora::global(cx).imports.clone();
         if !imports.read(cx).active() {
             imports.update(cx, |import, cx| import.reset(cx));
@@ -89,29 +123,155 @@ impl SpotifyImport {
         cx.notify();
     }
 
+    fn clear(&mut self, cx: &mut Context<Self>) {
+        let imports = Sonora::global(cx).imports.clone();
+        imports.update(cx, |import, cx| import.reset(cx));
+        self.input.update(cx, |input, cx| input.set_text("", cx));
+        self.file = None;
+        self.manual = None;
+        self.manual_tracks = 0;
+        self.note = None;
+        self.show_unmatched = false;
+    }
+
+    fn focus_field(&mut self, window: &mut Window, cx: &mut App) {
+        match self.source {
+            Source::Link => self.input.update(cx, |input, cx| input.focus(window, cx)),
+            Source::File | Source::Paste => window.focus(&self.focus, cx),
+        }
+    }
+
+    /// Hands the field back after a result, with the choices still on screen.
+    fn again(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.clear(cx);
+        self.source = Source::Link;
+        self.focus_field(window, cx);
+        cx.notify();
+    }
+
+    fn select(&mut self, source: Source, window: &mut Window, cx: &mut Context<Self>) {
+        let imports = Sonora::global(cx).imports.clone();
+        if imports.read(cx).active() {
+            return;
+        }
+        if imports.read(cx).stage() == ImportStage::Failed {
+            imports.update(cx, |import, cx| import.reset(cx));
+        }
+        self.source = source;
+        self.note = None;
+        self.focus_field(window, cx);
+        cx.notify();
+    }
+
+    /// Asks the desktop for one playlist file. The parser is chosen from the extension, so the
+    /// dialog accepts M3U, M3U8, CSV and plain text.
+    fn choose_file(&mut self, cx: &mut Context<Self>) {
+        if self.picking.is_some() {
+            return;
+        }
+        let receiver = cx.prompt_for_paths(PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: false,
+            prompt: Some(t!("import-file-prompt")),
+        });
+        self.note = None;
+        self.picking = Some(cx.spawn(async move |this, cx| {
+            let picked = match receiver.await {
+                Ok(Ok(Some(paths))) => paths.into_iter().next(),
+                Ok(Err(error)) => {
+                    log::warn!("import: cannot open the file dialog: {error:#}");
+                    None
+                }
+                _ => None,
+            };
+            this.update(cx, |this, cx| {
+                if let Some(path) = picked {
+                    this.file = Some(path);
+                }
+                this.picking = None;
+                cx.notify();
+            })
+            .ok();
+        }));
+        cx.notify();
+    }
+
+    /// Reads the clipboard as a pasted track list. The list is parsed here only to say how many
+    /// tracks it holds; the import itself parses it again off the UI thread.
+    fn paste_list(&mut self, cx: &mut Context<Self>) {
+        let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) else {
+            self.note = Some(t!("import-paste-empty"));
+            cx.notify();
+            return;
+        };
+        if text.trim().is_empty() {
+            self.note = Some(t!("import-paste-empty"));
+            cx.notify();
+            return;
+        }
+        if text.len() > MAX_IMPORT_BYTES {
+            self.note = Some(t!("import-file-too-large"));
+            cx.notify();
+            return;
+        }
+        let count = parse_manual(&text, "clipboard")
+            .map(|playlist| playlist.entries.len())
+            .unwrap_or(0);
+        if count == 0 {
+            self.note = Some(t!("import-paste-empty"));
+            cx.notify();
+            return;
+        }
+        self.manual_tracks = count;
+        self.manual = Some(SharedString::from(text));
+        self.note = None;
+        cx.notify();
+    }
+
+    fn ready(&self, cx: &App) -> bool {
+        match self.source {
+            Source::Link => !self.input.read(cx).text().trim().is_empty(),
+            Source::File => self.file.is_some(),
+            Source::Paste => self.manual.is_some(),
+        }
+    }
+
     fn submit(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let imports = Sonora::global(cx).imports.clone();
         if imports.read(cx).active() {
             return;
         }
-        let text = self.input.read(cx).text().trim().to_owned();
-        imports.update(cx, |import, cx| import.start(&text, cx));
-        // A link that failed before any request leaves the field focused and the message on
+        match self.source {
+            Source::Link => {
+                let text = self.input.read(cx).text().trim().to_owned();
+                if text.is_empty() {
+                    return;
+                }
+                imports.update(cx, |import, cx| import.start_link(&text, cx));
+            }
+            Source::File => match self.file.clone() {
+                Some(path) => imports.update(cx, |import, cx| import.start_file(path, cx)),
+                None => {
+                    self.choose_file(cx);
+                    return;
+                }
+            },
+            Source::Paste => match self.manual.clone() {
+                Some(text) => imports.update(cx, |import, cx| import.start_manual(&text, cx)),
+                None => {
+                    self.paste_list(cx);
+                    return;
+                }
+            },
+        }
+        // A link that failed before any request keeps the field focused and the message on
         // screen; one that started keeps focus so Escape still closes the dialog.
         if !imports.read(cx).active() {
-            self.input.update(cx, |input, cx| input.focus(window, cx));
+            self.focus_field(window, cx);
         } else {
             window.focus(&self.focus, cx);
         }
-        cx.notify();
-    }
-
-    fn again(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let imports = Sonora::global(cx).imports.clone();
-        imports.update(cx, |import, cx| import.reset(cx));
-        self.input.update(cx, |input, cx| input.set_text("", cx));
-        self.show_unmatched = false;
-        self.input.update(cx, |input, cx| input.focus(window, cx));
         cx.notify();
     }
 
@@ -126,11 +286,64 @@ impl SpotifyImport {
         navigate(destination, cx);
     }
 
-    /// The field and the explanation, with the last failure under it.
+    fn sources(&self, cx: &mut Context<Self>) -> TabBar {
+        TabBar::new("import-sources")
+            .name(t!("import-sources-name"))
+            .items([Source::Link, Source::File, Source::Paste].map(|source| {
+                Button::new(match source {
+                    Source::Link => "import-source-link",
+                    Source::File => "import-source-file",
+                    Source::Paste => "import-source-paste",
+                })
+                .label(source.label())
+                .small()
+                .ghost()
+                .selected(self.source == source)
+                .on_click(cx.listener(move |this, _, window, cx| this.select(source, window, cx)))
+            }))
+    }
+
+    /// The choice and its explanation, with the last failure under it.
     fn field(&self, failure: Option<ImportFailure>, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = *cx.theme();
-        let form = Form::new("spotify-import-form").field(Field::new(&self.input, cx));
+        let body = match self.source {
+            Source::Link => self.link_field(cx).into_any_element(),
+            Source::File => self.file_field(cx).into_any_element(),
+            Source::Paste => self.paste_field(cx).into_any_element(),
+        };
+        let spotify = Sonora::global(cx)
+            .session
+            .read(cx)
+            .client()
+            .and_then(|client| client.spotify_web())
+            .is_some();
+        let hint = match (self.source, spotify) {
+            (Source::Link, true) => t!("import-link-hint-signed-in"),
+            (Source::Link, false) => t!("import-link-hint"),
+            (Source::File, _) => t!("import-file-hint"),
+            (Source::Paste, _) => t!("import-paste-hint"),
+        };
 
+        div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .child(self.sources(cx))
+            .child(body)
+            .when_some(failure, |column, failure| {
+                column.child(self.failure(failure, cx))
+            })
+            .child(
+                div()
+                    .text_size(theme.text(Text::Small))
+                    .text_color(theme.muted_foreground.opacity(0.8))
+                    .child(hint),
+            )
+    }
+
+    fn link_field(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let form = Form::new("import-link-form").field(Field::new(&self.input, cx));
         div()
             .flex()
             .flex_col()
@@ -139,35 +352,136 @@ impl SpotifyImport {
                 div()
                     .text_size(theme.text(Text::Body))
                     .text_color(theme.muted_foreground)
-                    .child(t!("spotify-import-detail")),
+                    .child(t!("import-link-detail")),
             )
             .child(form)
-            .when_some(failure, |column, failure| {
-                column.child(self.failure(failure, cx))
-            })
+    }
+
+    fn file_field(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let name = self
+            .file
+            .as_ref()
+            .and_then(|path| path.file_name())
+            .map(|name| SharedString::from(name.to_string_lossy().into_owned()));
+        div()
+            .flex()
+            .flex_col()
+            .gap_3()
             .child(
                 div()
-                    .text_size(theme.text(Text::Small))
-                    .text_color(theme.muted_foreground.opacity(0.8))
-                    .child(t!("spotify-import-accounts-hint")),
+                    .text_size(theme.text(Text::Body))
+                    .text_color(theme.muted_foreground)
+                    .child(t!("import-file-detail")),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_3()
+                    .child(
+                        Button::new("import-choose-file")
+                            .outline()
+                            .icon("icons/folder-open.svg")
+                            .label(t!("import-file-choose"))
+                            .disabled(self.picking.is_some())
+                            .on_click(cx.listener(|this, _, _, cx| this.choose_file(cx))),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .flex_1()
+                            .min_w_0()
+                            .child(
+                                div()
+                                    .truncate()
+                                    .text_size(theme.text(Text::Body))
+                                    .child(name.unwrap_or_else(|| t!("import-file-none"))),
+                            )
+                            .when_some(self.note.clone(), |column, note| {
+                                column.child(
+                                    div()
+                                        .text_size(theme.text(Text::Small))
+                                        .text_color(theme.danger_foreground)
+                                        .child(note),
+                                )
+                            }),
+                    ),
+            )
+    }
+
+    fn paste_field(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .child(
+                div()
+                    .text_size(theme.text(Text::Body))
+                    .text_color(theme.muted_foreground)
+                    .child(t!("import-paste-detail")),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_3()
+                    .child(
+                        Button::new("import-paste-list")
+                            .outline()
+                            .icon("icons/clipboard-paste.svg")
+                            .label(t!("import-paste-action"))
+                            .on_click(cx.listener(|this, _, _, cx| this.paste_list(cx))),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .flex_1()
+                            .min_w_0()
+                            .child(div().text_size(theme.text(Text::Body)).child(
+                                match self.manual.is_some() {
+                                    true => {
+                                        t!("import-paste-count", count = self.manual_tracks as i64)
+                                    }
+                                    false => t!("import-paste-none"),
+                                },
+                            ))
+                            .when_some(self.note.clone(), |column, note| {
+                                column.child(
+                                    div()
+                                        .text_size(theme.text(Text::Small))
+                                        .text_color(theme.danger_foreground)
+                                        .child(note),
+                                )
+                            }),
+                    ),
             )
     }
 
     fn failure(&self, failure: ImportFailure, cx: &mut Context<Self>) -> impl IntoElement {
-        let (message, sign_in) = match failure {
-            ImportFailure::InvalidLink => (t!("spotify-import-invalid-link"), false),
-            ImportFailure::SpotifyNotConnected => (t!("spotify-import-not-connected"), true),
-            ImportFailure::Unauthorized => (t!("spotify-import-unauthorized"), true),
-            ImportFailure::Forbidden => (t!("spotify-import-forbidden"), false),
-            ImportFailure::NotFound => (t!("spotify-import-not-found"), false),
-            ImportFailure::RateLimited { seconds } => (
-                t!("spotify-import-rate-limited", seconds = seconds as i64),
-                false,
-            ),
-            ImportFailure::Cancelled => (t!("spotify-import-cancelled"), false),
-            ImportFailure::Network(reason) => {
-                (t!("spotify-import-network", reason = reason), false)
+        let theme = *cx.theme();
+        let (message, fallback) = match failure {
+            ImportFailure::InvalidLink => (t!("import-invalid-link"), false),
+            ImportFailure::TracklistUnavailable | ImportFailure::SpotifyNotConnected => {
+                (t!("import-tracklist-unavailable"), true)
             }
+            ImportFailure::Unauthorized => (t!("import-unauthorized"), true),
+            ImportFailure::Forbidden => (t!("import-forbidden"), true),
+            ImportFailure::NotFound => (t!("import-not-found"), true),
+            ImportFailure::RateLimited { seconds } => {
+                (t!("import-rate-limited", seconds = seconds as i64), true)
+            }
+            ImportFailure::Cancelled => (t!("import-cancelled"), false),
+            ImportFailure::EmptySource => (t!("import-empty-source"), false),
+            ImportFailure::UnsupportedFile(name) => {
+                (t!("import-unsupported-file", name = name), false)
+            }
+            ImportFailure::FileTooLarge => (t!("import-file-too-large"), false),
+            ImportFailure::File(reason) => (SharedString::from(reason), false),
+            ImportFailure::Network(reason) => (t!("import-network", reason = reason), true),
             ImportFailure::Other(reason) => (SharedString::from(reason), false),
         };
 
@@ -177,22 +491,45 @@ impl SpotifyImport {
             .gap_2()
             .items_start()
             .child(
-                Notice::new(t!("spotify-import-failed"), message)
+                Notice::new(t!("import-failed"), message)
                     .failed()
-                    .spoken("spotify-import-failure"),
+                    .spoken("import-failure"),
             )
-            .when(sign_in, |column| {
-                column.child(
-                    Button::new("spotify-import-sign-in")
-                        .outline()
-                        .small()
-                        .icon("icons/user-round.svg")
-                        .label(t!("spotify-import-sign-in"))
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            this.close(window, cx);
-                            navigate(Destination::Settings(SettingsPage::Providers), cx);
-                        })),
-                )
+            .when(fallback && self.source == Source::Link, |column| {
+                column
+                    .child(
+                        div()
+                            .text_size(theme.text(Text::Small))
+                            .text_color(theme.muted_foreground)
+                            .child(t!("import-fallback-detail")),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .gap_2()
+                            .child(
+                                Button::new("import-fallback-file")
+                                    .outline()
+                                    .small()
+                                    .icon("icons/folder-open.svg")
+                                    .label(t!("import-fallback-file"))
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.select(Source::File, window, cx);
+                                        this.choose_file(cx);
+                                    })),
+                            )
+                            .child(
+                                Button::new("import-fallback-paste")
+                                    .outline()
+                                    .small()
+                                    .icon("icons/clipboard-paste.svg")
+                                    .label(t!("import-fallback-paste"))
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.select(Source::Paste, window, cx);
+                                        this.paste_list(cx);
+                                    })),
+                            ),
+                    )
             })
     }
 
@@ -205,17 +542,26 @@ impl SpotifyImport {
     ) -> impl IntoElement {
         let theme = *cx.theme();
         let message = match stage {
-            ImportStage::Fetching if total > 0 => {
+            ImportStage::Fetching => match self.source {
+                Source::Link => t!("import-progress-link"),
+                Source::File => t!("import-progress-file"),
+                Source::Paste => t!("import-progress-paste"),
+            },
+            ImportStage::Matching if total > 0 => {
                 t!(
-                    "spotify-import-progress",
+                    "import-progress-matching",
                     read = read as i64,
                     total = total as i64
                 )
             }
-            ImportStage::Fetching => t!("spotify-import-reading"),
-            ImportStage::Matching => t!("spotify-import-matching"),
-            ImportStage::Saving => t!("spotify-import-saving"),
-            _ => t!("spotify-import-reading"),
+            ImportStage::Matching => t!("import-progress-matching-unknown"),
+            ImportStage::Saving => t!("import-progress-saving"),
+            _ => t!("import-progress-link"),
+        };
+        let metadata = match self.source {
+            Source::Link => t!("import-metadata-spotify"),
+            Source::File => t!("import-metadata-file"),
+            Source::Paste => t!("import-metadata-paste"),
         };
 
         div()
@@ -228,7 +574,7 @@ impl SpotifyImport {
                     .items_center()
                     .gap_2()
                     .text_size(theme.text(Text::Body))
-                    .child(Spinner::new("spotify-import-spinner"))
+                    .child(Spinner::new("import-spinner"))
                     .child(message),
             )
             .when(total > 0, |column| {
@@ -250,23 +596,37 @@ impl SpotifyImport {
                     )
                     .child(
                         div()
+                            .flex()
+                            .items_center()
+                            .justify_between()
                             .text_size(theme.text(Text::Small))
                             .text_color(theme.muted_foreground)
-                            .child(t!("spotify-import-progress-detail")),
+                            .child(metadata)
+                            .child(t!("import-progress-detail")),
                     )
             })
             .child(
                 div()
                     .text_size(theme.text(Text::Small))
                     .text_color(theme.muted_foreground)
-                    .child(t!("spotify-import-cancel-hint")),
+                    .child(t!("import-cancel-hint")),
             )
+    }
+
+    fn source_label(&self, source: &str) -> SharedString {
+        match source {
+            "spotify" => t!("import-source-spotify"),
+            "csv" => t!("import-source-csv"),
+            "m3u" => t!("import-source-m3u"),
+            "manual" => t!("import-source-manual"),
+            _ => t!("import-source-other"),
+        }
     }
 
     fn result(&mut self, report: &ImportReport, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = *cx.theme();
         let playable = report.playable();
-        let counts = [
+        let mut counts = vec![
             (
                 t!("spotify-import-playable", count = playable as i64),
                 theme.primary,
@@ -280,7 +640,7 @@ impl SpotifyImport {
                 theme.muted_foreground,
             ),
             (
-                t!("spotify-import-external", count = report.external as i64),
+                t!("import-external", count = report.external as i64),
                 theme.muted_foreground,
             ),
             (
@@ -291,9 +651,23 @@ impl SpotifyImport {
                 theme.danger_foreground.opacity(0.85),
             ),
         ];
+        if report.duplicates > 0 {
+            counts.push((
+                t!("import-duplicates", count = report.duplicates as i64),
+                theme.muted_foreground,
+            ));
+        }
+        if report.skipped > 0 {
+            counts.push((
+                t!("import-skipped", count = report.skipped as i64),
+                theme.danger_foreground.opacity(0.85),
+            ));
+        }
         let imported_at = crate::shared::cells::stamp(Some(report.imported_at));
-        let source = report.source_url.clone();
+        let source_url = report.source_url.clone();
         let name = report.name.clone();
+        let description = report.description.clone();
+        let label = self.source_label(&report.source);
         let unmatched = report.unmatched.len();
         let shown: Vec<_> = report
             .unmatched
@@ -315,7 +689,7 @@ impl SpotifyImport {
                         Artwork::new(report.cover.clone())
                             .size(theme.metrics.cover)
                             .corner_radius(theme.radius)
-                            .fallback("icons/spotify.svg")
+                            .fallback("icons/list-music.svg")
                             .flex_none(),
                     )
                     .child(
@@ -337,19 +711,36 @@ impl SpotifyImport {
                                     .text_size(theme.text(Text::Small))
                                     .text_color(theme.muted_foreground)
                                     .child(t!(
-                                        "spotify-import-result-detail",
+                                        "import-result-detail",
                                         total = report.total as i64,
                                         date = &imported_at
                                     )),
                             )
                             .child(
-                                Button::new("spotify-import-source")
-                                    .ghost()
-                                    .small()
-                                    .icon("icons/external-link.svg")
-                                    .label(t!("spotify-import-open-source"))
-                                    .on_click(move |_, _, cx| cx.open_url(&source)),
-                            ),
+                                div()
+                                    .text_size(theme.text(Text::Small))
+                                    .text_color(theme.muted_foreground)
+                                    .child(t!("import-result-source", source = &label)),
+                            )
+                            .when(!description.is_empty(), |column| {
+                                column.child(
+                                    div()
+                                        .text_size(theme.text(Text::Small))
+                                        .text_color(theme.muted_foreground)
+                                        .child(description.clone()),
+                                )
+                            })
+                            .when(!source_url.is_empty(), |column| {
+                                let source = source_url.clone();
+                                column.child(
+                                    Button::new("import-source-open")
+                                        .ghost()
+                                        .small()
+                                        .icon("icons/external-link.svg")
+                                        .label(t!("import-open-source"))
+                                        .on_click(move |_, _, cx| cx.open_url(&source)),
+                                )
+                            }),
                     ),
             )
             .child(
@@ -369,7 +760,7 @@ impl SpotifyImport {
                     })),
             )
             .child(
-                Button::new("spotify-import-unmatched")
+                Button::new("import-unmatched")
                     .ghost()
                     .small()
                     .icon(match open {
@@ -394,9 +785,13 @@ impl SpotifyImport {
                             .flex_col()
                             .children(shown.into_iter().enumerate().map(|(index, entry)| {
                                 let status = entry.status;
-                                let url = entry.source_url.clone();
+                                let url = entry
+                                    .external_url
+                                    .clone()
+                                    .or_else(|| entry.source_url.clone());
+                                let link = entry.external_url.clone().map(SharedString::from);
                                 div()
-                                    .id(("spotify-import-unmatched-row", index))
+                                    .id(("import-unmatched-row", index))
                                     .flex()
                                     .items_center()
                                     .gap_3()
@@ -423,7 +818,9 @@ impl SpotifyImport {
                                                     .child(entry.artists),
                                             ),
                                     )
-                                    .child(crate::shared::cells::import_status(index, status, cx))
+                                    .child(crate::shared::cells::import_status(
+                                        index, status, link, cx,
+                                    ))
                             })),
                     )
                     .when(unmatched > UNMATCHED_SHOWN, |column| {
@@ -443,7 +840,7 @@ impl SpotifyImport {
                 div()
                     .text_size(theme.text(Text::Small))
                     .text_color(theme.muted_foreground)
-                    .child(t!("spotify-import-compliance")),
+                    .child(t!("import-compliance")),
             )
     }
 }
@@ -478,7 +875,7 @@ impl Render for SpotifyImport {
         let mut actions: Vec<Button> = Vec::new();
         if active {
             actions.push(
-                Button::new("spotify-import-cancel")
+                Button::new("import-cancel")
                     .ghost()
                     .label(t!("spotify-import-cancel"))
                     .on_click(cx.listener(|_, _, _, cx| {
@@ -489,7 +886,7 @@ impl Render for SpotifyImport {
         }
         if idle || active {
             actions.push(
-                Button::new("spotify-import-close")
+                Button::new("import-close")
                     .ghost()
                     .label(t!("spotify-import-close"))
                     .on_click(cx.listener(|this, _, window, cx| this.close(window, cx))),
@@ -497,7 +894,7 @@ impl Render for SpotifyImport {
         }
         if report.is_some() && !active {
             actions.push(
-                Button::new("spotify-import-again")
+                Button::new("import-again")
                     .ghost()
                     .label(t!("spotify-import-another"))
                     .on_click(cx.listener(|this, _, window, cx| this.again(window, cx))),
@@ -505,7 +902,7 @@ impl Render for SpotifyImport {
         }
         if let Some(report) = report.filter(|_| !active) {
             actions.push(
-                Button::new("spotify-import-open")
+                Button::new("import-open")
                     .primary()
                     .icon("icons/list-music.svg")
                     .label(t!("spotify-import-open-playlist"))
@@ -516,23 +913,24 @@ impl Render for SpotifyImport {
         }
         if idle {
             actions.push(
-                Button::new("spotify-import-submit")
+                Button::new("import-submit")
                     .primary()
                     .icon("icons/download.svg")
-                    .label(t!("spotify-import-action"))
+                    .label(t!("import-action"))
+                    .disabled(!self.ready(cx))
                     .on_click(cx.listener(|this, _, window, cx| this.submit(window, cx))),
             );
         }
 
-        let mut modal = Modal::new("spotify-import", t!("spotify-import-title"))
-            .w(theme.metrics.cover * 3.)
-            .detail(t!("spotify-import-subtitle"))
+        let mut modal = Modal::new("import", t!("import-title"))
+            .w(theme.metrics.cover * 3.2)
+            .detail(t!("import-subtitle"))
             .close_button()
             .trailing(
                 svg()
-                    .path(icons::path("icons/spotify.svg"))
+                    .path(icons::path("icons/list-music.svg"))
                     .size(px(22.))
-                    .text_color(crate::shared::provider_brand("spotify", cx)),
+                    .text_color(theme.foreground.opacity(0.7)),
             )
             .child(body);
         for action in actions {

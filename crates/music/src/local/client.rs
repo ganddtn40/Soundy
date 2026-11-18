@@ -105,12 +105,13 @@ impl LocalClient {
     fn assemble(&self, id: &str) -> Result<PlaylistDetail> {
         let stored = self.store.one(id)?;
         if stored.imported.is_some() {
-            let (tracks, statuses) = self.assemble_imported(&self.store.entries(id)?);
+            let (tracks, statuses, links) = self.assemble_imported(&self.store.entries(id)?);
             return Ok(PlaylistDetail {
                 playlist: playlist_from(stored, &tracks),
                 tracks,
                 continuation: None,
                 statuses,
+                links,
             });
         }
         let tracks = self.listed(&self.store.tracks(id)?);
@@ -119,6 +120,7 @@ impl LocalClient {
             tracks,
             continuation: None,
             statuses: Vec::new(),
+            links: Vec::new(),
         })
     }
 
@@ -128,10 +130,11 @@ impl LocalClient {
     fn assemble_imported(
         &self,
         entries: &[ImportedEntry],
-    ) -> (Vec<Track>, Vec<Option<ImportStatus>>) {
+    ) -> (Vec<Track>, Vec<Option<ImportStatus>>, Vec<Option<String>>) {
         let scanned = self.scanned.read().unwrap();
         let mut tracks = Vec::with_capacity(entries.len());
         let mut statuses = Vec::with_capacity(entries.len());
+        let mut links = Vec::with_capacity(entries.len());
         for entry in entries {
             let status = if entry.status.playable() && entry.track_id.is_none() {
                 ImportStatus::Unavailable
@@ -149,13 +152,22 @@ impl LocalClient {
                 _ => imported_track(entry, None),
             };
             let missing = status == ImportStatus::Personal && !track.playable;
-            statuses.push(Some(match missing {
+            let status = match missing {
                 true => ImportStatus::Unavailable,
                 false => status,
-            }));
+            };
+            let link = match status {
+                ImportStatus::External => entry
+                    .external_url
+                    .clone()
+                    .or_else(|| entry.source_url.clone()),
+                _ => None,
+            };
+            statuses.push(Some(status));
+            links.push(link);
             tracks.push(track);
         }
-        (tracks, statuses)
+        (tracks, statuses, links)
     }
 
     fn album_track_paths(&self, track_id: &str) -> Vec<PathBuf> {
@@ -696,7 +708,7 @@ impl MusicApi for LocalClient {
     async fn playlist_tracks(&self, playlist_id: &str) -> Result<Vec<Track>> {
         let stored = self.store.one(playlist_id)?;
         if stored.imported.is_some() {
-            let (tracks, _) = self.assemble_imported(&self.store.entries(playlist_id)?);
+            let (tracks, _, _) = self.assemble_imported(&self.store.entries(playlist_id)?);
             return Ok(tracks);
         }
         Ok(self.listed(&self.store.tracks(playlist_id)?))
@@ -1121,6 +1133,7 @@ mod tests {
             isrc: None,
             status,
             track_id: track_id.map(str::to_owned),
+            external_url: None,
             added_at: Some(1_700_000_000),
         }
     }
@@ -1137,6 +1150,7 @@ mod tests {
             imported_at: 1_700_000_000,
             entries,
             duplicates: 0,
+            skipped: 0,
         }
     }
 
@@ -1184,13 +1198,18 @@ mod tests {
                 imported_entry(3, "Gone", ImportStatus::Unavailable, None, None),
                 // A file that was in the library when it was matched but is gone now.
                 imported_entry(4, "Gone", ImportStatus::Personal, Some("local:gone"), None),
+                // A recording a public catalogue knows but Soundy cannot play.
+                ImportedEntry {
+                    external_url: Some("https://audius.co/artist/song".to_owned()),
+                    ..imported_entry(5, "Elsewhere", ImportStatus::External, None, None)
+                },
             ],
             "list",
         );
         let id = client.save_import(&data).await.unwrap();
 
         let detail = client.playlist(&id).await.unwrap();
-        assert_eq!(detail.tracks.len(), 5, "every source entry is kept");
+        assert_eq!(detail.tracks.len(), 6, "every source entry is kept");
         assert_eq!(
             detail.statuses,
             [
@@ -1199,6 +1218,18 @@ mod tests {
                 Some(ImportStatus::Personal),
                 Some(ImportStatus::Unavailable),
                 Some(ImportStatus::Unavailable),
+                Some(ImportStatus::External),
+            ]
+        );
+        assert_eq!(
+            detail.links,
+            [
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some("https://audius.co/artist/song".to_owned()),
             ]
         );
         assert_eq!(
@@ -1213,6 +1244,7 @@ mod tests {
                 Some("local:file"),
                 None,
                 None,
+                None,
             ]
         );
         assert_eq!(
@@ -1221,9 +1253,9 @@ mod tests {
                 .iter()
                 .map(|track| track.playable)
                 .collect::<Vec<_>>(),
-            [true, true, true, false, false]
+            [true, true, true, false, false, false]
         );
-        assert_eq!(detail.playlist.track_count, 5);
+        assert_eq!(detail.playlist.track_count, 6);
         assert!(detail.playlist.read_only);
         assert_eq!(detail.playlist.owner, "Owner");
         assert_eq!(
@@ -1234,9 +1266,9 @@ mod tests {
         // The listing and the hero's play-all read the imported rows, not the empty local table.
         let listed = client.playlists().await.unwrap();
         let row = listed.iter().find(|playlist| playlist.id == id).unwrap();
-        assert_eq!(row.track_count, 5);
+        assert_eq!(row.track_count, 6);
         assert!(row.read_only);
-        assert_eq!(client.playlist_tracks(&id).await.unwrap().len(), 5);
+        assert_eq!(client.playlist_tracks(&id).await.unwrap().len(), 6);
         assert_eq!(
             client.playlist_covers(&id, 4).await.unwrap(),
             vec!["https://i.scdn.co/image/a".to_owned()]

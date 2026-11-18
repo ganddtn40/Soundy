@@ -73,6 +73,11 @@ pub(crate) trait Tracks: 'static {
     fn import_status(&self, _row: usize, _cx: &App) -> Option<music::ImportStatus> {
         None
     }
+
+    /// The public catalogue page of an imported row that Soundy can only open elsewhere.
+    fn import_link(&self, _row: usize, _cx: &App) -> Option<SharedString> {
+        None
+    }
 }
 
 pub(crate) fn first_playable(table: &Entity<TableState<TrackSource>>, cx: &App) -> Option<usize> {
@@ -517,7 +522,12 @@ impl TrackSource {
         // otherwise carry: an imported row that matched a personal file is marked as such by
         // its own status.
         let status = match self.provider.import_status(cell.row, cx) {
-            Some(status) => Some(cells::import_status(cell.row, status, cx)),
+            Some(status) => Some(cells::import_status(
+                cell.row,
+                status,
+                self.provider.import_link(cell.row, cx),
+                cx,
+            )),
             None => match self.marks_local(cx)
                 && track.id.as_deref().is_some_and(|id| Shelf::of(id).local())
             {

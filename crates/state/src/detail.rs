@@ -93,6 +93,8 @@ pub struct Detail {
     /// The import status of each row in `tracks`, aligned by index, for a playlist imported
     /// from another service.
     statuses: Vec<Option<music::ImportStatus>>,
+    /// The public catalogue page of each row, when the row is external playback only.
+    links: Vec<Option<String>>,
     continuation: Option<String>,
     also_like: Vec<Album>,
     similar: Vec<SavedArtist>,
@@ -242,6 +244,7 @@ impl Detail {
             playlist: None,
             tracks: Vec::new(),
             statuses: Vec::new(),
+            links: Vec::new(),
             continuation: None,
             also_like: Vec::new(),
             similar: Vec::new(),
@@ -292,6 +295,12 @@ impl Detail {
     /// page is not an imported playlist.
     pub fn statuses(&self) -> &[Option<music::ImportStatus>] {
         &self.statuses
+    }
+
+    /// The public catalogue page of each row in [`Detail::tracks`], when the row is external
+    /// playback only. Aligned with [`Detail::statuses`].
+    pub fn links(&self) -> &[Option<String>] {
+        &self.links
     }
 
     /// What the provider lists as related to the page's album, with more from the same
@@ -694,6 +703,7 @@ impl Detail {
                     .cloned()
                     .collect();
                 self.statuses.clear();
+                self.links.clear();
                 self.continuation = None;
                 self.fill(cx);
             }
@@ -709,6 +719,7 @@ impl Detail {
                 self.playlist = Some(playlist);
                 self.tracks = detail.tracks.clone();
                 self.statuses = detail.statuses.clone();
+                self.links = detail.links.clone();
                 self.continuation = detail.continuation.clone();
             }
         }
@@ -733,6 +744,7 @@ impl Detail {
         self.playlist = None;
         self.tracks.clear();
         self.statuses.clear();
+        self.links.clear();
         self.continuation = None;
         self.also_like.clear();
         self.similar.clear();

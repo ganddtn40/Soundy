@@ -102,6 +102,16 @@ impl Tracks for DetailTracks {
         self.0.read(cx).statuses().get(row).copied().flatten()
     }
 
+    fn import_link(&self, row: usize, cx: &App) -> Option<SharedString> {
+        self.0
+            .read(cx)
+            .links()
+            .get(row)
+            .cloned()
+            .flatten()
+            .map(SharedString::from)
+    }
+
     /// Your own playlist's songs come in the order its provider says. Anyone else's playlist is
     /// in its curator's order, and an album's never by when they were added.
     fn arrival(&self, cx: &App) -> Option<Arrival> {

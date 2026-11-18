@@ -1453,6 +1453,7 @@ impl MusicApi for SubsonicClient {
             tracks,
             continuation: None,
             statuses: Vec::new(),
+            links: Vec::new(),
         })
     }
 

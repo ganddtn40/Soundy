@@ -246,9 +246,9 @@ impl Store {
             let mut insert = transaction
                 .prepare(
                     "INSERT INTO imported_entries
-                        (playlist_id, position, source_id, source_url, title, artists, album,
-                         duration_ms, cover, isrc, status, track_id, added_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (playlist_id, position, source_id, source_url, external_url, title, artists,
+                         album, duration_ms, cover, isrc, status, track_id, added_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 )
                 .context("cannot prepare the imported entries")?;
             for entry in &data.entries {
@@ -258,6 +258,7 @@ impl Store {
                         entry.position as i64,
                         entry.source_id,
                         entry.source_url,
+                        entry.external_url,
                         entry.title,
                         entry.artists,
                         entry.album,
@@ -280,8 +281,8 @@ impl Store {
         let connection = self.open()?;
         let mut query = connection
             .prepare(
-                "SELECT position, source_id, source_url, title, artists, album, duration_ms,
-                        cover, isrc, status, track_id, added_at
+                "SELECT position, source_id, source_url, external_url, title, artists, album,
+                        duration_ms, cover, isrc, status, track_id, added_at
                  FROM imported_entries WHERE playlist_id = ? ORDER BY position",
             )
             .context("cannot read the imported entries")?;
@@ -291,15 +292,16 @@ impl Store {
                     position: row.get::<_, i64>(0)? as u32,
                     source_id: row.get(1)?,
                     source_url: row.get(2)?,
-                    title: row.get(3)?,
-                    artists: row.get(4)?,
-                    album: row.get(5)?,
-                    duration: std::time::Duration::from_millis(row.get::<_, i64>(6)?.max(0) as u64),
-                    cover: row.get(7)?,
-                    isrc: row.get(8)?,
-                    status: ImportStatus::parse(&row.get::<_, String>(9)?),
-                    track_id: row.get(10)?,
-                    added_at: row.get(11)?,
+                    external_url: row.get(3)?,
+                    title: row.get(4)?,
+                    artists: row.get(5)?,
+                    album: row.get(6)?,
+                    duration: std::time::Duration::from_millis(row.get::<_, i64>(7)?.max(0) as u64),
+                    cover: row.get(8)?,
+                    isrc: row.get(9)?,
+                    status: ImportStatus::parse(&row.get::<_, String>(10)?),
+                    track_id: row.get(11)?,
+                    added_at: row.get(12)?,
                 })
             })
             .context("cannot read the imported entries")?;

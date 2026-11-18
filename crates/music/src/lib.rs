@@ -2,6 +2,7 @@ mod aac;
 pub mod apple;
 pub mod artwork;
 mod audio;
+pub mod audius;
 pub mod binimum;
 mod calendar;
 pub mod connect;

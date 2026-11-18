@@ -443,6 +443,10 @@ pub struct ImportedEntry {
     pub status: ImportStatus,
     /// The id of the playable track that matched, when one did.
     pub track_id: Option<String>,
+    /// A permitted public catalogue's page for the recording, when it was found there but
+    /// cannot be played inside Soundy. This is separate from the source link so neither
+    /// replaces the other.
+    pub external_url: Option<String>,
     /// When the entry was added to the source playlist, in seconds since the epoch.
     pub added_at: Option<i64>,
 }
@@ -463,6 +467,8 @@ pub struct ImportedPlaylistData {
     pub entries: Vec<ImportedEntry>,
     /// How many entries share a recording with an earlier one. Both are kept.
     pub duplicates: u32,
+    /// Rows the list carried that could not be read as a track. Nothing is invented for them.
+    pub skipped: usize,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -473,6 +479,9 @@ pub struct PlaylistDetail {
     /// The import status of each row in `tracks`, aligned by index. Empty for a playlist that
     /// was not imported.
     pub statuses: Vec<Option<ImportStatus>>,
+    /// The public catalogue page of each row in `tracks`, when a permitted catalogue knows the
+    /// recording but Soundy cannot play it. Aligned with `statuses`.
+    pub links: Vec<Option<String>>,
 }
 
 /// Which end of a list holds the songs added last, for a list that comes in the order its songs
