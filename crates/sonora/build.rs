@@ -8,13 +8,21 @@ fn main() {
     if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         let icon = concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../assets/windows/sonora.ico"
+            "/../../assets/windows/soundy.ico"
         );
         println!("cargo:rerun-if-changed={icon}");
         let mut resource = winresource::WindowsResource::new();
         resource.set_icon(icon);
-        resource.set("ProductName", "Sonora");
-        resource.set("FileDescription", "Sonora");
+        resource.set("ProductName", "Soundy");
+        resource.set("FileDescription", "Soundy");
+        resource.set("CompanyName", "Soundy");
+        resource.set("InternalName", "soundy");
+        resource.set("OriginalFilename", "soundy.exe");
+        resource.set("ProductVersion", env!("CARGO_PKG_VERSION"));
+        resource.set(
+            "LegalCopyright",
+            "GPL-3.0-or-later. Based on Sonora by its contributors.",
+        );
         resource.compile().expect("cannot embed the windows icon");
     }
 }

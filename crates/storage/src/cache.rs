@@ -43,11 +43,11 @@ pub struct Cache {
 }
 
 impl Cache {
-    /// `$XDG_CACHE_HOME/sonora/cache.sqlite` and equivalent on Windows.
+    /// `$XDG_CACHE_HOME/soundy/cache.sqlite` and equivalent on Windows.
     pub fn standard() -> Self {
         let dir = dirs::cache_dir()
             .unwrap_or_else(std::env::temp_dir)
-            .join("sonora");
+            .join("soundy");
         Self::at(dir.join("cache.sqlite"))
     }
 

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>app.soundy.player</id>
+
+  <name>Soundy</name>
+  <developer id="app.soundy">
+    <name>Soundy</name>
+  </developer>
+  <keywords>
+    <keyword>music</keyword>
+    <keyword>spotify</keyword>
+    <keyword>audio</keyword>
+    <keyword>player</keyword>
+  </keywords>
+  <summary>A lightweight native music player</summary>
+
+  <metadata_license>MIT</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <url type="homepage">https://github.com/sonorahq/sonora</url>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+
+  <description>
+    <p>
+      Soundy is a lightweight native music player built with Rust and GPUI. It is a fork of
+      Sonora and keeps its provider integrations, lyrics, artist pages, playlists and system
+      media controls.
+    </p>
+  </description>
+
+  <content_rating type="oars-1.1" />
+
+  <provides>
+    <mediatype>audio/mpeg</mediatype>
+    <mediatype>audio/flac</mediatype>
+    <mediatype>audio/mp4</mediatype>
+    <mediatype>audio/aac</mediatype>
+    <mediatype>audio/ogg</mediatype>
+    <mediatype>audio/opus</mediatype>
+    <mediatype>audio/x-wav</mediatype>
+    <mediatype>audio/x-aiff</mediatype>
+    <mediatype>audio/webm</mediatype>
+    <mediatype>audio/x-matroska</mediatype>
+    <mediatype>audio/x-wavpack</mediatype>
+    <mediatype>audio/x-ape</mediatype>
+  </provides>
+
+  <releases>
+    <release version="@VERSION@" date="@DATE@" />
+  </releases>
+
+  <launchable type="desktop-id">app.soundy.player.desktop</launchable>
+</component>

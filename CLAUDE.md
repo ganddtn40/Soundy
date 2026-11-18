@@ -1,4 +1,8 @@
-# sonora
+# soundy
+
+Soundy is a Windows-first fork of [Sonora](https://github.com/sonorahq/sonora), keeping its
+native GPUI architecture. The internal crate and state type names stay `sonora`; only the
+user-visible identity is Soundy. GPL-3.0-or-later, with upstream attribution preserved.
 
 A native, familiar music streaming client.
 
@@ -87,9 +91,9 @@ sonora → views → state → music
 - **Assets are picked up from their folder.** Drop an icon into `assets/icons/<pack>/` or a face
   into `assets/fonts/`. Call sites spell `"icons/<name>.svg"` and resolve it with `icons::path` at
   render.
-- **Generated files are regenerated, never edited.** App icons come from
-  `scripts/generate-icons.py`, `THIRD-PARTY.md` from `scripts/generate-notices.py`, the README
-  translation table from `scripts/i18n-coverage.py`.
+- **Generated files are regenerated, never edited.** `THIRD-PARTY.md` comes from
+  `scripts/generate-notices.py`, the README translation table from `scripts/i18n-coverage.py`,
+  and the icon set from `scripts/generate-soundy-icons.py` (see `assets/branding/README.md`).
 - **Do not add tests unless asked.** Offering is fine. Existing tests are `#[cfg(test)] mod tests`
   at the bottom of the file they cover. Accessibility regression tests in
   `crates/ui/tests/a11y_tree.rs` are the exception: extend them with every new primitive. Accessibility regression tests in

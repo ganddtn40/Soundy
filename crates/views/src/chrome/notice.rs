@@ -16,7 +16,7 @@ const ICON: Pixels = px(16.);
 /// The title's line height as a multiple of its size, which the icon centres on.
 const LEADING: f32 = 1.4;
 const REACH: Pixels = px(400.);
-/// Where the README says what to install alongside Sonora.
+/// Where the README says what to install alongside Soundy.
 const INSTALL: &str = "https://github.com/sonorahq/sonora#linux";
 
 type Handler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;

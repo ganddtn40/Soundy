@@ -454,36 +454,37 @@ impl Global for Transition {}
 impl Theme {
     pub fn dark() -> Self {
         Self {
-            background: rgb(0x0a0a0a).into(),
-            foreground: rgb(0xfafafa).into(),
-            border: rgba(0x50505066).into(),
-            muted: rgb(0x262626).into(),
-            overlay: rgba(0x0000008c).into(),
-            overlay_foreground: rgb(0xfafafa).into(),
-            muted_foreground: rgb(0x909090).into(),
-            secondary: rgb(0x171717).into(),
-            secondary_hover: rgba(0x36363666).into(),
-            secondary_active: rgba(0x4d4d4d66).into(),
-            primary: rgb(0xfafafa).into(),
-            primary_foreground: rgb(0x171717).into(),
-            primary_hover: rgba(0xe5e5e5b3).into(),
+            // Soundy wears a near-black graphite page with translucent emerald accents.
+            background: rgb(0x090a0c).into(),
+            foreground: rgb(0xf2f7f4).into(),
+            border: rgba(0xffffff1a).into(),
+            muted: rgb(0x14171a).into(),
+            overlay: rgba(0x05070a9e).into(),
+            overlay_foreground: rgb(0xf2f7f4).into(),
+            muted_foreground: rgb(0x8fa39a).into(),
+            secondary: rgb(0x101114).into(),
+            secondary_hover: rgba(0x1f2b2766).into(),
+            secondary_active: rgba(0x2b3d3566).into(),
+            primary: rgb(0x34d399).into(),
+            primary_foreground: rgb(0x04140f).into(),
+            primary_hover: rgba(0x6ee7b7cc).into(),
             danger: rgb(0x7f1d1d).into(),
             danger_foreground: rgb(0xfef2f2).into(),
             danger_hover: rgba(0x8b2020b3).into(),
-            popover: rgb(0x141414).into(),
-            popover_foreground: rgb(0xfafafa).into(),
-            progress_bar: rgb(0xf5f5f5).into(),
-            selection: rgb(0x1d4ed8).into(),
-            sidebar: rgb(0x0a0a0a).into(),
-            sidebar_accent: rgba(0x50505066).into(),
-            sidebar_border: rgb(0x262626).into(),
-            title_bar_border: rgb(0x262626).into(),
-            table_head: rgba(0x171717cc).into(),
-            table_head_foreground: rgb(0x8a8a8a).into(),
-            table_row_border: rgba(0x262626b3).into(),
-            table_hover: rgba(0x50505033).into(),
-            table_active: rgba(0x1e40af33).into(),
-            table_active_border: rgb(0x1d4ed8).into(),
+            popover: rgb(0x0e1113).into(),
+            popover_foreground: rgb(0xf2f7f4).into(),
+            progress_bar: rgb(0x34d399).into(),
+            selection: rgb(0x10b981).into(),
+            sidebar: rgb(0x090a0c).into(),
+            sidebar_accent: rgba(0x10b9812e).into(),
+            sidebar_border: rgba(0xffffff12).into(),
+            title_bar_border: rgba(0xffffff12).into(),
+            table_head: rgba(0x101114e6).into(),
+            table_head_foreground: rgb(0x8fa39a).into(),
+            table_row_border: rgba(0xffffff10).into(),
+            table_hover: rgba(0xffffff0f).into(),
+            table_active: rgba(0x10b98124).into(),
+            table_active_border: rgb(0x10b981).into(),
             radius: px(6.),
             font_size: px(14.),
             metrics: Metrics::default(),
@@ -970,6 +971,18 @@ mod tests {
         l: 0.5,
         a: 1.,
     };
+
+    #[test]
+    fn the_dark_theme_keeps_the_soundy_palette() {
+        let theme = Theme::dark();
+
+        assert_eq!(theme.background, rgb(0x090a0c).into());
+        assert_eq!(theme.foreground, rgb(0xf2f7f4).into());
+        assert_eq!(theme.primary, rgb(0x34d399).into());
+        assert_eq!(theme.progress_bar, theme.primary);
+        assert_eq!(theme.selection, rgb(0x10b981).into());
+        assert_eq!(theme.table_active_border, rgb(0x10b981).into());
+    }
 
     #[test]
     fn tinting_keeps_surface_contrast() {

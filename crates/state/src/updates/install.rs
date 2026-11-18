@@ -8,18 +8,18 @@ use anyhow::{Context as _, Result};
 const UNINSTALLER: &str = "unins000.exe";
 #[cfg(target_os = "windows")]
 const INSTALLER: &str = match cfg!(target_arch = "aarch64") {
-    true => "Sonora-Setup-arm64.exe",
-    false => "Sonora-Setup.exe",
+    true => "Soundy-Setup-arm64.exe",
+    false => "Soundy-Setup.exe",
 };
 /// Where Homebrew keeps the stable and the nightly cask, on Apple silicon and on Intel. Any of
 /// them existing means Homebrew owns /Applications/Sonora.app, though not a copy installed
 /// anywhere else.
 #[cfg(target_os = "macos")]
 const CASKROOMS: [&str; 4] = [
-    "/opt/homebrew/Caskroom/sonora",
-    "/opt/homebrew/Caskroom/sonora-nightly",
-    "/usr/local/Caskroom/sonora",
-    "/usr/local/Caskroom/sonora-nightly",
+    "/opt/homebrew/Caskroom/soundy",
+    "/opt/homebrew/Caskroom/soundy-nightly",
+    "/usr/local/Caskroom/soundy",
+    "/usr/local/Caskroom/soundy-nightly",
 ];
 
 /// How this copy of Sonora was installed, which decides whether it may replace itself.
@@ -46,7 +46,10 @@ impl Install {
     }
 
     pub(super) fn updates_itself(&self) -> bool {
-        *self != Self::Managed
+        // Soundy is a fork with no release feed of its own. Pointing the updater at the
+        // upstream Sonora releases would replace this build with a different application,
+        // so updates stay off until Soundy publishes signed builds.
+        false
     }
 
     /// Whether a release asset is the one this install updates from.
@@ -73,7 +76,7 @@ impl Install {
             Self::Bundle(bundle) => swap_bundle(download, bundle),
             #[cfg(not(any(target_os = "windows", target_os = "macos")))]
             Self::AppImage(image) => swap_image(download, image),
-            Self::Managed => anyhow::bail!("a package manager updates this copy of sonora"),
+            Self::Managed => anyhow::bail!("a package manager updates this copy of Soundy"),
         }
     }
 }
@@ -171,10 +174,10 @@ fn swap_bundle(image: &Path, bundle: &Path) -> Result<()> {
         .arg(image))
     .context("cannot open the disk image")?;
 
-    let staged = bundle.with_file_name(".Sonora.app.update");
+    let staged = bundle.with_file_name(".Soundy.app.update");
     let copied = remove(&staged).and_then(|()| {
         run(Command::new("/usr/bin/ditto")
-            .arg(mount.path().join("Sonora.app"))
+            .arg(mount.path().join("Soundy.app"))
             .arg(&staged))
         .context("cannot copy the new version off the disk image")
     });
@@ -187,7 +190,7 @@ fn swap_bundle(image: &Path, bundle: &Path) -> Result<()> {
     copied?;
     std::fs::remove_file(image).ok();
 
-    let retired = bundle.with_file_name(".Sonora.app.old");
+    let retired = bundle.with_file_name(".Soundy.app.old");
     remove(&retired)?;
     std::fs::rename(bundle, &retired).context("cannot move the old version aside")?;
     if let Err(error) = std::fs::rename(&staged, bundle) {
@@ -206,7 +209,7 @@ fn swap_bundle(image: &Path, bundle: &Path) -> Result<()> {
 fn swap_image(download: &Path, image: &Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt as _;
 
-    let staged = image.with_file_name(".sonora-update.AppImage");
+    let staged = image.with_file_name(".soundy-update.AppImage");
     std::fs::copy(download, &staged).context("cannot copy the new AppImage beside the old")?;
     std::fs::remove_file(download).ok();
     std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o755))

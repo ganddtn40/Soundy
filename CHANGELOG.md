@@ -5,24 +5,50 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-11-18
+
+The first Soundy release, forked from Sonora at commit `91d8055b`, after the 0.50.1 release.
 
 ### Added
 
-- Click the tray icon on Linux to show Sonora's window, or to hide it into the tray when it is open.
-- Choose Wide under Settings, Appearance, Page width to let pages fill a large window again instead of staying centred.
+- The Soundy identity: window title, tray, taskbar, notifications, application id
+  `app.soundy.player`, the `soundy:` link scheme, `soundy.exe`, a new waveform icon and a Windows
+  installer.
+- An emerald Liquid Glass theme over graphite surfaces, with frosted controls and the fullscreen
+  player's ambient field, vinyl record and artwork backdrop.
+- A performance section and measurement script, with the numbers taken from a release build.
+- Click the tray icon on Linux to show Soundy's window, or to hide it into the tray when it is open.
+- Choose Wide under Settings, Appearance, Page width to let pages fill a large window again instead
+  of staying centred.
+
+### Changed
+
+- Update checking and the updater are removed, so a Soundy build is never replaced by a Sonora
+  release.
+- Installation reporting is removed; Soundy has no telemetry endpoint.
+- The default data, cache, socket and log paths use `soundy`, and the executable target is
+  `soundy`.
+- The now-playing artwork is drawn as a rotating vinyl disc in the fullscreen player.
 
 ### Fixed
 
-- Music keeps playing smoothly on Windows while another program keeps the processor busy, without raising Sonora's priority in Task Manager.
+- Command-line commands now reach the running app on Windows instead of reporting that it is not
+  running, because a named pipe cannot carry the read timeout the client asked for.
+- Music keeps playing smoothly on Windows while another program keeps the processor busy, without
+  raising Soundy's priority in Task Manager.
 - The fullscreen player counts down the time left when Show time left is on, as the player bar does.
-- Clicking a song or other suggestion under the search page field opens it again instead of just closing the list.
-- Your own YouTube Music playlists keep your name as their creator on the playlist page, as they do in your library.
-- Skipping songs in a Spotify album or playlist with Soloist plays the next song again, instead of a different one or a greyed-out next button.
+- Clicking a song or other suggestion under the search page field opens it again instead of just
+  closing the list.
+- Your own YouTube Music playlists keep your name as their creator on the playlist page, as they do
+  in your library.
+- Skipping songs in a Spotify album or playlist with Soloist plays the next song again, instead of a
+  different one or a greyed-out next button.
 - Play Next and Play Last work again with Soloist.
 - Radio carries on with similar songs again after an album or playlist ends with Soloist.
-- Picking a Deezer Family profile at sign-in switches to it instead of failing and staying on the account owner.
-- Blur window stays available on Linux at 100% opacity, so a compositor that makes Sonora see-through, such as when it is unfocused, blurs the desktop behind it.
+- Picking a Deezer Family profile at sign-in switches to it instead of failing and staying on the
+  account owner.
+- Blur window stays available on Linux at 100% opacity, so a compositor that makes Soundy
+  see-through, such as when it is unfocused, blurs the desktop behind it.
 
 ## [0.50.1] - 2026-11-17
 

@@ -8,7 +8,7 @@ use tray_icon::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIc
 
 use super::{Art, Event, Shown};
 
-const TOOLTIP: &str = "Sonora";
+const TOOLTIP: &str = "Soundy";
 #[cfg(target_os = "macos")]
 const TEMPLATES: [&[u8]; 2] = [
     include_bytes!("../../../../assets/tray/template-18.png"),

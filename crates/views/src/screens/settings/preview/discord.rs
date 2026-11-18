@@ -296,7 +296,7 @@ fn image(art: Option<String>, badge: Option<(&'static str, &'static str)>, cx: &
             .bg(rgb(APP_ICON))
             .child(
                 svg()
-                    .path(icons::path("icons/sonora.svg"))
+                    .path(icons::path("icons/soundy.svg"))
                     .size(ART * APP_MARK_SHARE)
                     .text_color(rgb(APP_MARK)),
             )

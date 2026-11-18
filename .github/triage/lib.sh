@@ -25,7 +25,7 @@ ask() {
     -H "Authorization: Bearer $TRIAGE_API_KEY" \
     -H 'Content-Type: application/json' \
     -H "x-opencode-session: $session" \
-    -A "sonora-triage/1.0" \
+    -A "soundy-triage/1.0" \
     --data-binary @- \
     "$base/chat/completions" <<<"$1"
 }

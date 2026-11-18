@@ -6,52 +6,52 @@ use gpui::{App, AssetSource, SharedString};
 include!(concat!(env!("OUT_DIR"), "/fonts.rs"));
 
 /// Where About asks for the app icon, and the icon this platform shows for the app.
-const APP_ICON: &str = "brand/sonora.svg";
+const APP_ICON: &str = "brand/soundy.svg";
 #[cfg(target_os = "macos")]
-const APP_ICON_SVG: &[u8] = include_bytes!("../../../assets/macos/sonora.svg");
+const APP_ICON_SVG: &[u8] = include_bytes!("../../../assets/macos/soundy.svg");
 #[cfg(target_os = "windows")]
-const APP_ICON_SVG: &[u8] = include_bytes!("../../../assets/windows/sonora.svg");
+const APP_ICON_SVG: &[u8] = include_bytes!("../../../assets/windows/soundy.svg");
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-const APP_ICON_SVG: &[u8] = include_bytes!("../../../assets/linux/sonora.svg");
+const APP_ICON_SVG: &[u8] = include_bytes!("../../../assets/linux/soundy.svg");
 
 /// RGBA icon sizes shared by X11 windows and status notifier pixmaps.
 #[cfg(target_os = "linux")]
 pub const LINUX_ICONS: &[(u32, &[u8])] = &[
     (
         16,
-        include_bytes!("../../../assets/linux/icons/hicolor/16x16/apps/sonora.png"),
+        include_bytes!("../../../assets/linux/icons/hicolor/16x16/apps/soundy.png"),
     ),
     (
         22,
-        include_bytes!("../../../assets/linux/icons/hicolor/22x22/apps/sonora.png"),
+        include_bytes!("../../../assets/linux/icons/hicolor/22x22/apps/soundy.png"),
     ),
     (
         24,
-        include_bytes!("../../../assets/linux/icons/hicolor/24x24/apps/sonora.png"),
+        include_bytes!("../../../assets/linux/icons/hicolor/24x24/apps/soundy.png"),
     ),
     (
         32,
-        include_bytes!("../../../assets/linux/icons/hicolor/32x32/apps/sonora.png"),
+        include_bytes!("../../../assets/linux/icons/hicolor/32x32/apps/soundy.png"),
     ),
     (
         48,
-        include_bytes!("../../../assets/linux/icons/hicolor/48x48/apps/sonora.png"),
+        include_bytes!("../../../assets/linux/icons/hicolor/48x48/apps/soundy.png"),
     ),
     (
         64,
-        include_bytes!("../../../assets/linux/icons/hicolor/64x64/apps/sonora.png"),
+        include_bytes!("../../../assets/linux/icons/hicolor/64x64/apps/soundy.png"),
     ),
     (
         128,
-        include_bytes!("../../../assets/linux/icons/hicolor/128x128/apps/sonora.png"),
+        include_bytes!("../../../assets/linux/icons/hicolor/128x128/apps/soundy.png"),
     ),
     (
         256,
-        include_bytes!("../../../assets/linux/icons/hicolor/256x256/apps/sonora.png"),
+        include_bytes!("../../../assets/linux/icons/hicolor/256x256/apps/soundy.png"),
     ),
     (
         512,
-        include_bytes!("../../../assets/linux/icons/hicolor/512x512/apps/sonora.png"),
+        include_bytes!("../../../assets/linux/icons/hicolor/512x512/apps/soundy.png"),
     ),
 ];
 
@@ -99,7 +99,7 @@ impl AssetSource for Assets {
 /// Matches the installed desktop file for launcher icons and window grouping on Linux.
 pub fn app_id() -> &'static str {
     match cfg!(target_os = "linux") && std::path::Path::new("/.flatpak-info").exists() {
-        true => "io.github.nolight132.sonora",
-        false => "sonora",
+        true => "app.soundy.player",
+        false => "soundy",
     }
 }

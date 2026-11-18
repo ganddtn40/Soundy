@@ -303,7 +303,7 @@ mod host {
                 .map_err(|message| anyhow!(message))?;
             if version != wire::VERSION.as_bytes() {
                 bail!(
-                    "the cdm host is version {}, not {}, so sonora was replaced while running",
+                    "the cdm host is version {}, not {}, so Soundy was replaced while running",
                     String::from_utf8_lossy(&version),
                     wire::VERSION
                 );
@@ -519,7 +519,7 @@ mod host {
     /// replaced under the app is caught by the version in the host's first answer.
     #[cfg(not(target_os = "linux"))]
     fn executable() -> Result<PathBuf> {
-        std::env::current_exe().context("cannot find the sonora executable")
+        std::env::current_exe().context("cannot find the Soundy executable")
     }
 
     /// Waits for a host whose stdin has closed to exit, and kills it if it does not.

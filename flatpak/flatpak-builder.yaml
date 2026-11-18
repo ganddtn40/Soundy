@@ -1,4 +1,4 @@
-id: io.github.nolight132.sonora
+id: app.soundy.player
 branch: stable
 
 runtime: org.gnome.Platform
@@ -7,7 +7,7 @@ sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
 
-command: sonora
+command: soundy
 finish-args:
   - --socket=wayland # Permission needed to show the window
   - --socket=fallback-x11 # Permission needed to show the window on legacy windowing systems
@@ -40,15 +40,15 @@ finish-args:
   - --talk-name=org.kde.StatusNotifierWatcher
 
   # MPRIS media controls
-  - --own-name=org.mpris.MediaPlayer2.sonora
+  - --own-name=org.mpris.MediaPlayer2.soundy
 
 modules:
-  - name: sonora
+  - name: soundy
     buildsystem: simple
     build-options:
       append-path: /usr/lib/sdk/rust-stable/bin
       env:
-        CARGO_HOME: /run/build/sonora/cargo
+        CARGO_HOME: /run/build/soundy/cargo
         CARGO_NET_OFFLINE: 'true'
     sources:
       # Use source from GitHub:
@@ -81,20 +81,20 @@ modules:
 
       # Collect info as suggested by: https://v2.tauri.app/distribute/flatpak/
       # Install binary to /app/bin
-      - install -Dm755 "target/release/sonora" /app/bin/sonora
+      - install -Dm755 "target/release/soundy" /app/bin/soundy
 
       # Install desktop icons
-      - for icon in assets/linux/icons/hicolor/*/apps/sonora.png; do install -Dm644 "$icon" "/app/share/icons/hicolor/$(basename "$(dirname "$(dirname "$icon")")")/apps/io.github.nolight132.sonora.png"; done
-      - install -Dm644 assets/linux/sonora.svg /app/share/icons/hicolor/scalable/apps/io.github.nolight132.sonora.svg
+      - for icon in assets/linux/icons/hicolor/*/apps/soundy.png; do install -Dm644 "$icon" "/app/share/icons/hicolor/$(basename "$(dirname "$(dirname "$icon")")")/apps/app.soundy.player.png"; done
+      - install -Dm644 assets/linux/soundy.svg /app/share/icons/hicolor/scalable/apps/app.soundy.player.svg
 
       # Install Desktop File and AppData Metainfo
       - install -d /app/share/applications /app/share/metainfo
-      - sed -e 's/^Icon=sonora$/Icon=io.github.nolight132.sonora/' -e 's/^StartupWMClass=sonora$/StartupWMClass=io.github.nolight132.sonora/' assets/linux/sonora.desktop > /app/share/applications/io.github.nolight132.sonora.desktop
-      - sed -e "s/@VERSION@/$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)/" -e "s/@DATE@/$(date -I)/" flatpak/io.github.nolight132.sonora.metainfo.xml > /app/share/metainfo/io.github.nolight132.sonora.metainfo.xml
+      - sed -e 's/^Icon=soundy$/Icon=app.soundy.player/' -e 's/^StartupWMClass=soundy$/StartupWMClass=app.soundy.player/' assets/linux/soundy.desktop > /app/share/applications/app.soundy.player.desktop
+      - sed -e "s/@VERSION@/$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)/" -e "s/@DATE@/$(date -I)/" flatpak/app.soundy.player.metainfo.xml > /app/share/metainfo/app.soundy.player.metainfo.xml
 
       # Install licenses
-      - install -Dm644 COPYING /app/share/licenses/io.github.nolight132.sonora/LICENSE
-      - install -Dm644 THIRD-PARTY.md /app/share/licenses/io.github.nolight132.sonora/THIRD-PARTY.md
-      - install -Dm644 assets/fonts/LICENSE.txt /app/share/licenses/io.github.nolight132.sonora/LICENSE.Inter
-      - install -Dm644 assets/icons/LICENSE /app/share/licenses/io.github.nolight132.sonora/icons/LICENSE
-      - for licence in assets/icons/*/LICENSE; do install -Dm644 "$licence" "/app/share/licenses/io.github.nolight132.sonora/icons/LICENSE.$(basename "$(dirname "$licence")")"; done
+      - install -Dm644 COPYING /app/share/licenses/app.soundy.player/LICENSE
+      - install -Dm644 THIRD-PARTY.md /app/share/licenses/app.soundy.player/THIRD-PARTY.md
+      - install -Dm644 assets/fonts/LICENSE.txt /app/share/licenses/app.soundy.player/LICENSE.Inter
+      - install -Dm644 assets/icons/LICENSE /app/share/licenses/app.soundy.player/icons/LICENSE
+      - for licence in assets/icons/*/LICENSE; do install -Dm644 "$licence" "/app/share/licenses/app.soundy.player/icons/LICENSE.$(basename "$(dirname "$licence")")"; done

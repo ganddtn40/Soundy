@@ -20,9 +20,9 @@ use crate::item;
 /// shapes are kept apart and joined in `into_command`.
 #[derive(Parser)]
 #[command(
-    name = "sonora",
-    about = "A native, familiar music streaming client",
-    override_usage = "sonora [FILE_OR_LINK]...\n       sonora [--json] <COMMAND>",
+    name = "soundy",
+    about = "A lightweight native music player",
+    override_usage = "soundy [FILE_OR_LINK]...\n       soundy [--json] <COMMAND>",
     disable_help_subcommand = true,
     disable_version_flag = true,
     arg = Arg::new("version")
@@ -148,10 +148,10 @@ enum Sub {
     Providers,
     /// Print the current provider, or switch to one that has an account.
     Provider {
-        /// A provider as `sonora providers` lists it, such as `spotify`.
+        /// A provider as `soundy providers` lists it, such as `spotify`.
         slug: Option<String>,
     },
-    /// Print the Sonora Session Sonora is in, or start, join or leave one.
+    /// Print the Sonora Session Soundy is in, or start, join or leave one.
     Session {
         #[command(subcommand)]
         action: Option<SessionSub>,
@@ -160,14 +160,14 @@ enum Sub {
     Completions { shell: Shell },
 }
 
-/// What `sonora session` does with a Sonora Session.
+/// What `soundy session` does with a Sonora Session.
 #[derive(Subcommand)]
 enum SessionSub {
     /// Start a session on the current provider and print its code.
     Start,
     /// Join the session a friend's six-digit code names, or open the dialog to type it in.
     Join { code: Option<String> },
-    /// Leave the session, which ends it for everyone when Sonora hosts it.
+    /// Leave the session, which ends it for everyone when Soundy hosts it.
     Leave,
 }
 
@@ -274,7 +274,7 @@ pub fn completions(shell: Shell) {
     // the version only has to be there for `-v` to build, a script never shows it
     let mut command = Args::command().version(env!("CARGO_PKG_VERSION"));
     let mut script = Vec::new();
-    clap_complete::generate(shell, &mut command, "sonora", &mut script);
+    clap_complete::generate(shell, &mut command, "soundy", &mut script);
     io::stdout().write_all(&script).ok();
 }
 
@@ -469,7 +469,7 @@ mod tests {
     use super::*;
 
     fn parsed(args: &[&str]) -> CommandType {
-        let args: Vec<OsString> = std::iter::once("sonora")
+        let args: Vec<OsString> = std::iter::once("soundy")
             .chain(args.iter().copied())
             .map(OsString::from)
             .collect();
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn queue_reads_as_a_snapshot_request() {
         let CommandType::Remote(request, format) = parsed(&["queue"]) else {
-            panic!("`sonora queue` should ask the running Sonora");
+            panic!("`soundy queue` should ask the running Soundy");
         };
         assert_eq!(request, Request::Queue(QueueCommand::Snapshot));
         assert_eq!(format, Format::Text);
@@ -492,7 +492,7 @@ mod tests {
     #[test]
     fn queue_json_keeps_the_snapshot_request() {
         let CommandType::Remote(request, format) = parsed(&["queue", "--json"]) else {
-            panic!("`sonora queue --json` should ask the running Sonora");
+            panic!("`soundy queue --json` should ask the running Soundy");
         };
         assert_eq!(request, Request::Queue(QueueCommand::Snapshot));
         assert_eq!(format, Format::Json);
@@ -505,7 +505,7 @@ mod tests {
             (&["lyrics", "--json"], Format::Json),
         ] {
             let CommandType::Remote(request, format) = parsed(args) else {
-                panic!("`sonora lyrics` should ask the running Sonora");
+                panic!("`soundy lyrics` should ask the running Soundy");
             };
             assert_eq!(request, Request::Lyrics);
             assert_eq!(format, expected);
@@ -523,7 +523,7 @@ mod tests {
             (&["mute", "--json"][..], None, Format::Json),
         ] {
             let CommandType::Remote(actual, actual_format) = parsed(args) else {
-                panic!("`sonora mute` should ask the running Sonora");
+                panic!("`soundy mute` should ask the running Soundy");
             };
             assert_eq!(actual, Request::Playback(PlaybackCommand::Mute(switch)));
             assert_eq!(actual_format, format);
@@ -552,7 +552,7 @@ mod tests {
             (&["like", "--json"][..], Request::Like(None), Format::Json),
         ] {
             let CommandType::Remote(actual, actual_format) = parsed(args) else {
-                panic!("`sonora like` should ask the running Sonora");
+                panic!("`soundy like` should ask the running Soundy");
             };
             assert_eq!(actual, request);
             assert_eq!(actual_format, format);
@@ -561,13 +561,13 @@ mod tests {
 
     #[test]
     fn mute_rejects_an_unknown_switch() {
-        let args = ["sonora", "mute", "perhaps"].map(OsString::from);
+        let args = ["soundy", "mute", "perhaps"].map(OsString::from);
         assert!(parse(args.to_vec(), "0.0.0").is_err());
     }
 
     #[test]
     fn like_rejects_an_unknown_switch() {
-        let args = ["sonora", "like", "perhaps"].map(OsString::from);
+        let args = ["soundy", "like", "perhaps"].map(OsString::from);
         assert!(parse(args.to_vec(), "0.0.0").is_err());
     }
 
@@ -599,7 +599,7 @@ mod tests {
             ),
         ] {
             let CommandType::Remote(actual, _) = parsed(args) else {
-                panic!("a search should ask the running Sonora");
+                panic!("a search should ask the running Soundy");
             };
             assert_eq!(actual, Request::Queue(request));
         }
@@ -607,7 +607,7 @@ mod tests {
 
     #[test]
     fn local_needs_a_search() {
-        let args = ["sonora", "play", "--local"].map(OsString::from);
+        let args = ["soundy", "play", "--local"].map(OsString::from);
         assert!(parse(args.to_vec(), "0.0.0").is_err());
     }
 }

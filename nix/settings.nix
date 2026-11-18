@@ -6,13 +6,13 @@
 }:
 let
   json = pkgs.formats.json { };
-  generated = json.generate "sonora-settings.json" ({ version = 1; } // settings);
+  generated = json.generate "soundy-settings.json" ({ version = 1; } // settings);
   apply = pkgs.writeShellApplication {
-    name = "sonora-apply-settings";
+    name = "soundy-apply-settings";
     runtimeInputs = [ pkgs.jq ];
     text = ''
       generated=$1
-      dest="''${XDG_CONFIG_HOME:-$HOME/.config}/sonora/settings.json"
+      dest="''${XDG_CONFIG_HOME:-$HOME/.config}/soundy/settings.json"
       mkdir -p "$(dirname "$dest")"
       if [[ -f "$dest" ]]; then
         tmp=$(mktemp "$dest.XXXXXX")
@@ -26,19 +26,18 @@ let
   };
   merge = "${lib.getExe apply} ${generated}";
   alsaPluginDir = pkgs.symlinkJoin {
-    name = "sonora-alsa-plugins";
+    name = "soundy-alsa-plugins";
     paths = [
       "${pkgs.pipewire}/lib/alsa-lib"
       "${pkgs.alsa-plugins}/lib/alsa-lib"
     ];
   };
   wrapped = pkgs.symlinkJoin {
-    name = "sonora";
+    name = "soundy";
     paths = [ package ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
-      rm -f $out/bin/sonora
-      makeWrapper ${lib.getExe package} $out/bin/sonora \
+      makeWrapper ${lib.getExe package} $out/bin/soundy \
         ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--set ALSA_PLUGIN_DIR ${alsaPluginDir}"} \
         ${lib.optionalString (settings != { }) "--run ${lib.escapeShellArg merge}"}
     '';

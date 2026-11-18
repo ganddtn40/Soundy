@@ -16,7 +16,7 @@ tag=triage
 source "$(git rev-parse --show-toplevel)/.github/triage/lib.sh"
 
 system="$root/.github/triage/prompt.md"
-marker="<!-- sonora-triage:needs-info -->"
+marker="<!-- soundy-triage:needs-info -->"
 
 # The issue as GitHub has it, plus the label names the repository actually carries. A label the
 # model picks that nobody ever created is dropped rather than failing the whole edit.
@@ -50,7 +50,7 @@ user="$(jq -r \
    "\n\nBody:\n" + (($issue.body // "") | .[0:12000]) +
    "\n\nComments, oldest first. Context given in one of these counts as given:\n" +
    ([ $issue.comments[]
-      | select((.body | contains("sonora-triage")) | not)
+      | select((.body | contains("soundy-triage")) | not)
       | "- " + (.author.login // "unknown") + ": " + (.body | .[0:4000]) ]
     | .[-10:] | join("\n\n"))' <<<"$issue_json")"
 
@@ -93,7 +93,7 @@ has_label 'needs triage' && remove+=(--remove-label 'needs triage')
 where=""
 if grep -qi 'log' <<<"$missing"; then
   where="
-The log is at \`~/.local/state/sonora/sonora.log\` on Linux, \`~/Library/Caches/sonora/sonora.log\` on macOS and \`%LOCALAPPDATA%\\sonora\\sonora.log\` on Windows. Reproduce the problem, then paste the tail of it. Starting Sonora with \`SONORA_LOG=debug\` makes it more detailed.
+The log is at \`~/.local/state/soundy/soundy.log\` on Linux, \`~/Library/Caches/soundy/soundy.log\` on macOS and \`%LOCALAPPDATA%\\soundy\\soundy.log\` on Windows. Reproduce the problem, then paste the tail of it. Starting Soundy with \`SOUNDY_LOG=debug\` makes it more detailed.
 "
 fi
 
@@ -107,7 +107,7 @@ $where
 Edit the issue or reply with the missing pieces and the label comes off. Left as it is, this closes itself in a couple of weeks.
 
 > [!NOTE]
-> Sonora Buddy is an AI. If it read the issue wrong, say so and a maintainer will look.
+> Soundy Buddy is an AI. If it read the issue wrong, say so and a maintainer will look.
 "
   add+=(--add-label 'needs-info')
 elif [ -z "$missing" ] && has_label 'needs-info'; then

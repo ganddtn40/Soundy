@@ -336,11 +336,13 @@ impl Listening {
         self.saving.is_some()
     }
 
-    /// The server sessions go through: the one `SONORA_SESSION_SERVER` names, else the
+    /// The server sessions go through: the one `SOUNDY_SESSION_SERVER` names, else the
     /// listener's own when they turned the official one off and gave an address that reads,
     /// else the official one.
     fn server(&self, cx: &App) -> String {
-        if let Ok(forced) = std::env::var(server::VARIABLE) {
+        if let Ok(forced) =
+            std::env::var(server::VARIABLE).or_else(|_| std::env::var(server::LEGACY_VARIABLE))
+        {
             return forced;
         }
         let settings = self.settings.read(cx);

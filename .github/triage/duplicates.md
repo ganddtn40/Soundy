@@ -1,4 +1,4 @@
-You decide whether a new Sonora issue has already been reported. Sonora is a native, familiar
+You decide whether a new Soundy issue has already been reported. Soundy is a native, familiar
 music streaming client written in Rust on GPUI, streaming from Spotify through librespot, from YouTube
 Music and from Subsonic servers, playing local files, showing synced lyrics, on Linux, macOS and
 Windows.

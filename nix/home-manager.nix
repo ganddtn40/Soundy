@@ -5,7 +5,7 @@
   ...
 }:
 let
-  cfg = config.programs.sonora;
+  cfg = config.programs.soundy;
   settings = import ./settings.nix {
     inherit pkgs lib;
     package = cfg.package;
@@ -19,7 +19,7 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [ settings.package ];
 
-    home.activation.sonoraSettings = lib.mkIf (cfg.settings != { }) (
+    home.activation.soundySettings = lib.mkIf (cfg.settings != { }) (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         $DRY_RUN_CMD ${settings.merge}
       ''

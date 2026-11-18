@@ -1038,7 +1038,7 @@ impl TidalClient {
                 );
                 answer = info(FALLBACK_QUALITY).await?;
                 manifest(&answer).with_context(|| {
-                    format!("the tidal track {track_id} has no stream sonora can play")
+                    format!("the tidal track {track_id} has no stream Soundy can play")
                 })?
             }
         };

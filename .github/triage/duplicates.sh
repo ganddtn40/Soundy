@@ -16,7 +16,7 @@ tag=duplicates
 # shellcheck source=.github/triage/lib.sh
 source "$(git rev-parse --show-toplevel)/.github/triage/lib.sh"
 
-marker="<!-- sonora-triage:duplicates -->"
+marker="<!-- soundy-triage:duplicates -->"
 
 scan="$(yq '.duplicates.scan // 300' "$config")"
 shortlist="$(yq '.duplicates.shortlist // 6' "$config")"
@@ -146,7 +146,7 @@ $(jq -r '.[] | "- #\(.issue): \(.why)"' <<<"$found")
 If it is the same thing, close this one and follow the older issue for updates. If it is not, leave it open and say so, and a maintainer will take it from here.
 
 > [!NOTE]
-> Sonora Buddy is an AI. If it read the issue wrong, say so and a maintainer will look.
+> Soundy Buddy is an AI. If it read the issue wrong, say so and a maintainer will look.
 "
 
 if [ -n "$dry" ]; then

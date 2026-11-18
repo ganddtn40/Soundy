@@ -1692,7 +1692,7 @@ mod tests {
         assert!(
             seen[0]
                 .authorization
-                .starts_with("MediaBrowser Client=\"Sonora\", Device=\"desk\"")
+                .starts_with("MediaBrowser Client=\"Soundy\", Device=\"desk\"")
         );
         assert!(seen[0].authorization.contains("DeviceId=\"sonora-1\""));
         assert!(!seen[0].authorization.contains("Token="));

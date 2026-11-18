@@ -2,257 +2,128 @@
 
 <img src="./.github/readme-icon.svg" alt="" width="60" height="60">
 
-<h1>Sonora</h1>
+<h1>Soundy</h1>
 
-<p align="center">
-  <a href="https://sonorahq.org/changelog">Changelog</a>
-  ·
-  <a href="https://sonorahq.org/docs">Docs</a>
-  ·
-  <a href="https://sonorahq.org/docs/roadmap">Roadmap</a>
-  ·
-  <a href="https://sonorahq.org/faq">FAQ</a>
-</p>
+### A lightweight native music player
 
-[![Build](https://img.shields.io/github/actions/workflow/status/sonorahq/sonora/release.yml?style=flat-square&label=build)](https://github.com/sonorahq/sonora/actions/workflows/release.yml)
-[![License](https://img.shields.io/github/license/sonorahq/sonora?style=flat-square&label=license&cacheSeconds=3600)](./COPYING)
-![Installs](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsonora-stats.nolight.dev%2Fcount&query=%24.count&label=Installs&color=blue&style=flat-square)
-\
-[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/a8N8Tx23rV)
-[![Matrix](https://img.shields.io/badge/Matrix-000000?style=for-the-badge&logo=matrix&logoColor=white)](https://matrix.to/#/#sonora:nolight.dev)
-[![Support us](https://img.shields.io/badge/Support_us-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/R5A72AGYNZ)
-
-### A native, familiar music streaming client
-
-Stream from your favorite services and play local files — all in one **native** app.
 </div>
 
-<div align="center">
-    <table>
-      <tr>
-        <td colspan="2">
-          <img width="1556" height="967" alt="image" src="https://github.com/user-attachments/assets/c797cb19-9631-45b0-91b6-695f28f4143d" />
-        </td>
-      </tr>
-      <tr>
-        <td width="50%">
-          <img width="1555" height="966" alt="image" src="https://github.com/user-attachments/assets/b556bcd0-2823-485f-83f3-41e1099fdc45" />
-        </td>
-        <td width="50%">
-          <img width="1555" height="966" alt="image" src="https://github.com/user-attachments/assets/f27400ab-9264-4d82-9a70-e0a60e0c3a5f" />
-        </td>
-      </tr>
-    </table>
-</div>
-<div align="center">
-    <sub>
-      Adaptive themes are optional. Everything is (or will be) customizable.
-    </sub>
-</div>
+Soundy is a Windows-first desktop music player written in Rust with
+[GPUI](https://github.com/zed-industries/zed). It plays local files and streams from the
+providers its upstream project supports, and it is built to stay small: no Electron, no
+WebView shell, no client-side JavaScript framework, and no background polling beyond what
+playback needs.
+
+Soundy is a fork of [Sonora](https://github.com/sonorahq/sonora), which supplies the player,
+provider integrations and the native UI toolkit. This fork changes the identity, the theme,
+packaging and the runtime defaults, and keeps the provider behaviour and GPL obligations of
+the project it comes from.
 
 > [!IMPORTANT]
-> **Sonora is not a piracy tool.**
+> **Soundy is not a piracy tool.**
 >
-> Sonora is not a platform for obtaining or sharing copyrighted material. We will not implement any functions that can be used to export decrypted streams, DRM licenses, content keys, or to convert protected streams into media files.
->
-> Sonora is not designed to circumvent subscriptions or other restrictions put in place by music streaming platforms. If the service demands that you have a valid subscription in order to play back their tracks, so will Sonora.
->
-> Features aimed at ripping, downloading, distributing, or gaining access to protected streaming content are out of scope for the project.
+> Soundy does not obtain, share, export or decrypt copyrighted material. It does not bypass
+> DRM, subscriptions, paywalls or the rules of the services it connects to. If a provider
+> requires a valid subscription to play a track, Soundy requires one too. Features aimed at
+> ripping, downloading or redistributing protected streams are out of scope.
 
-## Installation
+## What this fork changes
 
-### macOS
+- **Soundy identity** - window title, tray, notifications, application id
+  `app.soundy.player`, `soundy:` links, `soundy.exe`, icons and Windows installer.
+- **Emerald Liquid Glass** - near-black graphite surfaces (`#090A0C` / `#101114`), emerald
+  accents, frosted controls and the fullscreen player's ambient field. The fullscreen cover
+  is presented as a vinyl record with a slow reflective sweep, over a blurred copy of the
+  artwork.
+- **No self-update** - a Soundy build is never replaced by a Sonora release. Update checking
+  is off and the updater does not run.
+- **No install reporting** - upstream's optional install ping is disabled; Soundy has no
+  telemetry endpoint of its own.
+- **Lower idle work** - no polling loops or timers are added; appearance defaults keep
+  backdrop blur and motion available, and both can be turned off in Settings.
 
-Install with [Brew](https://brew.sh/):
+Provider names, service links and the Discord application id still belong to Sonora and its
+providers. They are kept because they are the real services and credentials this player
+uses; they are not claimed as Soundy-owned.
 
-```sh
-brew install --cask nolight132/tap/sonora
+## Status
+
+Windows 11 x64 is the primary target. The release build is tested locally; Linux and macOS
+sources remain in place because they come from the same codebase, but they are not packaged
+or released by this fork yet. There is no Soundy release server, package repository, AUR
+package, Flatpak repository or code-signing certificate at this point.
+
+## Building on Windows
+
+Prerequisites:
+
+- Rust stable with the MSVC toolchain
+- Visual Studio Build Tools with the C++ workload (including CMake)
+- Inno Setup 6, for the installer only
+
+From a Developer PowerShell:
+
+```powershell
+cargo build --release -p sonora
 ```
 
-After installing (thanks Apple):
+The executable is `target\release\soundy.exe`. To build the installer:
 
-```sh
-xattr -dr com.apple.quarantine /Applications/Sonora.app
+```powershell
+.\scripts\windows\build-soundy-installer.ps1
 ```
 
-Or install the [disk image](https://github.com/sonorahq/sonora/releases/latest), which updates itself.
+The installer and portable output land in `dist\`. The executable is unsigned; Windows may
+show a SmartScreen warning for a locally built binary.
 
-### Linux
+### Other platforms
 
-#### Arch
+The workspace keeps the Linux and macOS build paths. Use the upstream
+[build documentation](https://sonorahq.org/docs) for platform packages, then run the same
+`cargo build --release -p sonora` command. The resulting executable is named `soundy` on
+Unix. The Flatpak manifest under `flatpak/` builds the Soundy binary and app id; it is a
+source recipe, not a published repository.
 
-Install from the AUR with your AUR helper of choice:
+## Data and logs
 
-```sh
-yay -S sonora-bin
-```
+Soundy keeps its data in the platform's usual application directories under `soundy`:
 
-Or:
+- Windows: `%APPDATA%\soundy` and `%LOCALAPPDATA%\soundy`
+- macOS: `~/Library/Application Support/soundy` and `~/Library/Caches/soundy`
+- Linux: `$XDG_CONFIG_HOME/soundy` and `$XDG_CACHE_HOME/soundy`
 
-```sh
-yay -S sonora
-```
+`SOUNDY_LOG` sets the log filter. `SOUNDY_BLUR=0` turns backdrop blur off for a renderer that
+cannot afford it. The legacy `SONORA_*` names are still read for settings that predate the
+rename.
 
-#### Flatpak
+## Performance
 
-```sh
-flatpak install --user https://sonorahq.github.io/sonora/sonora.flatpakref
-```
+Soundy targets an idle resident set below 100 MB and near-zero idle CPU. **The CPU goal is met;
+the memory goal is not.** On Windows 11 x64 the release build idles at 107–115 MB resident
+(97–102 MB private working set), with a median idle CPU of 0.00%, while closing the memory gap
+would need a smaller renderer than GPUI's `wgpu` baseline. The measured figures, the method and the
+caveats are in [PERFORMANCE.md](./PERFORMANCE.md). Nothing in this repository claims a measurement
+that was not taken on a real run.
 
-#### Snap
+## Attribution and licence
 
-Install from the [Snap Store](https://snapcraft.io/sonora): 
+Soundy is distributed under the **GNU General Public License v3.0 or later**, the same licence
+as Sonora. See [COPYING](./COPYING) and [THIRD-PARTY.md](./THIRD-PARTY.md).
 
-```sh
-sudo snap install sonora
-```
+The original project and its authors are credited at
+[sonorahq/sonora](https://github.com/sonorahq/sonora). The Soundy name, icon set and theme
+changes are additions of this fork. The icon libraries, fonts and Rust crates bundled by the
+upstream project keep their own licences; the third-party notices are included in the
+installer and in the source tree.
 
-#### AppImage
+Upstream credits that still apply:
 
-Download from the [latest release](https://github.com/sonorahq/sonora/releases/latest), make it executable and run
-it:
+- [Zed](https://github.com/zed-industries/zed) for GPUI
+- [librespot](https://github.com/librespot-org/librespot) for Spotify playback
+- [ytmusic-rs](https://github.com/sonorahq/ytmusic-rs) for YouTube Music
+- The lyric, metadata and audio-decoding projects listed in [THIRD-PARTY.md](./THIRD-PARTY.md)
 
-```sh
-chmod +x sonora-*.AppImage
-./sonora-*.AppImage
-```
+## Code signing
 
-### Nix
-
-Pick a channel with the input's ref and install `inputs.sonora.packages.${system}.default`:
-
-```nix
-inputs.sonora.url = "github:sonorahq/sonora/stable";   # the latest release
-inputs.sonora.url = "github:sonorahq/sonora/nightly";  # the nightly
-inputs.sonora.url = "github:sonorahq/sonora";          # main
-```
-
-Every channel is built for x86_64-linux and aarch64-linux and pushed to a binary cache, and `stable` only moves to a
-release once its build is there. Trust the cache and Nix downloads Sonora instead of compiling it:
-
-```nix
-nix.settings = {
-  extra-substituters = [ "https://sonora.cachix.org" ];
-  extra-trusted-public-keys = [ "sonora.cachix.org-1:qbPeDsvZPbwUWHpQS5Oe0bjz5oHAVscHem+MCzwrc9Q=" ];
-};
-```
-
-Building from source on macOS needs Xcode added to the Nix store, because the shaders compile with Apple's Metal compiler.
-
-Configuration with NixOS or Home Manager is provided by the module under `programs.sonora`.
-
-```nix
-{ inputs, ... }: {
-  imports = [ inputs.sonora.nixosModules.default ]; # NixOS
-  # imports = [ inputs.sonora.homeModules.default ]; # Home Manager
-  programs.sonora = {
-    enable = true;
-    settings = {
-      provider = "youtube";
-      gapless = true;
-      appearance.theme = "dark";
-    };
-  };
-}
-```
-
-### Windows
-
-#### Installer
-
-Download and run the [installer](https://github.com/sonorahq/sonora/releases/latest/download/Sonora-Setup.exe),
-or the [ARM installer](https://github.com/sonorahq/sonora/releases/latest/download/Sonora-Setup-arm64.exe)
-on Windows on ARM.
-
-#### Portable
-
-Download the latest `windows-msvc.exe` for your architecture from [Releases](https://github.com/sonorahq/sonora/releases/latest).
-
-### Nightly
-
-[Nightly builds](https://github.com/sonorahq/sonora/releases/tag/nightly) are available.
-
-```sh
-brew install --cask nolight132/tap/sonora-nightly
-yay -S sonora-nightly-bin
-nix run github:sonorahq/sonora/nightly
-```
-
-## Community
-
-Feel free to join our [Discord](https://discord.gg/a8N8Tx23rV) server and [Matrix](https://matrix.to/#/#sonora:nolight.dev) space.
-Discord is the primary one, but we do have a Matrix bridge.
-
-## Translations
-
-<!-- i18n:start -->
-
-| Language | Translated | Coverage |
-| --- | --- | --- |
-| English (`en-US`) | 1343/1343 | 100% |
-| Deutsch (`de`) | 1106/1343 | 82% |
-| Español (`es`) | 1104/1343 | 82% |
-| Français (`fr`) | 1105/1343 | 82% |
-| Italiano (`it`) | 1104/1343 | 82% |
-| Bahasa Indonesia (`id`) | 1104/1343 | 82% |
-| 日本語 (`ja`) | 1104/1343 | 82% |
-| 한국어 (`ko`) | 1339/1343 | 100% |
-| Русский (`ru`) | 1214/1343 | 90% |
-| Українська (`uk`) | 1106/1343 | 82% |
-| Polski (`pl`) | 1106/1343 | 82% |
-| Čeština (`cs`) | 1104/1343 | 82% |
-| Português (Brasil) (`pt-BR`) | 1104/1343 | 82% |
-| Português (Portugal) (`pt-PT`) | 1104/1343 | 82% |
-| 简体中文 (`zh-CN`) | 1104/1343 | 82% |
-| Türkçe (`tr`) | 1104/1343 | 82% |
-| Shqip (`sq`) | 1104/1343 | 82% |
-| Tiếng Việt (`vi`) | 1339/1343 | 100% |
-
-<!-- i18n:end -->
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=sonorahq%2Fsonora&type=date&logscale=&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=sonorahq/sonora&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=sonorahq/sonora&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=sonorahq/sonora&type=date&legend=top-left" />
- </picture>
-</a>
-
-## Credits
-
-Sonora is built with the help of some incredible open-source projects, including:
-
-- [Zed](https://github.com/zed-industries/zed) — a wonderful editor (~~ab~~)used by all core team members. Conveniently provides `gpui` — their native Rust rendering stack.
-- [librespot](https://github.com/librespot-org/librespot) — Spotify playback and library integration.
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — certain YouTube ideas implemented in [ytmusic-rs](https://github.com/sonorahq/ytmusic-rs) :)
-
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by
-[SignPath Foundation](https://signpath.org).
-
-The Windows executable and installer are built by GitHub Actions from this repository and signed
-through SignPath.
-
-- Reviewers: members of sonorahq
-- Approvers: [@nolight132](https://github.com/nolight132)
-
-## License
-
-Copyright (C) 2026 Sonora Contributors.
-
-Sonora is free software, released under the [GNU General Public License version
-3 or later](COPYING).
-
-Sonora is an unofficial client and is not affiliated with, endorsed by, or
-sponsored by Spotify AB.
-
-The binary also embeds the [Inter](https://github.com/rsms/inter) typeface (SIL
-Open Font License 1.1) and four interchangeable icon sets:
-[Lucide](https://lucide.dev) (ISC), [Iconoir](https://iconoir.com) (MIT),
-[Remix Icon](https://remixicon.com) 4.8.0 (Apache 2.0) and the
-[Solar](https://www.figma.com/community/file/1166831539721848736) Linear set
-(CC BY 4.0, by 480 Design). Each pack keeps its licence beside its files in
-`assets/icons`. `THIRD-PARTY.md` lists every bundled dependency.
+This fork has no code-signing certificate. Upstream Sonora's SignPath signing policy applies
+to binaries built and signed by the Sonora project, not to builds made from this tree.

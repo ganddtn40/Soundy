@@ -20,9 +20,9 @@ const NIGHTLY_TITLE: &str = "Nightly ";
 /// How many leading hex digits of a commit hash the version row shows, as `git` abbreviates it.
 const SHORT_COMMIT: usize = 7;
 const AGENT: &str = concat!(
-    "sonora/",
+    "soundy/",
     env!("CARGO_PKG_VERSION"),
-    " (https://github.com/sonorahq/sonora)"
+    " (Sonora fork; https://github.com/sonorahq/sonora)"
 );
 
 /// The builds Sonora updates to. Stable follows tagged releases, and Nightly follows the build
@@ -219,11 +219,12 @@ impl Updates {
     /// started by switching channels, which runs even with update checks turned off. A copy a
     /// package manager installed follows its own build's channel, and a nightly one never looks.
     fn look(&mut self, asked: bool, cx: &mut Context<Self>) {
-        let channel = match updates_itself() {
-            true => self.channel,
-            false if Channel::running() == Channel::Stable => Channel::Stable,
-            false => return,
-        };
+        // Soundy has no release feed of its own, and the upstream feed would offer a Sonora
+        // build. Never ask GitHub, even if an old settings file has update checks enabled.
+        if !updates_itself() {
+            return;
+        }
+        let channel = self.channel;
         if !asked && !self.settings.read(cx).check_updates() {
             return;
         }
@@ -345,7 +346,7 @@ async fn download(
         .error_for_status()
         .context("the update is missing")?;
 
-    let path = std::env::temp_dir().join(format!("sonora-{version}-{}", package.name));
+    let path = std::env::temp_dir().join(format!("soundy-{version}-{}", package.name));
     let mut file = std::fs::File::create(&path).context("cannot keep the update")?;
     let mut hasher = Sha256::new();
     while let Some(chunk) = response.chunk().await.context("cannot read the update")? {

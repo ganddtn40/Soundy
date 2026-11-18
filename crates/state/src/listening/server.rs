@@ -10,7 +10,9 @@ use reqwest::Url;
 pub(crate) const OFFICIAL: &str = "wss://sessions.sonorahq.org/ws";
 /// Points the app at another server whatever the settings say, as one run locally while working
 /// on it.
-pub(crate) const VARIABLE: &str = "SONORA_SESSION_SERVER";
+pub(crate) const VARIABLE: &str = "SOUNDY_SESSION_SERVER";
+/// The name upstream used, still honoured for an existing development setup.
+pub(crate) const LEGACY_VARIABLE: &str = "SONORA_SESSION_SERVER";
 /// How long a health check waits for an answer.
 const PATIENCE: Duration = Duration::from_secs(6);
 

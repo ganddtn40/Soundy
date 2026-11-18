@@ -1,14 +1,16 @@
 use std::path::{self, PathBuf};
 
 /// Whether a launch argument is an address rather than a path, so one no provider reads is
-/// never tried as a file. Sonora's own scheme is case-insensitive and has no `//` when bare.
+/// never tried as a file. Soundy's own scheme is case-insensitive and has no `//` when bare;
+/// Sonora's scheme stays recognized so old links are not mistaken for files.
 pub fn is_address(item: &str) -> bool {
     !item.starts_with("file://")
         && (item.contains("://")
             || item.starts_with("spotify:")
-            || item
-                .get(.."sonora:".len())
-                .is_some_and(|scheme| scheme.eq_ignore_ascii_case("sonora:")))
+            || ["soundy:", "sonora:"].iter().any(|scheme| {
+                item.get(..scheme.len())
+                    .is_some_and(|start| start.eq_ignore_ascii_case(scheme))
+            }))
 }
 
 /// An item as the running Sonora should read it. A path is made absolute against this
@@ -80,11 +82,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_bare_sonora_link_is_an_address() {
+    fn a_bare_soundy_link_is_an_address() {
+        assert!(is_address("soundy:"));
+        assert!(is_address("SOUNDY:"));
+        assert!(is_address("soundy://"));
+        assert!(!is_address("/music/soundy:"));
+        // Links from before the fork are addresses too, never files to play.
         assert!(is_address("sonora:"));
-        assert!(is_address("SONORA:"));
-        assert!(is_address("sonora://"));
-        assert!(!is_address("/music/sonora:"));
+        assert!(is_address("SONORA://"));
     }
 
     #[test]

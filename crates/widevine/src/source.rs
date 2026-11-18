@@ -49,7 +49,7 @@ pub(crate) const ARCH: &str = "";
 /// How a CDM was come by.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Origin {
-    /// Named by `SONORA_WIDEVINE_CDM`.
+    /// Named by `SOUNDY_WIDEVINE_CDM`.
     Configured,
     /// A copy a browser on this machine already had.
     Installed,
@@ -112,7 +112,7 @@ pub(crate) fn remember(found: Found) -> Found {
 }
 
 /// Settles on a module the user just installed, in place of a browser's copy the process
-/// settled on before. A module named by `SONORA_WIDEVINE_CDM` or an earlier one from the store
+/// settled on before. A module named by `SOUNDY_WIDEVINE_CDM` or an earlier one from the store
 /// stays settled, as [`remember`] keeps it.
 pub(crate) fn prefer(found: Found) -> Found {
     let mut settled = settled();
@@ -158,14 +158,14 @@ fn search() -> Option<Found> {
     })
 }
 
-/// The path `SONORA_WIDEVINE_CDM` names, if it names a file that is there.
+/// The path `SOUNDY_WIDEVINE_CDM` names, if it names a file that is there.
 pub fn configured() -> Option<PathBuf> {
     let path = PathBuf::from(std::env::var_os(CDM_PATH)?);
     path.is_file().then_some(path)
 }
 
 /// The CDM a browser on this machine has, looked for in the order of [`places`]: the first
-/// place holding one answers. Nothing when `SONORA_WIDEVINE_SKIP_BROWSERS` is set.
+/// place holding one answers. Nothing when `SOUNDY_WIDEVINE_SKIP_BROWSERS` is set.
 pub fn installed() -> Option<PathBuf> {
     if std::env::var_os(SKIP_BROWSERS).is_some_and(|value| !value.is_empty()) {
         log::debug!("widevine: skipping the browser search as asked");
@@ -230,7 +230,7 @@ fn gmp(profile: &Path) -> Option<PathBuf> {
 pub fn store() -> PathBuf {
     dirs::cache_dir()
         .unwrap_or_else(std::env::temp_dir)
-        .join("sonora")
+        .join("soundy")
         .join("widevine")
 }
 

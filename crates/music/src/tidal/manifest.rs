@@ -77,7 +77,7 @@ impl Manifest {
         let manifest = Self::parse(mime, encoded)?;
         let codec = manifest.codec().to_ascii_lowercase();
         if SPATIAL.iter().any(|spatial| codec.starts_with(spatial)) {
-            bail!("the track is coded as {codec}, which sonora cannot decode");
+            bail!("the track is coded as {codec}, which Soundy cannot decode");
         }
         Ok(manifest)
     }

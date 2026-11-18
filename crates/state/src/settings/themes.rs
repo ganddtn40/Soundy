@@ -24,10 +24,14 @@ use ui::{Theme, ThemeKind, ThemeOverrides};
 include!(concat!(env!("OUT_DIR"), "/themes.rs"));
 
 const FORMAT_VERSION: u32 = 1;
-/// The scheme every link meant for Sonora itself uses.
-const SCHEME: &str = "sonora:";
+/// The scheme every link meant for Soundy itself uses.
+const SCHEME: &str = "soundy:";
+/// The scheme Sonora used, read so links shared before the fork still install.
+const LEGACY_SCHEME: &str = "sonora:";
 /// What a theme link starts with. The theme file or family follows as unpadded base64url.
-const THEME_LINK: &str = "sonora://theme/";
+const THEME_LINK: &str = "soundy://theme/";
+/// The theme-link prefix of the upstream scheme, kept for the same reason.
+const LEGACY_THEME_LINK: &str = "sonora://theme/";
 /// The longest theme link read. A full theme file encodes to about 2 KiB.
 const LINK_LIMIT: usize = 16 * 1024;
 /// How many variants a linked family may have.
@@ -319,26 +323,31 @@ pub(super) fn load(directory: &Path, previous: &[ThemeVariant]) -> Loaded {
     Loaded { themes, retry }
 }
 
-/// Whether `text` is a link in Sonora's own scheme, which no provider reads and which is never
-/// a file to play.
+/// Whether `text` is a link in Soundy's own scheme, or the scheme Sonora used, which no
+/// provider reads and which is never a file to play.
 pub fn is_own_link(text: &str) -> bool {
-    text.trim()
-        .get(..SCHEME.len())
-        .is_some_and(|scheme| scheme.eq_ignore_ascii_case(SCHEME))
+    let text = text.trim();
+    [SCHEME, LEGACY_SCHEME].iter().any(|scheme| {
+        text.get(..scheme.len())
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case(scheme))
+    })
 }
 
-/// Reads the theme a `sonora://theme/` link carries. The link has to be short, its payload pure
+/// Reads the theme a `soundy://theme/` link carries. The link has to be short, its payload pure
 /// base64url, and the file inside has to pass the same checks as one in the themes folder. A
 /// name or author with control or direction characters is refused, since both are shown as
 /// they are.
 pub fn read_link(text: &str) -> Result<ThemeOffer> {
     let text = text.trim();
     anyhow::ensure!(text.len() <= LINK_LIMIT, "theme link is too long");
-    let payload = text
-        .get(..THEME_LINK.len())
-        .filter(|prefix| prefix.eq_ignore_ascii_case(THEME_LINK))
-        .map(|_| &text[THEME_LINK.len()..])
+    let prefix = [THEME_LINK, LEGACY_THEME_LINK]
+        .into_iter()
+        .find(|prefix| {
+            text.get(..prefix.len())
+                .is_some_and(|start| start.eq_ignore_ascii_case(prefix))
+        })
         .context("not a theme link")?;
+    let payload = &text[prefix.len()..];
     // a browser on Windows may hand the link over with a slash added
     let payload = payload.strip_suffix('/').unwrap_or(payload);
     let payload = payload.trim_end_matches('=');

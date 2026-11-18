@@ -6,8 +6,8 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use super::{Art, Event, Shown};
 
-const ID: &str = "sonora";
-const ICON_NAME: &str = "sonora";
+const ID: &str = "soundy";
+const ICON_NAME: &str = "soundy";
 /// Flatpak writes this file into every sandbox it starts.
 const FLATPAK_INFO: &str = "/.flatpak-info";
 const WATCHER: &str = "org.kde.StatusNotifierWatcher";
@@ -140,7 +140,7 @@ impl ksni::Tray for Item {
     }
 
     fn title(&self) -> String {
-        "Sonora".to_owned()
+        "Soundy".to_owned()
     }
 
     fn icon_name(&self) -> String {
@@ -153,7 +153,7 @@ impl ksni::Tray for Item {
 
     fn tool_tip(&self) -> ToolTip {
         ToolTip {
-            title: "Sonora".to_owned(),
+            title: "Soundy".to_owned(),
             description: self
                 .shown
                 .as_ref()

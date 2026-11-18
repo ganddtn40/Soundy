@@ -18,11 +18,17 @@ pub enum VeilEdge {
     Bottom,
 }
 
-/// Whether backdrop blurs are drawn at all. `SONORA_BLUR=0` turns them off for a renderer that
-/// cannot afford them, and every haze falls back to its flat colour.
+/// Whether backdrop blurs are drawn at all. `SOUNDY_BLUR=0` turns them off for a renderer that
+/// cannot afford them, and every haze falls back to its flat colour. `SONORA_BLUR` is still read
+/// for setups carried over from the fork's upstream.
 pub fn effects() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *ON.get_or_init(|| std::env::var("SONORA_BLUR").as_deref() != Ok("0"))
+    *ON.get_or_init(|| {
+        let value = std::env::var("SOUNDY_BLUR")
+            .or_else(|_| std::env::var("SONORA_BLUR"))
+            .ok();
+        value.as_deref() != Some("0")
+    })
 }
 
 /// A band that blurs what passes under it, at full strength along `edge` and fading to nothing

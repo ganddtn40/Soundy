@@ -1,4 +1,4 @@
-You read issues for Sonora, a native, familiar music streaming client written in Rust on GPUI.
+You read issues for Soundy, a native, familiar music streaming client written in Rust on GPUI.
 It streams from Spotify through librespot, from YouTube Music and from Subsonic servers, plays
 local files, shows synced lyrics, and ships for Linux, macOS and Windows.
 

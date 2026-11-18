@@ -1,7 +1,8 @@
-//! Apple Music: a proof of concept that a subscription track can reach Sonora's own output.
+//! Apple Music: a proof of concept that a subscription track can reach Soundy's own output.
 //!
 //! The account arrives as one cookie, `media-user-token`, from the app's own sign-in window, or
-//! from `SONORA_APPLE_MEDIA_USER_TOKEN` for a headless run. Playback resolves the track through
+//! from `SOUNDY_APPLE_MEDIA_USER_TOKEN` (legacy `SONORA_APPLE_MEDIA_USER_TOKEN`) for a headless
+//! run. Playback resolves the track through
 //! the web player's own endpoints, asks the Widevine CDM the machine has for a license, and
 //! decrypts each CENC sample as the decoder reaches it. What comes out
 //! is an ordinary clear fMP4, so from `rodio` onwards this is the same path as every other
@@ -34,8 +35,8 @@ use crate::{
 pub use client::AppleClient;
 pub use progressive::Media;
 
-/// The account token a run without a window uses: whatever `SONORA_APPLE_MEDIA_USER_TOKEN`
-/// names, or the one the sign-in window stored.
+/// The account token a run without a window uses: whatever `SOUNDY_APPLE_MEDIA_USER_TOKEN`
+/// (or the legacy `SONORA_APPLE_MEDIA_USER_TOKEN`) names, or the one the sign-in window stored.
 pub fn account() -> Option<String> {
     auth::load()
 }

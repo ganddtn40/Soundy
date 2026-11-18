@@ -70,7 +70,7 @@ impl ConnectName {
 
     pub fn key(self) -> &'static str {
         match self {
-            Self::Sonora => "settings-spotify-connect-name-sonora",
+            Self::Sonora => "settings-spotify-connect-name-soundy",
             Self::Both => "settings-spotify-connect-name-both",
             Self::Computer => "settings-spotify-connect-name-computer",
             Self::Custom => "settings-spotify-connect-name-custom",
@@ -764,7 +764,7 @@ impl Default for Values {
             fullscreen_lyrics_scale: DEFAULT_LYRICS_SCALE,
             romanization_scripts: RomanizationScripts::default(),
             adaptive_menu: false,
-            check_updates: cfg!(target_os = "windows") || updates_itself(),
+            check_updates: updates_itself(),
             update_channel: String::new(),
             close_to_tray: true,
             tray_icon: true,
@@ -3164,7 +3164,7 @@ fn save_settings(path: &Path, bytes: &[u8], previous: Option<&[u8]>) -> Result<(
     if let Some(previous) =
         previous.filter(|previous| serde_json::from_slice::<Values>(json(previous)).is_ok())
     {
-        write_settings(&path.with_file_name("sonora.backup.json"), previous)
+        write_settings(&path.with_file_name("soundy.backup.json"), previous)
             .context("cannot back up settings")?;
     }
     write_settings(path, bytes)
@@ -3224,7 +3224,7 @@ fn write_settings(path: &Path, bytes: &[u8]) -> Result<()> {
 fn settings_path() -> PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("sonora")
+        .join("soundy")
         .join("settings.json")
 }
 
@@ -3661,7 +3661,7 @@ mod tests {
     fn scratch(name: &str) -> PathBuf {
         static NEXT: AtomicU64 = AtomicU64::new(0);
         std::env::temp_dir().join(format!(
-            "sonora-{name}-{}-{}",
+            "soundy-{name}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ))

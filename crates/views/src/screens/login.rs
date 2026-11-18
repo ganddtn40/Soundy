@@ -21,7 +21,7 @@ const CARD: Pixels = px(400.);
 /// The app icon over the welcome.
 const ICON: Pixels = px(64.);
 /// The app icon as this platform shows it, registered by the binary's asset source.
-const APP_ICON: &str = "brand/sonora.svg";
+const APP_ICON: &str = "brand/soundy.svg";
 /// A provider's mark in its row.
 const MARK: Pixels = px(22.);
 /// The space between two provider rows.

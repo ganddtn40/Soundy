@@ -5,18 +5,20 @@ use std::time::{Duration, Instant};
 use gpui::accesskit::Role;
 use gpui::prelude::*;
 use gpui::{
-    AnyElement, AnyView, App, Bounds, ClickEvent, Context, Entity, FocusHandle, FontWeight,
-    KeyDownEvent, MouseButton, MouseDownEvent, MouseExitEvent, MouseMoveEvent, MouseUpEvent,
-    Pixels, Point, Render, ScrollWheelEvent, SharedString, SpringConfig, SpringState, Task,
-    TextShadow,
+    Animation, AnimationExt as _, AnyElement, AnyView, App, Bounds, ClickEvent, Context, Entity,
+    FocusHandle, FontWeight, KeyDownEvent, MouseButton, MouseDownEvent, MouseExitEvent,
+    MouseMoveEvent, MouseUpEvent, Pixels, Point, Render, ScrollWheelEvent, SharedString,
+    SpringConfig, SpringState, Task, TextShadow, Transformation, percentage,
 };
-use gpui::{Div, Window, anchored, canvas, deferred, div, phi, point, px};
+use gpui::{Div, Window, anchored, canvas, deferred, div, phi, point, px, svg};
 use i18n::t;
 use input::{
     ToggleFullscreen, ToggleLyrics, ToggleQueue, ToggleWindowFullscreen, WORKSPACE_CONTEXT,
 };
 use router::{Destination, navigate};
-use state::{AppSettings, Cover, FullscreenControlsAutohide, Playback, Queue, SideTab, Sonora};
+use state::{
+    AppSettings, Cover, FullscreenControlsAutohide, Playback, PlaybackState, Queue, SideTab, Sonora,
+};
 use ui::{
     ActiveTheme as _, Artwork, Badge, Button, Flight, InlineLink, InlineLinks, Motion,
     Motioned as _, Popup, Room, Scrollbar, Scrubber, ScrubberState, Springs, Sprung, TabBar,
@@ -81,6 +83,12 @@ const VEIL: f32 = 0.34;
 /// and gets by on a pixel; a bar of the visualizer is a hard edge and needs a real radius
 /// before it stops reading through the text over it.
 const VEIL_BLUR: Pixels = px(12.);
+/// How hard the cover behind the player is blurred, how much of it shows through and how much
+/// page colour lies over it. The field carries the theme's colour; the blurred art adds the
+/// grain and light of the record without competing with the lyrics or the controls.
+const BACKDROP_BLUR: Pixels = px(72.);
+const BACKDROP_OPACITY: f32 = 0.34;
+const BACKDROP_SHADE: f32 = 0.46;
 /// How far ahead of the spectrum that band runs as the two come and go: it is at full strength
 /// by the time this share of the spectrum shows. A band that only kept pace would let the bars
 /// read sharp through it for as long as either was partly there.
@@ -493,16 +501,7 @@ impl FullscreenView {
         presentation_scale: f32,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        // The cover leaves the player bar with that cover's tight corners, which round out to
-        // its own as it lands, and tighten again on the way back. A panel coming or going only
-        // scales it between two sizes of its own, so it keeps its own corners the whole way.
-        let (tight, round) = (Artwork::rounding(cx), cx.theme().radius * 2.);
-        let zoom = self.cover_zoom.get();
-        let radius = match (self.on_show, self.switch.is_some()) {
-            (true, true) => zoom.radius(round, round),
-            (true, false) => zoom.radius(tight, round),
-            (false, _) => zoom.radius(round, tight),
-        };
+        let theme = *cx.theme();
         let pad = px(COVER_LAYER_PAD);
         let inset = (layout_side - raster_side) / 2. - pad;
         let (album, small, local_id, named) = match self.playback.read(cx).shown_track(cx) {
@@ -539,55 +538,113 @@ impl FullscreenView {
 
         // As the player opens, its cover comes into view with the rest of it while it flies.
         let fade = cx.try_global::<CoverFade>().map_or(1., |fade| fade.0);
-        let cover = div()
-            .id("fullscreen-artwork")
-            .when(fade < 1., |this| this.opacity(fade))
-            .relative()
-            .size(layout_side)
-            .flex_none()
-            .when_some(album, |this, album| {
-                this.role(Role::Link)
-                    .aria_label(named)
-                    .cursor_pointer()
-                    .on_click(move |_, _, cx| open_album(&album, cx))
-            })
-            .child(
-                div()
-                    .absolute()
-                    .top(inset)
-                    .left(inset)
-                    .size(raster_side + pad * 2.)
-                    .child(
-                        div().absolute().top(pad).left(pad).child(
-                            Artwork::new(small)
+        // The player's centrepiece is a record, not a thumbnail: the cover sits a rim inside a
+        // dark disc with a spindle and a shallow groove, and a translucent sweep turns over it
+        // while audio reaches the output. Turning the sweep rather than the artwork keeps the
+        // picture crisp and costs one small layer, and pausing stops it outright.
+        let rim = px(6.);
+        let disc = raster_side - rim * 2.;
+        let playing = self.playback.read(cx).state() == &PlaybackState::Playing;
+        let sweep = match (playing, ui::motion::animates(cx)) {
+            (true, true) => svg()
+                .path(icons::path("icons/vinyl-sheen.svg"))
+                .size(raster_side)
+                .absolute()
+                .top_0()
+                .left_0()
+                .with_animation(
+                    "fullscreen-vinyl-sheen",
+                    Animation::new(Duration::from_secs(8)).repeat(),
+                    |sweep, turn| {
+                        sweep.with_transformation(Transformation::rotate(percentage(turn)))
+                    },
+                )
+                .into_any_element(),
+            _ => div().into_any_element(),
+        };
+        let cover =
+            div()
+                .id("fullscreen-artwork")
+                .when(fade < 1., |this| this.opacity(fade))
+                .relative()
+                .size(layout_side)
+                .flex_none()
+                .when_some(album, |this, album| {
+                    this.role(Role::Link)
+                        .aria_label(named)
+                        .cursor_pointer()
+                        .on_click(move |_, _, cx| open_album(&album, cx))
+                })
+                .child(
+                    div()
+                        .absolute()
+                        .top(inset)
+                        .left(inset)
+                        .size(raster_side + pad * 2.)
+                        .child(
+                            div()
+                                .absolute()
+                                .top(pad)
+                                .left(pad)
                                 .size(raster_side)
-                                .corner_radius(radius)
-                                .soft(waiting),
-                        ),
-                    )
-                    .children(
-                        [("cover-large", large), ("cover-full", full)]
-                            .into_iter()
-                            .filter_map(|(layer, url)| {
-                                let url = url?;
-                                Some(
-                                    div()
-                                        .absolute()
-                                        .top(pad)
-                                        .left(pad)
-                                        .child(
-                                            Artwork::new(Some(url))
-                                                .size(raster_side)
-                                                .corner_radius(radius)
-                                                .overlay(),
-                                        )
-                                        .motion((layer, revision), Motion::Slow, |art, t| {
-                                            art.opacity(t)
+                                .rounded_full()
+                                .bg(theme.background)
+                                .border_1()
+                                .border_color(theme.foreground.opacity(0.08))
+                                .overflow_hidden()
+                                .child(
+                                    div().absolute().top(rim).left(rim).child(
+                                        Artwork::new(small).size(disc).circle().soft(waiting),
+                                    ),
+                                )
+                                .children(
+                                    [("cover-large", large), ("cover-full", full)]
+                                        .into_iter()
+                                        .filter_map(|(layer, url)| {
+                                            let url = url?;
+                                            Some(
+                                                div()
+                                                    .absolute()
+                                                    .top(rim)
+                                                    .left(rim)
+                                                    .child(
+                                                        Artwork::new(Some(url))
+                                                            .size(disc)
+                                                            .circle()
+                                                            .overlay(),
+                                                    )
+                                                    .motion(
+                                                        (layer, revision),
+                                                        Motion::Slow,
+                                                        |art, t| art.opacity(t),
+                                                    ),
+                                            )
                                         }),
                                 )
-                            }),
-                    ),
-            );
+                                .child(
+                                    div()
+                                        .absolute()
+                                        .top(rim)
+                                        .left(rim)
+                                        .size(disc)
+                                        .rounded_full()
+                                        .border_1()
+                                        .border_color(theme.foreground.opacity(0.05)),
+                                )
+                                .child(sweep)
+                                .child(
+                                    div()
+                                        .absolute()
+                                        .top(raster_side / 2. - px(5.))
+                                        .left(raster_side / 2. - px(5.))
+                                        .size(px(10.))
+                                        .rounded_full()
+                                        .bg(theme.background)
+                                        .border_1()
+                                        .border_color(theme.foreground.opacity(0.18)),
+                                ),
+                        ),
+                );
         // The cover flies in from the player bar as fullscreen opens, and slides and grows to
         // its new place when a panel comes or goes, above everything while it travels.
         // The controls falling asleep move the cover on a spring of their own, so layout only
@@ -1512,6 +1569,53 @@ impl Render for FullscreenView {
             true => self.aside.update(cx, |aside, cx| aside.perches(window, cx)),
             false => Vec::new(),
         };
+        // A blurred copy of the cover lies over the ambient field, dim enough to keep the
+        // lyrics and the controls readable. It waits until the player has finished entering, so
+        // the flight never carries a full-window blur, and it is left out entirely where the
+        // renderer has effects turned off.
+        let backdrop = shared::effects()
+            .then(|| {
+                let settled =
+                    cx.try_global::<ShellSwap>().copied().unwrap_or_default() == ShellSwap::Settled;
+                if !settled {
+                    return None;
+                }
+                let track = self.playback.read(cx).shown_track(cx)?;
+                let url = track.cover.clone().or_else(|| {
+                    let album = track.album_id.as_deref()?;
+                    self.cover.read(cx).large_for(album).map(str::to_owned)
+                })?;
+                let url = SharedString::from(url);
+                let side = viewport.width.max(viewport.height) * 1.15;
+                Some(
+                    div()
+                        .absolute()
+                        .inset_0()
+                        .overflow_hidden()
+                        .child(
+                            div()
+                                .absolute()
+                                .inset_0()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .child(
+                                    Artwork::new(Some(url))
+                                        .size(side)
+                                        .blur(BACKDROP_BLUR)
+                                        .opacity(BACKDROP_OPACITY),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .absolute()
+                                .inset_0()
+                                .bg(theme.background.opacity(BACKDROP_SHADE)),
+                        )
+                        .into_any_element(),
+                )
+            })
+            .flatten();
 
         div()
             .id("fullscreen")
@@ -1576,6 +1680,7 @@ impl Render for FullscreenView {
                 .top_0()
                 .left_0()
             })
+            .when_some(backdrop, |this, backdrop| this.child(backdrop))
             .children(behind)
             .child({
                 let column = staged.then(|| {

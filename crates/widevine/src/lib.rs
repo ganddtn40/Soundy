@@ -17,7 +17,7 @@
 //!   and where each fragment starts on the media timeline.
 //! - [`cenc::unlock`] relabels the sample entry so an ordinary decoder will open the cleartext.
 //!
-//! `SONORA_WIDEVINE_CDM` overrides the search with a path of the user's choosing, which is what
+//! `SOUNDY_WIDEVINE_CDM` overrides the search with a path of the user's choosing, which is what
 //! a package with a CDM of its own should set. With no module anywhere there is no Widevine
 //! playback and nothing else changes.
 //!
@@ -45,11 +45,11 @@ pub use fetch::{Offer, Release, fetch, latest, offer};
 pub use source::{Found, LIBRARY, Origin, configured, find, installed, store, stored, uninstall};
 
 /// The environment variable naming the CDM to load.
-pub const CDM_PATH: &str = "SONORA_WIDEVINE_CDM";
+pub const CDM_PATH: &str = "SOUNDY_WIDEVINE_CDM";
 
 /// The environment variable that, when set to anything, skips the browser search. For trying
 /// the download on a machine that has a browser's copy.
-pub const SKIP_BROWSERS: &str = "SONORA_WIDEVINE_SKIP_BROWSERS";
+pub const SKIP_BROWSERS: &str = "SOUNDY_WIDEVINE_SKIP_BROWSERS";
 
 /// The argument that starts the Sonora executable as the CDM host rather than the app. The
 /// module path follows it.

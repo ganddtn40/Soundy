@@ -57,7 +57,9 @@ impl Default for AuthConfig {
 impl AuthConfig {
     pub fn from_env() -> Self {
         let mut config = Self::default();
-        if let Ok(redirect_uri) = std::env::var("SONORA_REDIRECT_URI") {
+        if let Ok(redirect_uri) =
+            std::env::var("SOUNDY_REDIRECT_URI").or_else(|_| std::env::var("SONORA_REDIRECT_URI"))
+        {
             config.redirect_uri = redirect_uri;
         }
         config
@@ -162,7 +164,7 @@ fn authorize(client_id: &str, redirect_uri: &str, prompt: PromptSink) -> Result<
     let query = callback
         .query_pairs()
         .collect::<std::collections::HashMap<_, _>>();
-    let response = "You can return to Sonora.";
+    let response = "You can return to Soundy.";
     write!(
         stream,
         "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{response}",

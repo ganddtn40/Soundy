@@ -1,5 +1,5 @@
-/// Sets the Dock icon from the embedded family when Sonora runs outside an app bundle. A bundle
-/// keeps its own icon, because an image set here would replace the adaptive one in `Assets.car`.
+/// Sets the Dock icon from the embedded family when Soundy runs outside an app bundle. A bundle
+/// keeps the icon its `Info.plist` names.
 #[cfg(target_os = "macos")]
 pub fn install_icon() {
     use objc2::{AnyThread as _, MainThreadMarker};
@@ -12,7 +12,7 @@ pub fn install_icon() {
     let Some(mtm) = MainThreadMarker::new() else {
         return log::warn!("dock: cannot set the app icon off the main thread");
     };
-    let data = NSData::with_bytes(include_bytes!("../../../assets/macos/sonora.icns"));
+    let data = NSData::with_bytes(include_bytes!("../../../assets/macos/soundy.icns"));
     let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) else {
         return log::warn!("dock: cannot decode the app icon");
     };

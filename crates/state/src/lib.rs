@@ -137,7 +137,7 @@ impl Io {
             .worker_threads(WORKERS)
             .max_blocking_threads(BLOCKING)
             .thread_keep_alive(LINGER)
-            .thread_name("sonora-io")
+            .thread_name("soundy-io")
             .enable_all()
             .build()?;
 

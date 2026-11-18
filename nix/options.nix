@@ -1,7 +1,7 @@
 { lib, pkgs, ... }:
 {
-  options.programs.sonora = {
-    enable = lib.mkEnableOption "Sonora, a native, familiar music streaming client";
+  options.programs.soundy = {
+    enable = lib.mkEnableOption "Soundy, a lightweight native music player";
 
     package = lib.mkOption {
       type = lib.types.package;
@@ -18,7 +18,7 @@
         };
       };
       description = ''
-        Configuration written to {file}`$XDG_CONFIG_HOME/sonora/settings.json`.
+        Configuration written to {file}`$XDG_CONFIG_HOME/soundy/settings.json`.
         Same JSON keys as the app. Set keys are merged on switch and each launch;
         omitted keys, including resume and window bounds, are kept.
       '';

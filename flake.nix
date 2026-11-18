@@ -1,14 +1,5 @@
 {
-  description = "A native, familiar music streaming client";
-
-  # CI builds the `stable` and `nightly` branches and every push to main for Linux and pushes the
-  # result here, so the package downloads instead of compiling.
-  nixConfig = {
-    extra-substituters = [ "https://sonora.cachix.org" ];
-    extra-trusted-public-keys = [
-      "sonora.cachix.org-1:qbPeDsvZPbwUWHpQS5Oe0bjz5oHAVscHem+MCzwrc9Q="
-    ];
-  };
+  description = "Soundy, a lightweight native music player";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -111,7 +102,7 @@
           );
 
           alsaPluginDirectory = pkgs.symlinkJoin {
-            name = "sonora-alsa-plugins";
+            name = "soundy-alsa-plugins";
             paths = [
               "${pkgs.pipewire}/lib/alsa-lib"
               "${pkgs.alsa-plugins}/lib/alsa-lib"
@@ -140,8 +131,8 @@
             patchelf \
               --set-interpreter "${pkgs.stdenv.cc.bintools.dynamicLinker}" \
               --add-rpath "${lib.makeLibraryPath (runtimeLibraries ++ [ pkgs.stdenv.cc.cc.lib ])}" \
-              "$out/bin/sonora"
-            wrapProgram "$out/bin/sonora" \
+              "$out/bin/soundy"
+            wrapProgram "$out/bin/soundy" \
               --set ALSA_PLUGIN_DIR ${alsaPluginDirectory} \
               --prefix GIO_EXTRA_MODULES : ${pkgs.glib-networking}/lib/gio/modules \
               --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : ${gstPluginPath}
@@ -155,7 +146,7 @@
           # dependencies too.
           commonArgs = {
             inherit src;
-            pname = "sonora";
+            pname = "soundy";
             version = cargoVersion;
             strictDeps = true;
             doCheck = false;
@@ -223,7 +214,7 @@
 
           # Compiles the checked-out tree. At the `nightly` tag it takes the nightly's version, commit
           # and update channel, which the app reads at compile time.
-          sonora = craneLib.buildPackage (
+          soundy = craneLib.buildPackage (
             commonArgs
             // {
               inherit cargoArtifacts;
@@ -234,56 +225,54 @@
               # instead.
               env =
                 lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-                  SONORA_SOLOIST_LOADER = pkgs.stdenv.cc.bintools.dynamicLinker;
-                  SONORA_SOLOIST_LIBRARIES = soloistLibraries;
+                  SOUNDY_SOLOIST_LOADER = pkgs.stdenv.cc.bintools.dynamicLinker;
+                  SOUNDY_SOLOIST_LIBRARIES = soloistLibraries;
                 }
                 // lib.optionalAttrs (nightly ? version) {
-                  SONORA_VERSION = nightly.version;
-                  SONORA_CHANNEL = "nightly";
+                  SOUNDY_VERSION = nightly.version;
+                  SOUNDY_CHANNEL = "nightly";
                 }
                 // lib.optionalAttrs (nightly ? commit) {
-                  SONORA_COMMIT = nightly.commit;
+                  SOUNDY_COMMIT = nightly.commit;
                 };
 
               installPhase = ''
                 runHook preInstall
 
-                install -Dm755 target/release/sonora "$out/bin/sonora"
+                install -Dm755 target/release/soundy "$out/bin/soundy"
                 ${
                   if pkgs.stdenv.hostPlatform.isDarwin then
                     ''
-                      install -Dm755 target/release/sonora "$out/Applications/Sonora.app/Contents/MacOS/sonora"
-                      install -Dm444 "$src/assets/macos/sonora.icns" \
-                        "$out/Applications/Sonora.app/Contents/Resources/sonora.icns"
-                      install -Dm444 "$src/assets/macos/Assets.car" \
-                        "$out/Applications/Sonora.app/Contents/Resources/Assets.car"
+                      install -Dm755 target/release/soundy "$out/Applications/Soundy.app/Contents/MacOS/soundy"
+                      install -Dm444 "$src/assets/macos/soundy.icns" \
+                        "$out/Applications/Soundy.app/Contents/Resources/soundy.icns"
 
                       sed \
                         "s/@VERSION@/$version/g" \
                         "$src/assets/macos/Info.plist" \
-                        > "$out/Applications/Sonora.app/Contents/Info.plist"
+                        > "$out/Applications/Soundy.app/Contents/Info.plist"
 
-                      LICENSE_DIR="$out/Applications/Sonora.app/Contents/Resources"
+                      LICENSE_DIR="$out/Applications/Soundy.app/Contents/Resources"
                     ''
                   else
                     ''
-                      install -Dm444 "$src/assets/linux/sonora.desktop" \
-                        "$out/share/applications/sonora.desktop"
-                      install -Dm444 "$src/assets/linux/sonora.svg" \
-                        "$out/share/icons/hicolor/scalable/apps/sonora.svg"
-                      for icon in "$src"/assets/linux/icons/hicolor/*/apps/sonora.png; do
+                      install -Dm444 "$src/assets/linux/soundy.desktop" \
+                        "$out/share/applications/soundy.desktop"
+                      install -Dm444 "$src/assets/linux/soundy.svg" \
+                        "$out/share/icons/hicolor/scalable/apps/soundy.svg"
+                      for icon in "$src"/assets/linux/icons/hicolor/*/apps/soundy.png; do
                         size="$(basename "$(dirname "$(dirname "$icon")")")"
                         install -Dm444 "$icon" \
-                          "$out/share/icons/hicolor/$size/apps/sonora.png"
+                          "$out/share/icons/hicolor/$size/apps/soundy.png"
                       done
 
-                      LICENSE_DIR="$out/share/licenses/sonora"
+                      LICENSE_DIR="$out/share/licenses/soundy"
                     ''
                 }
                 install -Dm444 "$src/COPYING" "$LICENSE_DIR/LICENSE"
                 install -Dm444 "$src/THIRD-PARTY.md" "$LICENSE_DIR/THIRD-PARTY.md"
                 install -Dm444 "$src/assets/fonts/LICENSE.txt" \
-                  "$LICENSE_DIR/sonora/LICENSE.Inter"
+                  "$LICENSE_DIR/soundy/LICENSE.Inter"
                 for licence in "$src/assets/icons"/*/LICENSE; do
                   pack="$(basename "$(dirname "$licence")")"
                   install -Dm444 "$licence" \
@@ -302,8 +291,8 @@
           );
 
           meta = {
-            description = "A native, familiar music streaming client";
-            mainProgram = "sonora";
+            description = "Soundy, a lightweight native music player";
+            mainProgram = "soundy";
             license = with lib.licenses; [
               gpl3Plus
               ofl
@@ -313,11 +302,10 @@
           };
 
         in
-        # The flake ref picks the channel: `github:sonorahq/sonora/stable` is the latest release,
-        # `github:sonorahq/sonora/nightly` the nightly and `github:sonorahq/sonora` main.
+        # The checked-out branch or tag picks the channel: stable tags, nightly, or main.
         {
-          inherit sonora;
-          default = sonora;
+          inherit soundy;
+          default = soundy;
         }
       );
 
@@ -423,7 +411,7 @@
       );
 
       overlays.default = final: _prev: {
-        sonora = self.packages.${final.stdenv.hostPlatform.system}.default;
+        soundy = self.packages.${final.stdenv.hostPlatform.system}.default;
       };
 
       homeManagerModules = {
@@ -431,9 +419,9 @@
           { pkgs, lib, ... }:
           {
             imports = [ ./nix/home-manager.nix ];
-            programs.sonora.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+            programs.soundy.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
           };
-        sonora = self.homeManagerModules.default;
+        soundy = self.homeManagerModules.default;
       };
 
       homeModules = self.homeManagerModules;
@@ -443,9 +431,9 @@
           { pkgs, lib, ... }:
           {
             imports = [ ./nix/nixos.nix ];
-            programs.sonora.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+            programs.soundy.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
           };
-        sonora = self.nixosModules.default;
+        soundy = self.nixosModules.default;
       };
     };
 }

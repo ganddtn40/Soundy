@@ -1340,7 +1340,7 @@ fn named<'a>(entries: &[Entry], window: impl Iterator<Item = &'a Track>) -> Vec<
 
 /// Makes a fresh identity for a newly queued occurrence, never for a change of position.
 fn queue_uid() -> String {
-    format!("sonora-{:016x}", fastrand::u64(..))
+    format!("soundy-{:016x}", fastrand::u64(..))
 }
 
 /// Excludes local files from the provider's queue report while retaining occurrence identities.

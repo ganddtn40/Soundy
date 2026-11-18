@@ -35,9 +35,6 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  # A release branch only moves the version and the changelog over code main already checked,
-  # and release.yml builds its merge for the tag, so neither its pull request nor its merge runs
-  # here.
   # Lint and tests run as two jobs side by side, since they compile the workspace two different
   # ways and share nothing but the setup.
   check:
@@ -111,7 +108,8 @@ jobs:
 
   # The check job only ever sees the Linux side of a cfg. These two lint the other two
   # platforms' code without paying for codegen, linking or an installer, which is the whole
-  # cost of a release build. A tag still builds every target for real through release.yml.
+  # cost of a release build. Soundy release builds are produced locally; this fork has no
+  # release workflow of its own.
   # A push to main runs them too, only to save the cache every pull request starts from.
   platforms:
     name: clippy on ${{ matrix.target }}
@@ -178,11 +176,11 @@ jobs:
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             arch: x64compatible
-            setup: Sonora-Setup
+            setup: Soundy-Setup
           - target: aarch64-pc-windows-msvc
             os: windows-11-arm
             arch: arm64
-            setup: Sonora-Setup-arm64
+            setup: Soundy-Setup-arm64
     steps:
       - uses: actions/checkout@v7
 
@@ -257,8 +255,8 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           case "$RUNNER_OS" in
-            Windows) cp "target/$TARGET/release/sonora.exe" "dist/sonora-${GITHUB_SHA:0:7}-$TARGET.exe" ;;
-            *)       cp "target/$TARGET/release/sonora" "dist/sonora-${GITHUB_SHA:0:7}-$TARGET" ;;
+            Windows) cp "target/$TARGET/release/soundy.exe" "dist/soundy-${GITHUB_SHA:0:7}-$TARGET.exe" ;;
+            *)       cp "target/$TARGET/release/soundy" "dist/soundy-${GITHUB_SHA:0:7}-$TARGET" ;;
           esac
 
       - name: install Inno Setup
@@ -271,13 +269,14 @@ jobs:
         shell: pwsh
         env:
           TARGET: ${{ matrix.target }}
-          SONORA_ARCH: ${{ matrix.arch }}
-          SONORA_SETUP: ${{ matrix.setup }}
+          SOUNDY_ARCH: ${{ matrix.arch }}
+          SOUNDY_SETUP: ${{ matrix.setup }}
         run: |
-          $env:SONORA_VERSION = "0.0.0"
-          $env:SONORA_EXE = (Resolve-Path "target/$env:TARGET/release/sonora.exe").Path
-          $env:SONORA_DIST = (Resolve-Path "dist").Path
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "scripts/windows/sonora.iss"
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value
+          $env:SOUNDY_VERSION = $version
+          $env:SOUNDY_EXE = (Resolve-Path "target/$env:TARGET/release/soundy.exe").Path
+          $env:SOUNDY_DIST = (Resolve-Path "dist").Path
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "scripts/windows/soundy.iss"
 
       # A convenience binary, not a release artefact: GitHub's artifact service times out often
       # enough that it must not be what turns a green build red.

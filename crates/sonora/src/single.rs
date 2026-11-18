@@ -10,8 +10,8 @@ use tokio::sync::mpsc::{self, UnboundedSender};
 use tokio::sync::oneshot;
 
 const SOCKET: &str = match cfg!(debug_assertions) {
-    true => "sonora-dev.sock",
-    false => "sonora.sock",
+    true => "soundy-dev.sock",
+    false => "soundy.sock",
 };
 /// How long the running Sonora waits for a connection to say what it wants, so a stalled peer
 /// never holds a thread for good.
@@ -56,7 +56,7 @@ pub fn claim(
 
         Err(error) => {
             // Windows reports an occupied pipe with an error other than
-            // AddrInUse, so any failure may mean another Sonora owns the socket.
+            // AddrInUse, so any failure may mean another Soundy owns the socket.
             if hand_over(name.clone(), args) {
                 return Instance::Running;
             }
@@ -99,15 +99,20 @@ pub fn claim(
     Instance::First
 }
 
-/// The running Sonora's instance socket, for a command line that talks to it. One whose answer
+/// The running Soundy's instance socket, for a command line that talks to it. One whose answer
 /// `streams` waits for each reply as long as it takes, since a watch is quiet until something
 /// changes.
 pub fn connect(streams: bool) -> io::Result<Stream> {
     let stream = Stream::connect(name()?)?;
-    stream.set_recv_timeout(match streams {
+    // A named pipe cannot bound a read. That timeout only guards against a peer that never
+    // answers, so letting it fail the connect made every Windows command line report that the
+    // running app was not running at all.
+    if let Err(error) = stream.set_recv_timeout(match streams {
         true => None,
         false => Some(ANSWER),
-    })?;
+    }) {
+        log::debug!("single: cannot bound the read: {error:#}");
+    }
     Ok(stream)
 }
 
@@ -119,7 +124,8 @@ fn serve(
     commands: &UnboundedSender<Asked>,
 ) {
     if let Err(error) = connection.set_recv_timeout(Some(PATIENCE)) {
-        log::warn!("single: cannot bound the read: {error:#}");
+        // Named pipes do not support a read timeout, which is expected on Windows.
+        log::debug!("single: cannot bound the read: {error:#}");
     }
     let mut reader = BufReader::new(&connection);
     let command = match reader.fill_buf() {
@@ -224,7 +230,7 @@ fn private_dir() -> io::Result<std::path::PathBuf> {
         (Some(runtime), None) => return Ok(runtime),
         (None, _) => dirs::cache_dir()
             .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "no runtime or cache folder"))?
-            .join("sonora"),
+            .join("soundy"),
     };
     std::fs::DirBuilder::new()
         .recursive(true)

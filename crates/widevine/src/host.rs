@@ -173,7 +173,7 @@ fn answers() -> Result<io::Stdout> {
 /// otherwise show up as `exe`.
 #[cfg(target_os = "linux")]
 fn name_process() {
-    unsafe { libc::prctl(libc::PR_SET_NAME, c"sonora-widevine".as_ptr()) };
+    unsafe { libc::prctl(libc::PR_SET_NAME, c"soundy-widevine".as_ptr()) };
 }
 
 #[cfg(not(target_os = "linux"))]

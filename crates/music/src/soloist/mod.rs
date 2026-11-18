@@ -44,7 +44,7 @@ pub const TERMS: &str = "https://www.spotify.com/legal/end-user-agreement/";
 
 /// What the program is called on the account's device list. It differs from the name Sonora
 /// lists itself under, so the listener can tell the two apart while pairing.
-pub const DEVICE: &str = "Sonora Soloist";
+pub const DEVICE: &str = "Soundy Soloist";
 
 /// The levels Soloist serves, best first. Lossless is a ceiling: Spotify serves the best the
 /// account and the track have below it.

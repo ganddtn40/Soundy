@@ -33,9 +33,9 @@ const UPLOAD_LIMITS: CoverLimits = CoverLimits {
 };
 /// MusicBrainz refuses a client that does not say who it is.
 const AGENT: &str = concat!(
-    "sonora/",
+    "soundy/",
     env!("CARGO_PKG_VERSION"),
-    " (https://github.com/sonorahq/sonora)"
+    " (Sonora fork; https://github.com/sonorahq/sonora)"
 );
 
 /// Finds cover art by name in public catalogues that need no account and serve every image from

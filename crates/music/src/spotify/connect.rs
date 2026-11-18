@@ -46,7 +46,7 @@ use crate::connect::{
     Naming, QueuedTrack, Repeat, Request as Input, Roster, Snapshot, Start,
 };
 
-const DEVICE_NAME: &str = "Sonora";
+const DEVICE_NAME: &str = "Soundy";
 const TRACK_PREFIX: &str = "spotify:track:";
 /// The context a state names when it has none, which Spotify needs to see to keep the device
 /// active.

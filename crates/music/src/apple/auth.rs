@@ -21,11 +21,25 @@ use crate::credentials;
 pub(crate) const PROOF: &[&str] = &["media-user-token"];
 
 /// An account token supplied by hand, for a headless run with no sign-in window.
-pub const USER_TOKEN_ENV: &str = "SONORA_APPLE_MEDIA_USER_TOKEN";
+pub const USER_TOKEN_ENV: &str = "SOUNDY_APPLE_MEDIA_USER_TOKEN";
 
 /// A bearer token supplied by hand, which skips reading one off the page. Useful when Apple
 /// changes the page and the scrape below stops finding it.
-pub const BEARER_ENV: &str = "SONORA_APPLE_BEARER_TOKEN";
+pub const BEARER_ENV: &str = "SOUNDY_APPLE_BEARER_TOKEN";
+
+/// The names the fork's upstream read, still honoured so an existing headless setup keeps
+/// working after the rename.
+const LEGACY_USER_TOKEN_ENV: &str = "SONORA_APPLE_MEDIA_USER_TOKEN";
+const LEGACY_BEARER_ENV: &str = "SONORA_APPLE_BEARER_TOKEN";
+
+/// A token named in the environment, preferring Soundy's own variable and falling back to the
+/// one upstream used.
+fn token_from(primary: &str, legacy: &str) -> Option<String> {
+    std::env::var(primary)
+        .or_else(|_| std::env::var(legacy))
+        .ok()
+        .filter(|it| !it.is_empty())
+}
 
 /// What a browser calls itself. Apple's web endpoints answer a browser, and a bare reqwest
 /// agent gets a different page.
@@ -68,10 +82,7 @@ fn file() -> PathBuf {
 /// The stored account token, or the one the environment names. Reading the environment here is
 /// what lets the probe run without a sign-in.
 pub(crate) fn load() -> Option<String> {
-    if let Some(token) = std::env::var(USER_TOKEN_ENV)
-        .ok()
-        .filter(|it| !it.is_empty())
-    {
+    if let Some(token) = token_from(USER_TOKEN_ENV, LEGACY_USER_TOKEN_ENV) {
         return Some(token);
     }
     let body = std::fs::read(file()).ok()?;
@@ -97,7 +108,7 @@ pub(crate) fn forget() {
 }
 
 pub(crate) fn stored() -> bool {
-    file().exists() || std::env::var_os(USER_TOKEN_ENV).is_some()
+    file().exists() || token_from(USER_TOKEN_ENV, LEGACY_USER_TOKEN_ENV).is_some()
 }
 
 /// Pulls the account token out of what the sign-in window brought back, which is a `Cookie`
@@ -135,7 +146,7 @@ pub fn user_token(input: &str) -> Result<String> {
 /// launch kept while it has more than `MARGIN` left, or one read off the page now. Reading the
 /// page costs megabytes, so a launch with a kept token signs in without it.
 pub async fn bearer(http: &reqwest::Client) -> Result<String> {
-    if let Some(token) = std::env::var(BEARER_ENV).ok().filter(|it| !it.is_empty()) {
+    if let Some(token) = token_from(BEARER_ENV, LEGACY_BEARER_ENV) {
         return Ok(token);
     }
     if let Some(token) = held() {

@@ -1,9 +1,10 @@
 # Third-party licenses
 
-Sonora is licensed under the GNU General Public License v3.0 or later; the full
-text is in `COPYING`. The complete corresponding source is the tagged commit of
-<https://github.com/sonorahq/sonora> together with the dependency revisions
-pinned in `Cargo.lock`.
+Soundy is licensed under the GNU General Public License v3.0 or later; the full
+text is in `COPYING`. Its complete corresponding source is this tree together
+with the dependency revisions pinned in `Cargo.lock`. Soundy is a fork of
+<https://github.com/sonorahq/sonora>; the upstream authors and copyright notices
+below continue to apply.
 
 The binary embeds:
 
@@ -19,7 +20,7 @@ Symphonia decoders, `option-ext` and `priority-queue`. They are used unmodified;
 their source is available from the upstream repositories linked below and from
 <https://crates.io>.
 
-Where a dependency offers a choice of licenses, Sonora relies on the permissive
+Where a dependency offers a choice of licenses, Soundy relies on the permissive
 option: Apache-2.0 for `self_cell`, MPL-2.0 for `priority-queue`.
 
 Each section lists the crates covered by that license and the copyright notices

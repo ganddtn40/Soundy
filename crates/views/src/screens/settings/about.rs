@@ -5,16 +5,15 @@ use std::path::{Path, PathBuf};
 use gpui::prelude::*;
 use gpui::{AnyElement, Context, FontWeight, SharedString, div, img};
 use i18n::t;
-use state::Channel;
-use ui::{ActiveTheme as _, Avatar, Glowing as _, Switch, Text};
+use ui::{ActiveTheme as _, Avatar, Glowing as _, Text};
 
-use super::rows::{outward, segmented};
+use super::rows::outward;
 use super::{Group, SettingsView, Slot, group_heading};
 
 /// How large the app icon stands, in covers.
 const MARK_TILE: f32 = 0.5;
 /// The app icon as this platform shows it, registered by the binary's asset source.
-const APP_ICON: &str = "brand/sonora.svg";
+const APP_ICON: &str = "brand/soundy.svg";
 const LICENSE_URL: &str = "https://www.gnu.org/licenses/gpl-3.0.html";
 const SOURCE_URL: &str = "https://github.com/sonorahq/sonora";
 
@@ -64,15 +63,9 @@ const MEMBERS: [Member; 5] = [
 
 impl SettingsView {
     pub(super) fn about_groups(&self) -> Vec<Group> {
-        let channel = state::updates_itself().then_some(Slot::Channel);
-        vec![
-            Group::untitled().rows(
-                [Slot::Version, Slot::Updates]
-                    .into_iter()
-                    .chain(channel)
-                    .chain([Slot::Log, Slot::License, Slot::Source]),
-            ),
-        ]
+        // This fork has no update feed of its own, so About names the build it is rather
+        // than offering to replace itself with an upstream Sonora release.
+        vec![Group::untitled().rows([Slot::Version, Slot::Log, Slot::License, Slot::Source])]
     }
 
     /// The version row, which for a nightly also names the commit it was built from.
@@ -88,43 +81,6 @@ impl SettingsView {
         self.row(
             t!("settings-version"),
             ui::spoken("settings-version-value", version).into_any_element(),
-        )
-    }
-
-    pub(super) fn updates_row(&self, cx: &mut Context<Self>) -> AnyElement {
-        let on = self.settings.read(cx).check_updates();
-
-        self.row(
-            t!("settings-check-updates"),
-            Switch::new("check-updates", on)
-                .name(t!("settings-check-updates"))
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    this.settings
-                        .update(cx, |settings, cx| settings.set_check_updates(!on, cx));
-                }))
-                .into_any_element(),
-        )
-    }
-
-    pub(super) fn channel_row(&self, cx: &mut Context<Self>) -> AnyElement {
-        let current = self.settings.read(cx).update_channel();
-
-        let choices = segmented(
-            "update-channel",
-            Channel::ALL.map(|channel| (channel, channel.label())),
-            current,
-            cx.listener(|this, channel: &Channel, _, cx| {
-                let channel = *channel;
-                this.settings
-                    .update(cx, |settings, cx| settings.set_update_channel(channel, cx));
-            }),
-        );
-
-        self.row(
-            t!("settings-update-channel"),
-            choices
-                .name(t!("settings-update-channel"))
-                .into_any_element(),
         )
     }
 
@@ -251,10 +207,10 @@ impl SettingsView {
     }
 }
 
-/// Notepad on Windows refuses a file that Sonora still writes to, so the button opens a copy.
+/// Notepad on Windows refuses a file that Soundy still writes to, so the button opens a copy.
 /// `File::open` shares write access, and `fs::copy` documents no share mode.
 fn snapshot(log: &Path) -> io::Result<PathBuf> {
-    let copy = log.with_file_name("sonora.copy.log");
+    let copy = log.with_file_name("soundy.copy.log");
     io::copy(&mut File::open(log)?, &mut File::create(&copy)?)?;
     Ok(copy)
 }

@@ -22,7 +22,7 @@ pub fn tune() {
 pub fn tune() {}
 
 /// Logs the memory footprint every `INTERVAL` when debug logging is on for this module, and does
-/// nothing otherwise. The log file keeps it off, so it runs only when `RUST_LOG` or `SONORA_LOG`
+/// nothing otherwise. The log file keeps it off, so it runs only when `RUST_LOG` or `SOUNDY_LOG`
 /// asks for `sonora::memory=debug`.
 pub fn watch(cx: &mut App) {
     if !log::log_enabled!(log::Level::Debug) {

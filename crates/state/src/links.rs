@@ -1,6 +1,6 @@
 //! Links handed to the app from outside, by the system or on the command line, opened on the
-//! provider they belong to. Sonora's own `sonora:` links offer a theme to install, or name nothing
-//! and only bring the window forward.
+//! provider they belong to. Soundy's own `soundy:` links offer a theme to install, or name
+//! nothing and only bring the window forward. The upstream `sonora:` scheme is still read.
 
 use gpui::{App, Context, Entity, EventEmitter, Task};
 use music::link::{self, Linked};
@@ -73,7 +73,9 @@ impl Links {
         self.following = None;
         self.waiting = None;
         if let Some(address) = link::address(text).filter(|address| {
-            address.scheme() == "sonora"
+            ["soundy", "sonora"]
+                .iter()
+                .any(|scheme| address.scheme().eq_ignore_ascii_case(scheme))
                 && address
                     .host_str()
                     .is_some_and(|host| host.eq_ignore_ascii_case("open"))
@@ -235,7 +237,8 @@ impl Links {
     }
 }
 
-/// Whether a Sonora link names nothing to open: the bare scheme, or `sonora://open` without a `url`.
+/// Whether a Soundy link names nothing to open: the bare scheme, or `soundy://open` without a
+/// `url`. The upstream `sonora:` scheme reads the same way.
 fn is_bare_own_link(text: &str) -> bool {
     if !is_own_link(text) {
         return false;
@@ -259,24 +262,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn only_a_sonora_link_with_nothing_to_open_is_bare() {
+    fn only_a_soundy_link_with_nothing_to_open_is_bare() {
         for link in [
+            "soundy:",
+            "soundy://",
+            "soundy:///",
+            "SOUNDY://",
+            "soundy://open",
+            "soundy://open?url=",
+            "SOUNDY://OPEN?url=",
+            // Links shared before the fork still open the window and nothing else.
             "sonora:",
-            "sonora://",
-            "sonora:///",
-            "SONORA://",
-            "sonora://open",
             "sonora://open?url=",
-            "SONORA://OPEN?url=",
         ] {
             assert!(is_bare_own_link(link), "{link}");
             // `recognizes` must accept these, or `follow` treats them as files.
             assert!(is_own_link(link), "{link}");
         }
         for link in [
+            "soundy://open?url=https%3A%2F%2Fopen.spotify.com%2Ftrack%2Fabc",
+            "soundy://theme/abc",
+            "soundy:open",
             "sonora://open?url=https%3A%2F%2Fopen.spotify.com%2Ftrack%2Fabc",
-            "sonora://theme/abc",
-            "sonora:open",
         ] {
             assert!(!is_bare_own_link(link), "{link}");
         }

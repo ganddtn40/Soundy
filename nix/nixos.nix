@@ -5,7 +5,7 @@
   ...
 }:
 let
-  cfg = config.programs.sonora;
+  cfg = config.programs.soundy;
   settings = import ./settings.nix {
     inherit pkgs lib;
     package = cfg.package;
