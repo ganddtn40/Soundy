@@ -102,7 +102,7 @@ jobs:
 
   # The check job only ever sees the Linux side of a cfg. These two lint the other two
   # platforms' code without paying for codegen, linking or an installer, which is the whole
-  # cost of a release build. Soundy release builds are produced locally; this fork has no
+  # cost of a release build. Soundy release builds are produced locally; this project has no
   # release workflow of its own.
   # A push to main runs them too, only to save the cache every pull request starts from.
   platforms:

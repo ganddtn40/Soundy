@@ -48,7 +48,7 @@ Sonora. **Partial** — present with a stated limit. **No** — not present.
 | Discord presence | Yes | Yes | Yes | Off by default |
 | Tray and media keys | Yes | Yes | Yes | Native tray, taskbar thumb bar, media controls |
 | Listening sessions | Yes | Yes | Yes | Upstream session server, opt-in |
-| Self-update | No | Yes | No | Disabled for this fork |
+| Self-update | No | Yes | No | Disabled in Soundy |
 | Install reporting | No | Optional | No | Disabled; no telemetry endpoint |
 | Windows installer | Yes | Yes | Yes | Inno Setup, `dist\Soundy-1.0.0-Setup.exe` |
 | Portable build | Yes | No | If practical | `dist\Soundy-1.0.0-Portable.zip` |

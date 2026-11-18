@@ -7,7 +7,7 @@ projection. Re-run the commands below on your machine before comparing figures.
 
 | Metric | Target | Why |
 | --- | --- | --- |
-| Idle resident memory | below 100 MB | The original brief for this fork |
+| Idle resident memory | below 100 MB | The original brief for this project |
 | Idle CPU | as close to 0% as the renderer allows | No polling while nothing happens |
 | Startup to usable window | as short as the platform allows | Native build, no WebView boot |
 | Release executable size | small for a GPUI app | LTO, one codegen unit, stripped debug info |

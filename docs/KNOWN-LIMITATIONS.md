@@ -151,11 +151,11 @@ in the other 17 locales. Translating them is a strings-only change for a later p
 
 ### The binary is unsigned
 
-There is no code-signing certificate for this fork. Windows SmartScreen may warn on first run.
+There is no code-signing certificate for this release. Windows SmartScreen may warn on first run.
 
 ### Only Windows is packaged here
 
-The workspace keeps the Linux and macOS build paths, but this fork ships only a Windows x64
+The workspace keeps the Linux and macOS build paths, but Soundy ships only a Windows x64
 installer and portable ZIP. Flatpak and Nix files are source recipes, not published artefacts.
 
 ### UI automation is not part of the test suite
