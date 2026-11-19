@@ -74,18 +74,6 @@ pub(crate) const NAV: [(NavEntry, &str, Destination); 9] = [
 const TOP: std::ops::Range<usize> = 0..3;
 const LIBRARY: std::ops::Range<usize> = 3..9;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_navigation_groups_cover_every_row_without_overlap() {
-        assert_eq!(TOP.start, 0);
-        assert_eq!(TOP.end, LIBRARY.start);
-        assert_eq!(LIBRARY.end, NAV.len());
-    }
-}
-
 const MIN_WIDTH: Pixels = px(160.);
 const MAX_WIDTH: Pixels = px(400.);
 const HINT_HEIGHT: Pixels = px(42.);
@@ -1005,5 +993,17 @@ fn chevron(open: bool) -> &'static str {
     match open {
         true => "icons/chevron-down.svg",
         false => "icons/chevron-right.svg",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_navigation_groups_cover_every_row_without_overlap() {
+        assert_eq!(TOP.start, 0);
+        assert_eq!(TOP.end, LIBRARY.start);
+        assert_eq!(LIBRARY.end, NAV.len());
     }
 }

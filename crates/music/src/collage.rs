@@ -224,7 +224,7 @@ fn encode(canvas: &RgbaImage) -> Result<Vec<u8>> {
     // Drop the alpha channel: a JPEG has none, and the canvas is opaque anyway.
     let raw = canvas.as_raw();
     let mut opaque = Vec::with_capacity((width * height * 3) as usize);
-    for pixel in raw.chunks_exact(4) {
+    for pixel in raw.as_chunks::<4>().0 {
         opaque.extend_from_slice(&pixel[..3]);
     }
     let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 90);

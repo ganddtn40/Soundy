@@ -383,7 +383,7 @@ impl Enricher {
                 let found_duration = found
                     .track_time_millis
                     .filter(|value| *value > 0)
-                    .map(|value| Duration::from_millis(value as u64));
+                    .map(Duration::from_millis);
                 accepts(
                     title,
                     artist,
@@ -400,7 +400,7 @@ impl Enricher {
                 duration: found
                     .track_time_millis
                     .filter(|value| *value > 0)
-                    .map(|value| Duration::from_millis(value as u64)),
+                    .map(Duration::from_millis),
             })
     }
 
@@ -570,6 +570,9 @@ fn album_key(text: &str) -> String {
 
 /// Whether a catalogue answer describes the very take the row names. The title key keeps
 /// version words, so a remix or live version never matches a studio title.
+// Eight arguments keep the row and the answer side by side at each call site; grouping them
+// into a struct would hide which half a value belongs to.
+#[allow(clippy::too_many_arguments)]
 fn accepts(
     title: &str,
     artist: &str,

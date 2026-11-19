@@ -921,7 +921,6 @@ impl Render for SpotifyImport {
             );
         }
         if !active && imports.read(cx).can_retry_artwork() {
-            let imports = imports.clone();
             actions.push(
                 Button::new("import-retry-artwork")
                     .ghost()

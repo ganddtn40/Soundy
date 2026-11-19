@@ -117,10 +117,14 @@ pub(crate) fn command(program: &Path) -> Command {
 /// handler it never starts anyway.
 #[cfg(target_os = "linux")]
 fn loaded(program: &Path) -> Command {
-    const LOADER: Option<&str> =
-        option_env!("SOUNDY_SOLOIST_LOADER").or(option_env!("SONORA_SOLOIST_LOADER"));
-    const LIBRARIES: Option<&str> =
-        option_env!("SOUNDY_SOLOIST_LIBRARIES").or(option_env!("SONORA_SOLOIST_LIBRARIES"));
+    const LOADER: Option<&str> = match option_env!("SOUNDY_SOLOIST_LOADER") {
+        Some(value) => Some(value),
+        None => option_env!("SONORA_SOLOIST_LOADER"),
+    };
+    const LIBRARIES: Option<&str> = match option_env!("SOUNDY_SOLOIST_LIBRARIES") {
+        Some(value) => Some(value),
+        None => option_env!("SONORA_SOLOIST_LIBRARIES"),
+    };
     let Some(loader) = LOADER else {
         return Command::new(program);
     };

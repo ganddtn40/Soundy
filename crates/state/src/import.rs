@@ -395,7 +395,7 @@ impl Import {
             return self.fail(ImportFailure::TracklistUnavailable, cx);
         };
         let label = input.trim().to_owned();
-        let id = link.id.clone();
+        let id = link.id;
         self.start_with(
             label,
             move |cancel, read, total| async move {
@@ -588,22 +588,17 @@ impl Import {
             // blocking pool rather than between network awaits on the window's thread. The
             // answer also tells the network stage which rows need no lookup at all.
             let computed = io
-                .spawn_blocking({
-                    let isrc = isrc;
-                    let local_tracks = local_tracks;
-                    let playlist = playlist;
-                    move || {
-                        let mut read = |id: &str| isrc.get(id).cloned();
-                        let local_matches: Vec<Option<String>> = playlist
-                            .entries
-                            .iter()
-                            .map(|entry| {
-                                match_local(entry, &local_tracks, &mut read)
-                                    .and_then(|track| track.id.clone())
-                            })
-                            .collect();
-                        (playlist, local_matches)
-                    }
+                .spawn_blocking(move || {
+                    let mut read = |id: &str| isrc.get(id).cloned();
+                    let local_matches: Vec<Option<String>> = playlist
+                        .entries
+                        .iter()
+                        .map(|entry| {
+                            match_local(entry, &local_tracks, &mut read)
+                                .and_then(|track| track.id.clone())
+                        })
+                        .collect();
+                    (playlist, local_matches)
                 })
                 .await;
             let (mut playlist, local_matches) = match computed {

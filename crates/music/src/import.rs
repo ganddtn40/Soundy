@@ -1064,10 +1064,10 @@ pub fn same_recording(
     duration: Duration,
     isrc: Option<&str>,
 ) -> bool {
-    if let (Some(wanted), Some(found)) = (entry.isrc.as_deref(), isrc) {
-        if wanted.eq_ignore_ascii_case(found) {
-            return true;
-        }
+    if let (Some(wanted), Some(found)) = (entry.isrc.as_deref(), isrc)
+        && wanted.eq_ignore_ascii_case(found)
+    {
+        return true;
     }
     title_matches(&entry.title, title, &entry.artists)
         && same_artist(&split_artists(&entry.artists), &split_artists(artists))
