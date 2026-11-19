@@ -628,7 +628,14 @@ mod tests {
 
     #[test]
     fn a_refresh_without_a_new_token_keeps_the_stored_one() {
-        let dir = tempfile::tempdir().unwrap();
+        // Credential writes are deliberately confined to the system's private data folder. Put
+        // the test file under it, as the app does, so the guard is exercised too; `tempfile`
+        // removes the folder afterwards.
+        let data = dirs::data_local_dir().expect("a private data folder");
+        let dir = tempfile::Builder::new()
+            .prefix("soundy-auth-test-")
+            .tempdir_in(data)
+            .unwrap();
         let path = dir.path().join(METADATA);
         let previous = Metadata {
             access_token: "old".to_owned(),
