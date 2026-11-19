@@ -1,10 +1,11 @@
 //! The Spotify Web API calls the importer needs.
 //!
 //! Only two endpoints are read: the playlist itself, which carries its first page of entries,
-//! and `/items` for the pages after it. The bearer token is the one the signed-in librespot
-//! session already refreshes; Soundy ships no developer secret and never reads a stream URL
-//! from here. A 401 asks for the token once more, a 429 waits the `Retry-After` Spotify names,
-//! and a 403 is reported as the authorization restriction it is rather than worked around.
+//! and `/items` for the pages after it. A bearer token comes either from a signed-in librespot
+//! session or from the importer's own metadata-only sign-in; Soundy ships no developer secret
+//! and never reads a stream URL from here. A 401 asks for the token once more, a 429 waits the
+//! `Retry-After` Spotify names, and a 403 is reported as the authorization restriction it is
+//! rather than worked around.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,7 +21,9 @@ use tokio::time::sleep;
 use crate::import::{ImportFailure, SourceEntry, SourcePlaylist};
 
 const BASE: &str = "https://api.spotify.com/v1";
-const PAGE: usize = 100;
+/// The most a playlist-items page returns. Spotify's current maximum is 50; a larger `limit`
+/// is rejected rather than clamped.
+const PAGE: usize = 50;
 /// How long one request may take before it is treated as a network failure.
 const TIMEOUT: Duration = Duration::from_secs(30);
 /// How many 429 answers in a row are waited out before the import gives up.
@@ -52,6 +55,17 @@ impl TokenSource for Login5 {
     }
 }
 
+/// A token obtained once by the importer, for a build that has no playback session. It lasts an
+/// hour, which is longer than any playlist import, so it is not refreshed mid-flight.
+struct Bearer(String);
+
+#[async_trait]
+impl TokenSource for Bearer {
+    async fn authorization(&self) -> anyhow::Result<String> {
+        Ok(format!("Bearer {}", self.0))
+    }
+}
+
 /// Reads playlists from Spotify's public Web API with the session's own token.
 #[derive(Clone)]
 pub struct Web {
@@ -65,6 +79,16 @@ impl Web {
         Self {
             http: client(),
             token: Arc::new(Login5(session)),
+            base: BASE.to_owned(),
+        }
+    }
+
+    /// Reads with a bearer token another part of the app obtained, such as the importer's
+    /// metadata-only sign-in. The token is used as given and never persisted here.
+    pub fn with_bearer(token: impl Into<String>) -> Self {
+        Self {
+            http: client(),
+            token: Arc::new(Bearer(token.into())),
             base: BASE.to_owned(),
         }
     }
@@ -246,25 +270,18 @@ struct Body {
     #[serde(default)]
     images: Vec<Image>,
     external_urls: Option<External>,
+    /// Spotify moved the playlist's paging part from `tracks` to `items`. Both are the same
+    /// shape, and the deprecated name is still accepted so an older answer reads too.
+    #[serde(default)]
     tracks: Option<Page>,
     #[serde(default)]
-    items: Vec<Item>,
+    items: Option<Page>,
 }
 
 impl Body {
     fn into_playlist(self, asked: &str) -> SourcePlaylist {
         let id = self.id.unwrap_or_else(|| asked.to_owned());
-        let page = self.tracks.or_else(|| {
-            // `/playlists/{id}` nests the entries under `tracks`; if a test or a future
-            // response puts them at the top, accept that too.
-            (!self.items.is_empty()).then_some(Page {
-                items: self.items,
-                offset: 0,
-                total: 0,
-                next: None,
-            })
-        });
-        let (items, total) = match page {
+        let (items, total) = match self.items.or(self.tracks) {
             Some(page) => {
                 let total = page.total.max(page.offset + page.items.len());
                 (page.items, total)
@@ -324,6 +341,10 @@ struct Page {
 
 #[derive(Deserialize)]
 struct Item {
+    /// The current name for the entry's track or episode; `track` is the deprecated earlier
+    /// name and is kept as a fallback.
+    item: Option<ItemTrack>,
+    #[serde(default)]
     track: Option<ItemTrack>,
     #[serde(default)]
     is_local: bool,
@@ -371,7 +392,7 @@ struct ExternalIds {
 
 fn entry(item: Item) -> SourceEntry {
     let local = item.is_local;
-    let Some(track) = item.track else {
+    let Some(track) = item.item.or(item.track) else {
         return SourceEntry {
             title: "Unavailable track".to_owned(),
             local,
@@ -490,8 +511,17 @@ mod tests {
     }
 
     fn item(id: &str, name: &str) -> String {
+        track_field("track", id, name)
+    }
+
+    /// The entry shape Spotify documents now: the track lives under `item`.
+    fn current_item(id: &str, name: &str) -> String {
+        track_field("item", id, name)
+    }
+
+    fn track_field(field: &str, id: &str, name: &str) -> String {
         format!(
-            r#"{{"track":{{"id":"{id}","name":"{name}","artists":[{{"name":"Artist"}}],"album":{{"name":"Album","images":[{{"url":"https://i.scdn.co/image/cover"}}]}},"duration_ms":201000,"external_ids":{{"isrc":"USABC1234567"}},"external_urls":{{"spotify":"https://open.spotify.com/track/{id}"}},"is_playable":true}},"added_at":"2024-01-02T03:04:05Z"}}"#
+            r#"{{"{field}":{{"id":"{id}","name":"{name}","artists":[{{"name":"Artist"}}],"album":{{"name":"Album","images":[{{"url":"https://i.scdn.co/image/cover"}}]}},"duration_ms":201000,"external_ids":{{"isrc":"USABC1234567"}},"external_urls":{{"spotify":"https://open.spotify.com/track/{id}"}},"is_playable":true}},"added_at":"2024-01-02T03:04:05Z"}}"#
         )
     }
 
@@ -511,6 +541,31 @@ mod tests {
         format!(
             r#"{{"id":"list","name":"{name}","description":"About","owner":{{"display_name":"Owner"}},"images":[{{"url":"https://i.scdn.co/image/list"}}],"external_urls":{{"spotify":"https://open.spotify.com/playlist/list"}},"tracks":{first},"total":{total}}}"#
         )
+    }
+
+    /// The current playlist object: the paging part is called `items`, not `tracks`.
+    fn current_playlist(name: &str, first: String, total: usize) -> String {
+        format!(
+            r#"{{"id":"list","name":"{name}","description":"About","owner":{{"display_name":"Owner"}},"images":[{{"url":"https://i.scdn.co/image/list"}}],"external_urls":{{"spotify":"https://open.spotify.com/playlist/list"}},"items":{first},"total":{total}}}"#
+        )
+    }
+
+    #[tokio::test]
+    async fn reads_the_current_playlist_and_item_names() {
+        let first = page(&[current_item("a", "One")], 0, 2, true);
+        let rest = page(&[current_item("b", "Two")], 1, 2, false);
+        let (base, seen) = serve(vec![(200, current_playlist("List", first, 2)), (200, rest)]);
+        let web = Web::at(base, Fixed);
+        let playlist = web
+            .playlist("list", &AtomicBool::new(false), &|_, _| {})
+            .await
+            .unwrap();
+        assert_eq!(playlist.entries.len(), 2);
+        assert_eq!(playlist.entries[0].title, "One");
+        assert_eq!(playlist.entries[1].title, "Two");
+        assert_eq!(playlist.entries[1].id.as_deref(), Some("b"));
+        let seen = seen.lock().unwrap();
+        assert!(seen[1].contains("/playlists/list/items?limit=50&offset=1"));
     }
 
     #[tokio::test]
@@ -536,7 +591,7 @@ mod tests {
         assert!(progress.contains(&(2, 2)), "{progress:?}");
         let seen = seen.lock().unwrap();
         assert!(seen[0].contains("/playlists/list "));
-        assert!(seen[1].contains("/playlists/list/items?limit=100&offset=1"));
+        assert!(seen[1].contains("/playlists/list/items?limit=50&offset=1"));
     }
 
     #[tokio::test]

@@ -60,7 +60,7 @@ pub use equalizer::{DeviceRule, Equalizer, RuleDevice, Sound};
 pub use genre::{GenreDetails, Genres};
 pub use history::{History, HistoryState};
 pub use home::Home;
-pub use import::{Import, ImportEvent, ImportReport, Stage as ImportStage};
+pub use import::{Import, ImportEvent, ImportReport, Review, ReviewRow, Stage as ImportStage};
 pub use library::{
     Addition, CoverEdit, Leaving, Library, LibraryEvent, LibraryPart, LibraryState, Problem, Ready,
     Shelf, cover_problem,

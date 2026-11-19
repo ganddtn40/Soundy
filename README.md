@@ -76,12 +76,16 @@ them yet.
   artwork field.
 - Global media keys, tray controls and optional Discord rich presence.
 
-**Playlist import without an account**
+**Playlist import without Premium**
 
 - A Spotify playlist link, an M3U/M3U8 or CSV file, or a pasted track list.
-- No Spotify account, Premium, OAuth or API key is required. A Spotify link is read through an
-  existing Spotify session when one exists; without one the dialog says so and offers the file
-  and paste paths instead of scraping.
+- No Spotify Premium, developer key or external converter is required. A Spotify link uses an
+  existing playback session when there is one, and otherwise asks for a metadata-only browser
+  sign-in that a free account can complete. Spotify returns a playlist's contents only to an
+  account that owns or collaborates on it; another owner's playlist reports Forbidden. Files and
+  pasted lists need no account at all.
+- When a provider search finds more than one playable recording for a song, a review screen lets
+  you pick the right one before anything is saved; ignoring it keeps the first match.
 - Imported rows keep their order and duplicate counts, get provider-matched metadata and
   artwork, and fall back to a generated 2x2 cover.
 
@@ -151,7 +155,7 @@ needs a Vulkan driver.
 
 | Source | Accepts | Account needed |
 | --- | --- | --- |
-| Spotify link | playlist URL or `spotify:playlist:` URI | Only if Spotify is already signed in |
+| Spotify link | playlist URL or `spotify:playlist:` URI | A free Spotify account that owns or collaborates on the playlist, unless a playback session is already signed in |
 | M3U or CSV file | `.m3u`, `.m3u8`, `.csv`, `.txt` | None |
 | Pasted list | One track per line, `Artist - Title` or `Title \| Artist \| Album \| Duration` | None |
 
@@ -159,7 +163,9 @@ Every imported row keeps its position and duplicate count and ends with one hone
 **Full playback**, **Full playback (local)**, **Preview only**, **External playback** or
 **Unavailable**. Matching prefers your own files, then the active provider, then Audius (and
 Jamendo when `SOUNDY_JAMENDO_CLIENT_ID` is set); a different recording is never substituted.
-The full behaviour, formats and privacy notes are in [docs/IMPORTER.md](./docs/IMPORTER.md).
+When one song has several playable matches, a review screen shows the candidates and saves only
+after **Add to Soundy** is pressed; leaving a row alone keeps its first match. The full behaviour,
+formats and privacy notes are in [docs/IMPORTER.md](./docs/IMPORTER.md).
 
 ## Performance
 

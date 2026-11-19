@@ -21,7 +21,8 @@ Sonora. **Partial** — present with a stated limit. **No** — not present.
 | Streaming providers | Yes | Yes | Yes | Spotify, YouTube Music, Tidal, Deezer, Apple Music, Subsonic/Navidrome, Jellyfin |
 | Playlists | Yes | Yes | Yes | Create, rename, delete, reorder, import, export |
 | Smart playlists | Yes | Yes | Yes | Rule editor with boolean and order rules |
-| Import from Spotify link | Partial | No | Yes | With an existing authorized Spotify session; without one, a clear `TracklistUnavailable` result and file/paste fallbacks |
+| Import from Spotify link | Partial | No | Yes | Through an existing playback session or a metadata-only browser sign-in that a free account can finish; Spotify returns items only for playlists the account owns or collaborates on, and rows with several matches pause for review |
+| Choose between several matches | Yes | No | Yes | Review screen with up to six playable candidates per ambiguous row; the first is preselected and nothing is written before confirmation |
 | Import M3U/M3U8 | Yes | Partial | Yes | Local paths, `file://`, relative paths, HTTP entries as external links |
 | Import CSV | Yes | No | Yes | Spotify/Exportify/Soundiiz/TuneMyMusic exports, comma/semicolon/tab, BOM, artwork URLs, ISRC, URIs, dates, ms durations and headerless files |
 | Artwork enrichment | Yes | No | Yes | Deezer public API first, iTunes fallback; strict title + artist + duration/album matching; blocked providers disabled for the import |

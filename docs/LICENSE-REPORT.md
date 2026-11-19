@@ -38,9 +38,9 @@ At the time of this build:
 | 0BSD | 2 |
 
 The importer added **no new crate dependencies**. It reuses `reqwest`, `serde`, `tokio`,
-`futures`, `percent-encoding` and `csv`-free parsing code already present in the workspace. The
-unused `librespot-oauth` workspace dependency and its `[patch.crates-io]` entry were removed in
-this change, because the importer never asks for OAuth and nothing else referenced it.
+`futures`, `percent-encoding`, the `oauth2` crate already used for the playback sign-in, and the
+existing parsing code. The unused `librespot-oauth` workspace dependency and its
+`[patch.crates-io]` entry are not present, because nothing references that crate.
 
 Notable obligations:
 

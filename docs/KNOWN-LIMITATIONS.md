@@ -5,23 +5,27 @@ changing what a service permits. Nothing here is hidden behind a success message
 
 ## Spotify
 
-### A Spotify link cannot be imported without a Spotify session
+### A Spotify link needs Spotify's authorization
 
 Spotify does not expose a playlist's tracks to an unauthenticated client. Its public `oEmbed`
 answer contains the title and a thumbnail only; the Web API requires OAuth; scraping the web
 player is prohibited by Spotify's terms.
 
-When no session exists, Soundy returns **“Spotify does not publish this playlist's tracks
-without an authorized Spotify session”** and offers a file or pasted-list fallback. It does not
-scrape, fake a successful read or create an empty playlist. This is a deliberate product
-decision, not a bug.
+When no playback session exists, Soundy opens Spotify's own authorization page and asks only for
+the two playlist-read scopes. A free account can finish that sign-in; the app keeps the refresh
+token in its private accounts folder. A metadata-only link never pretends it can stream: its rows
+are matched to your files or the active provider, and an unmatched Spotify id is not written as a
+playable row.
 
-### The optional Spotify path needs an existing session
+Spotify returns a playlist's contents only to an account that owns or collaborates on it. A
+playlist owned by someone else reports **Forbidden**, and Soundy does not bypass that.
 
-The authorized path is used only when Spotify is signed in and selected as the active provider.
-It asks for no separate password, client secret or developer app. The path is not exercised in
-this repository's automated tests because no Spotify account is available; its HTTP behaviour is
-tested against a local server instead.
+### The live Spotify round trip is not in automated tests
+
+The browser consent and the Web API read are not exercised in this repository's automated tests
+because no Spotify account is available there. The redirect, scopes, CSRF/PKCE logic, refresh and
+failure mapping are unit-tested, and the HTTP reader is tested against a local server. The file
+and pasted-list paths remain fully usable without an account.
 
 ### Statuses are a snapshot
 

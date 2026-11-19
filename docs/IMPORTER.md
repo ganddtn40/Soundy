@@ -1,11 +1,13 @@
 # Playlist import
 
-Soundy imports a playlist from three sources. None of them requires a Spotify account, Spotify
-Premium, OAuth, a password, an API key or a paid service.
+Soundy imports a playlist from three sources. A file or a pasted list needs no account at all. A
+Spotify link asks Spotify for playlist metadata, using the playback session already signed in or
+its own browser sign-in; it needs no Spotify Premium, no developer secret and no external
+converter.
 
 | Source | What it accepts | Account needed |
 | --- | --- | --- |
-| Spotify link | A playlist URL or `spotify:playlist:` URI | Only for this source, and only if a Spotify session already exists |
+| Spotify link | A playlist URL or `spotify:playlist:` URI | A free Spotify account, and only when no playback session is already signed in |
 | File | M3U, M3U8, CSV, TXT | No |
 | Pasted list | Text on the clipboard, one track per line | No |
 
@@ -19,22 +21,28 @@ Spotify does not publish playlist tracklists to unauthenticated clients:
 
 - The public `oEmbed` endpoint returns the playlist title and thumbnail only, not its tracks.
 - The Web API's playlist endpoint requires an authorized access token.
+- Since February 2026, the Web API returns playlist contents only for playlists the signed-in
+  account owns or collaborates on; client credentials alone cannot read items.
 - Spotify's terms prohibit scraping the web player or otherwise working around authentication.
 
-Soundy therefore does one of two things:
+Soundy therefore reads a link through one of two authorized paths:
 
-1. **If a Spotify session is already authorized** (the listener signed in to Spotify in Soundy),
-   the link is read through the Spotify Web API using that same session. This is the optional
-   path, and it is only used when Spotify is the active provider.
-2. **If there is no Spotify session**, the link is parsed locally and the import stops with
-   `TracklistUnavailable`. The dialog explains why and offers two buttons: choose an exported
-   file, or paste the track list. Nothing is scraped, no request is faked, and no empty playlist
-   is created.
+1. **A signed-in Spotify playback session**, when one exists. The import uses the token that
+   session already refreshes, so it can stream rows through Spotify as well as read them.
+2. **A metadata-only browser sign-in**, when no playback session exists. Soundy opens Spotify's
+   own authorization page, receives a code on `127.0.0.1:8989`, and keeps a refresh token in the
+   private accounts folder. The sign-in asks only for the two playlist-read scopes and never
+   pretends a free account can stream. A free Spotify account can read its own or a
+   collaborative playlist this way.
 
-The same rule applies to private playlists: without the owner's authorized session Soundy
-reports `Forbidden` and does not try to bypass it.
+Spotify's current Web API returns a playlist's contents only to an account that owns it or
+collaborates on it. A playlist owned by someone else reports `Forbidden`; Soundy does not try to
+bypass that. The file and pasted-list paths remain for those playlists.
 
 ### How to export a Spotify playlist
+
+The link path is preferred, but the file and pasted-list paths remain for offline use or an
+account that cannot sign in:
 
 - Use Spotify's own export or a third-party exporter that produces **CSV** with `Title`, `Artist`,
   `Album` and `Duration` columns.
@@ -129,6 +137,26 @@ list has been written successfully.
 4. **Nothing else.** A remix, live take, cover, sped-up version or different artist is never
    substituted. The row stays **Unavailable**.
 
+A metadata-only Spotify import has no playback fallback. Its rows are searched like any other
+list, and a Spotify track id it cannot match is never written as a playable row. When a playback
+session exists, an unmatched row can still play through Spotify, and it is labelled **Full
+playback** for that reason.
+
+### When several recordings match
+
+A provider search can return more than one playable recording that agrees on title, artist and
+length, such as the album version and a deluxe edition. Instead of silently keeping the first,
+the import pauses on a review screen:
+
+- Each ambiguous row lists up to six candidates, with the album (or the recording's title when the
+  provider reports no album) and its length; the first is preselected. Ignoring the screen
+  therefore still writes a playable playlist.
+- Choosing another candidate updates the pending playlist immediately. Nothing is written until
+  **Add to Soundy** is pressed.
+- **Back** discards the review; **Close** discards it too. Nothing is saved by either.
+- Duplicate ids from one search are collapsed, so the same recording is never offered twice.
+- Review rows are capped at 500; beyond that the first match is kept and the screen says so.
+
 The status labels are:
 
 | Label | Meaning |
@@ -147,14 +175,17 @@ The status labels are:
 - The importer does not poll while idle. A progress timer runs only while an import is active.
 - A list file is capped at 8 MiB.
 - Cancelling before the write leaves the library untouched.
-- Spotify's rows can use the optional Web API path only when Spotify is already signed in; the
-  path never asks for a password or client secret and never reads audio.
+- Spotify metadata tokens are refreshed shortly before they expire. A revoked or expired refresh
+  token is removed and the next import asks for a browser sign-in again.
+- The metadata sign-in uses PKCE and ships no client secret. It never reads audio and cannot make
+  a free account stream.
 
 ## Privacy
 
 The importer sends only what the selected source needs. A file or pasted list is not uploaded.
-A Spotify link is sent to Spotify only through an existing session. Matching sends a search
-query of title and artist to the active provider and to Audius (and Jamendo if configured).
-Artwork enrichment sends the row's title, artist and album to Deezer and, when Deezer has no
-confident hit, to iTunes. No audio is uploaded. No telemetry, analytics or install reporting is
-added by the importer.
+A Spotify link is read through the Web API with an authorized token; no page is scraped. Matching
+sends a search query of title and artist to the active provider and to Audius (and Jamendo if
+configured). Artwork enrichment sends the row's title, artist and album to Deezer and, when Deezer
+has no confident hit, to iTunes. No audio is uploaded. No telemetry, analytics or install
+reporting is added by the importer. The metadata access and refresh tokens are stored in the
+private accounts folder and are never written to a log.

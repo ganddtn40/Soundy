@@ -212,12 +212,15 @@ impl SourcePlaylist {
     /// `local_matches` is aligned with `entries` and holds the id of the listener's own file
     /// that is this recording, when one is; the two match slices are aligned too, holding the
     /// active provider's playable match and the permitted public catalogue's page. A match is
-    /// never guessed: an absent or versioned recording stays unavailable.
+    /// never guessed: an absent or versioned recording stays unavailable. `spotify_playback` is
+    /// whether an authorized Spotify session can stream a row this import could not match; a
+    /// metadata-only link has no such fallback, so its rows stay external or unavailable.
     pub fn into_import(
         self,
         local_matches: &[Option<String>],
         provider_matches: &[Option<Track>],
         external_matches: &[Option<String>],
+        spotify_playback: bool,
         imported_at: i64,
     ) -> ImportedPlaylistData {
         let mut duplicates = 0_u32;
@@ -239,7 +242,11 @@ impl SourcePlaylist {
                 } else if let Some(url) = external_matches.get(position).cloned().flatten() {
                     external_url = Some(url);
                     (crate::models::ImportStatus::External, None)
-                } else if self.source == "spotify" && entry.playable && entry.id.is_some() {
+                } else if spotify_playback
+                    && self.source == "spotify"
+                    && entry.playable
+                    && entry.id.is_some()
+                {
                     (
                         crate::models::ImportStatus::Available,
                         entry.id.as_ref().map(|id| format!("spotify:track:{id}")),
@@ -1293,10 +1300,44 @@ mod tests {
             ],
             ..Default::default()
         };
-        let import = playlist.into_import(&[], &[], &[], 0);
+        let import = playlist.into_import(&[], &[], &[], true, 0);
         assert_eq!(import.entries.len(), 2);
         assert_eq!(import.duplicates, 1);
         assert!(import.entries.iter().all(|entry| entry.status.playable()));
+    }
+
+    #[test]
+    fn a_metadata_only_link_does_not_claim_spotify_can_play_its_rows() {
+        let playlist = SourcePlaylist {
+            source: "spotify".into(),
+            entries: vec![SourceEntry {
+                id: Some("one".into()),
+                title: "One".into(),
+                artists: "Artist".into(),
+                playable: true,
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        // Without a playback session the Spotify id is metadata, not an audio source: the row
+        // stays unavailable rather than being labelled playable with an id nothing can stream.
+        let import = playlist.clone().into_import(&[], &[], &[], false, 0);
+        assert_eq!(
+            import.entries[0].status,
+            crate::models::ImportStatus::Unavailable
+        );
+        assert!(import.entries[0].track_id.is_none());
+
+        let import = playlist.into_import(&[], &[], &[], true, 0);
+        assert_eq!(
+            import.entries[0].status,
+            crate::models::ImportStatus::Available
+        );
+        assert_eq!(
+            import.entries[0].track_id.as_deref(),
+            Some("spotify:track:one")
+        );
     }
 
     #[test]
@@ -1449,7 +1490,7 @@ mod tests {
         // A bare URL falls back to its own readable name.
         assert_eq!(playlist.entries[1].title, "Deep Focus");
 
-        let import = playlist.into_import(&[], &[], &[], 0);
+        let import = playlist.into_import(&[], &[], &[], false, 0);
         assert_eq!(
             import.entries[0].status,
             crate::models::ImportStatus::External

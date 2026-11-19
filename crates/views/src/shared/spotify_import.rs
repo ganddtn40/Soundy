@@ -15,15 +15,18 @@ use gpui::{
 use i18n::t;
 use music::import::{ImportFailure, MAX_IMPORT_BYTES, parse_manual};
 use router::{Destination, navigate};
-use state::{ImportReport, ImportStage, Sonora};
+use state::{ImportReport, ImportStage, Review, ReviewRow, Sonora};
 use ui::{
     ActiveTheme as _, Artwork, Button, Dismiss, Field, Form, Input, Modal, Notice, Spinner, Submit,
-    TabBar, Text,
+    TabBar, Text, clock,
 };
 
 /// How many unmatched rows the result lists before it says the rest are not shown. A playlist
 /// of thousands is still readable; the modal scrolls through the list.
 const UNMATCHED_SHOWN: usize = 300;
+/// How many ambiguous rows the review screen shows at once. The first match is kept for any row
+/// past this, which the review says rather than silently leaving the rest out.
+const REVIEW_SHOWN: usize = 100;
 
 /// Where the track list comes from. The three are equal paths; none needs an account.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -463,6 +466,7 @@ impl SpotifyImport {
 
     fn failure(&self, failure: ImportFailure, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = *cx.theme();
+        let cancelled = matches!(failure, ImportFailure::Cancelled);
         let (message, fallback) = match failure {
             ImportFailure::InvalidLink => (t!("import-invalid-link"), false),
             ImportFailure::TracklistUnavailable | ImportFailure::SpotifyNotConnected => {
@@ -491,9 +495,15 @@ impl SpotifyImport {
             .gap_2()
             .items_start()
             .child(
-                Notice::new(t!("import-failed"), message)
-                    .failed()
-                    .spoken("import-failure"),
+                Notice::new(
+                    match cancelled {
+                        true => t!("import-cancelled-title"),
+                        false => t!("import-failed"),
+                    },
+                    message,
+                )
+                .failed()
+                .spoken("import-failure"),
             )
             .when(fallback && self.source == Source::Link, |column| {
                 column
@@ -863,6 +873,137 @@ impl SpotifyImport {
                     .child(t!("import-compliance")),
             )
     }
+
+    /// The songs that matched more than one playable recording, each with the candidates to
+    /// choose between. Every choice is a real track the active provider can play.
+    fn review(&mut self, review: &Review, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let shown: Vec<ReviewRow> = review.rows.iter().take(REVIEW_SHOWN).cloned().collect();
+        let count = shown.len();
+        let total = review.total;
+        let mut rows = Vec::with_capacity(count);
+        for row in shown {
+            rows.push(self.candidate_row(row, cx).into_any_element());
+        }
+        div()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_1()
+                    .child(
+                        div()
+                            .text_size(theme.text(Text::Heading))
+                            .font_weight(gpui::FontWeight::SEMIBOLD)
+                            .child(t!("import-review-title")),
+                    )
+                    .child(
+                        div()
+                            .text_size(theme.text(Text::Small))
+                            .text_color(theme.muted_foreground)
+                            .child(t!("import-review-detail", count = total as i64)),
+                    ),
+            )
+            .child(div().flex().flex_col().children(rows))
+            .when(total > count, |column| {
+                column.child(
+                    div()
+                        .text_size(theme.text(Text::Small))
+                        .text_color(theme.muted_foreground)
+                        .child(t!(
+                            "import-review-hidden",
+                            shown = count as i64,
+                            total = total as i64
+                        )),
+                )
+            })
+            .child(
+                div()
+                    .text_size(theme.text(Text::Small))
+                    .text_color(theme.muted_foreground)
+                    .child(t!("import-review-note")),
+            )
+    }
+
+    /// One ambiguous song: what the source said, then one button per playable candidate.
+    fn candidate_row(&self, row: ReviewRow, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let ReviewRow {
+            position,
+            title,
+            artists,
+            album,
+            duration,
+            candidates,
+            chosen,
+        } = row;
+        let source_title = title.clone();
+        let detail = match album.is_empty() {
+            true => format!("{artists} · {}", clock(duration)),
+            false => format!("{artists} · {album} · {}", clock(duration)),
+        };
+        div()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .py_3()
+            .border_b_1()
+            .border_color(theme.border)
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .min_w_0()
+                    .child(div().truncate().child(title))
+                    .child(
+                        div()
+                            .truncate()
+                            .text_size(theme.text(Text::Small))
+                            .text_color(theme.muted_foreground)
+                            .child(detail),
+                    ),
+            )
+            .child(div().flex().flex_wrap().gap_2().children(
+                candidates.into_iter().enumerate().map(|(index, track)| {
+                    let length = clock(track.duration);
+                    // A provider sometimes reports no album for a search result. Showing
+                    // "· 3:15" for those would leave the listener guessing, so the recording's
+                    // own title stands in for the missing album.
+                    let label = match (track.name == source_title, track.album.is_empty()) {
+                        (_, true) => t!(
+                            "import-review-candidate-title",
+                            title = &track.name,
+                            duration = &length
+                        ),
+                        (true, false) => t!(
+                            "import-review-candidate",
+                            album = &track.album,
+                            duration = &length
+                        ),
+                        (false, false) => t!(
+                            "import-review-candidate-named",
+                            title = &track.name,
+                            album = &track.album,
+                            duration = &length
+                        ),
+                    };
+                    Button::new(format!("import-review-choice-{position}-{index}"))
+                        .ghost()
+                        .small()
+                        .selected(chosen == index)
+                        .label(label)
+                        .on_click(cx.listener(move |_, _, _, cx| {
+                            Sonora::global(cx)
+                                .imports
+                                .clone()
+                                .update(cx, |import, cx| import.choose(position, index, cx));
+                        }))
+                }),
+            ))
+    }
 }
 
 impl Render for SpotifyImport {
@@ -873,23 +1014,25 @@ impl Render for SpotifyImport {
 
         let theme = *cx.theme();
         let imports = Sonora::global(cx).imports.clone();
-        let (stage, active, report, failure, read, total) = {
+        let (stage, active, report, failure, review, read, total) = {
             let import = imports.read(cx);
             (
                 import.stage(),
                 import.active(),
                 import.report().cloned(),
                 import.failure().cloned(),
+                import.review().cloned(),
                 import.read(),
                 import.total(),
             )
         };
         let idle = matches!(stage, ImportStage::Idle | ImportStage::Failed);
 
-        let body = match (active, report.clone()) {
-            (true, _) => self.progress(stage, read, total, cx).into_any_element(),
-            (false, Some(report)) => self.result(&report, cx).into_any_element(),
-            (false, None) => self.field(failure, cx).into_any_element(),
+        let body = match (active, report.clone(), review.clone()) {
+            (true, _, _) => self.progress(stage, read, total, cx).into_any_element(),
+            (false, Some(report), _) => self.result(&report, cx).into_any_element(),
+            (false, None, Some(review)) => self.review(&review, cx).into_any_element(),
+            (false, None, None) => self.field(failure, cx).into_any_element(),
         };
 
         let mut actions: Vec<Button> = Vec::new();
@@ -904,12 +1047,25 @@ impl Render for SpotifyImport {
                     })),
             );
         }
-        if idle || active {
+        if idle || active || review.is_some() {
             actions.push(
                 Button::new("import-close")
                     .ghost()
                     .label(t!("spotify-import-close"))
                     .on_click(cx.listener(|this, _, window, cx| this.close(window, cx))),
+            );
+        }
+        if review.is_some() {
+            actions.push(
+                Button::new("import-review-back")
+                    .ghost()
+                    .label(t!("import-review-back"))
+                    .on_click(cx.listener(|_, _, _, cx| {
+                        Sonora::global(cx)
+                            .imports
+                            .clone()
+                            .update(cx, |import, cx| import.discard_review(cx));
+                    })),
             );
         }
         if report.is_some() && !active {
@@ -939,6 +1095,20 @@ impl Render for SpotifyImport {
                     .label(t!("spotify-import-open-playlist"))
                     .on_click(cx.listener(move |this, _, window, cx| {
                         this.open_playlist(&report, window, cx);
+                    })),
+            );
+        }
+        if review.is_some() {
+            actions.push(
+                Button::new("import-review-confirm")
+                    .primary()
+                    .icon("icons/download.svg")
+                    .label(t!("import-review-confirm"))
+                    .on_click(cx.listener(|_, _, _, cx| {
+                        Sonora::global(cx)
+                            .imports
+                            .clone()
+                            .update(cx, |import, cx| import.confirm(cx));
                     })),
             );
         }
@@ -979,6 +1149,11 @@ impl Render for SpotifyImport {
             }))
             .on_action(cx.listener(|this, _: &Submit, window, cx| {
                 cx.stop_propagation();
+                let imports = Sonora::global(cx).imports.clone();
+                if imports.read(cx).stage() == ImportStage::Review {
+                    imports.update(cx, |import, cx| import.confirm(cx));
+                    return;
+                }
                 this.submit(window, cx);
             }))
             .child(modal.on_dismiss(cx.listener(|this, _, window, cx| this.close(window, cx))))

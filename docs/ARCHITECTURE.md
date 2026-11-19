@@ -49,14 +49,23 @@ dialog (views)  ->  state::Import  ->  music::import parsers
                         |                    +-- Spotify link / CSV / M3U / manual
                         |                    +-- match_local
                         |
+                        +-- spotify::web (session token, or auth::metadata_access)
                         +-- active provider search (music trait)
                         +-- music::audius::Catalogue (Audius, optional Jamendo)
                         +-- music::enrich (Deezer, then iTunes: metadata and artwork)
+                        +-- review screen (several playable matches for one row)
                         +-- music::collage (2x2/3/2/1-tile playlist cover)
                         +-- local.save_import (music::local)
                                  |
                                  +-- storage::state.sqlite
 ```
+
+- A Spotify link uses the playback session's token when one exists. Otherwise
+  `spotify::auth::metadata_access` runs a PKCE browser sign-in on the blocking pool and stores a
+  refresh token in the private accounts folder; the Web API reader accepts either token.
+- Matching is unchanged for files and pasted lists. A row with more than one verified, playable
+  provider match pauses before `save_import` on a review screen; the listener's choice rewrites
+  that row's `track_id` in the pending playlist. Nothing is written until it is confirmed.
 
 - Enrichment runs after matching has settled: rows are grouped by album, covers already known are
   reused, and at most 160 album and 80 track lookups are made per import. A hit needs the title,

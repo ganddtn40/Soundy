@@ -4,9 +4,11 @@
 //! The dialog owns the text and the file choice; this entity owns the work. Opening the dialog
 //! does nothing until Import is pressed, so an idle app makes no request at all. Reading,
 //! matching and the database write run away from the UI thread, and only the counts they
-//! publish are read while they run. No path needs a Spotify account: a link with no authorized
-//! session reports that Spotify does not publish its tracklist and leaves the file and pasted
-//! list paths available.
+//! publish are read while they run. A Spotify link uses a signed-in playback session when one
+//! exists and otherwise asks Spotify for metadata through its own browser sign-in; the file and
+//! pasted-list paths still need no account at all. When the active provider matched a song more
+//! than once, the import pauses on a review screen so the listener can pick the recording
+//! instead of the importer guessing.
 
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
@@ -38,6 +40,12 @@ const LOOKUPS: usize = 4;
 /// The most distinct search answers one import keeps. A playlist with more distinct songs than
 /// this still matches; it simply asks again rather than growing without a bound.
 const LOOKUP_CACHE: usize = 2048;
+/// How many playable recordings one row may offer in review. A provider search that returns
+/// more than this is already ambiguous beyond what a dialog can usefully show.
+const CANDIDATES: usize = 6;
+/// How many ambiguous rows are kept for review. Past this the first match is kept for the rest,
+/// so a pathological playlist cannot make the review screen larger than the modal.
+const REVIEW_ROWS: usize = 500;
 
 /// What an import did, in the numbers the result screen shows.
 #[derive(Clone, Debug)]
@@ -134,6 +142,38 @@ fn displayable(status: ImportStatus) -> bool {
     )
 }
 
+/// One song the active provider matched more than once. Every candidate is a real, playable
+/// recording with its own id; the listener picks which one the source playlist meant.
+#[derive(Clone, Debug)]
+pub struct ReviewRow {
+    /// The row's place in the source playlist.
+    pub position: usize,
+    pub title: String,
+    pub artists: String,
+    pub album: String,
+    pub duration: Duration,
+    /// The candidates, in the provider's own relevance order, at most [`CANDIDATES`].
+    pub candidates: Vec<Track>,
+    /// The chosen candidate, an index into `candidates`. The first is preselected.
+    pub chosen: usize,
+}
+
+/// The ambiguous rows of one import, waiting for the listener's choice.
+#[derive(Clone, Debug, Default)]
+pub struct Review {
+    /// The rows shown, capped at [`REVIEW_ROWS`].
+    pub rows: Vec<ReviewRow>,
+    /// How many rows were ambiguous in total, including any past the cap.
+    pub total: usize,
+}
+
+/// What a reviewed import writes once it is confirmed: the playlist built from the current
+/// choices, and the artwork counts the enrichment pass produced.
+struct Pending {
+    data: ImportedPlaylistData,
+    enrichment: music::enrich::Report,
+}
+
 /// Where an import has got to. The dialog reads this rather than being told, so a redraw for
 /// any other reason never loses its place.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -143,6 +183,9 @@ pub enum Stage {
     Matching,
     /// Looking up the pictures and missing lengths the list did not carry.
     Enriching,
+    /// Matching is done, but some rows matched more than once and the dialog is asking which
+    /// recording is meant. Nothing has been written yet.
+    Review,
     Saving,
     Done,
     Failed,
@@ -162,6 +205,10 @@ pub struct Import {
     cancel: Arc<AtomicBool>,
     report: Option<Arc<ImportReport>>,
     failure: Option<ImportFailure>,
+    /// The ambiguous rows of an import that paused for a choice.
+    review: Option<Review>,
+    /// The playlist a reviewed import will write once it is confirmed.
+    pending: Option<Pending>,
     /// The text that failed, so the field can keep it after a dialog is reopened.
     link: String,
     task: Option<Task<()>>,
@@ -197,6 +244,8 @@ impl Import {
             cancel: Arc::new(AtomicBool::new(false)),
             report: None,
             failure: None,
+            review: None,
+            pending: None,
             link: String::new(),
             task: None,
             ticker: None,
@@ -232,6 +281,61 @@ impl Import {
         self.failure.as_ref()
     }
 
+    /// The rows waiting for a choice, while the import is on its review screen.
+    pub fn review(&self) -> Option<&Review> {
+        self.review.as_ref()
+    }
+
+    /// Records which recording a row with several provider matches means. The playlist that
+    /// will be written is updated in place, so confirming saves exactly what the review shows.
+    pub fn choose(&mut self, position: usize, candidate: usize, cx: &mut Context<Self>) {
+        let Some(review) = self.review.as_mut() else {
+            return;
+        };
+        let Some(row) = review.rows.iter_mut().find(|row| row.position == position) else {
+            return;
+        };
+        let Some(track) = row.candidates.get(candidate).cloned() else {
+            return;
+        };
+        row.chosen = candidate;
+        if let Some(pending) = self.pending.as_mut()
+            && let Some(entry) = pending.data.entries.get_mut(position)
+        {
+            entry.status = ImportStatus::Available;
+            entry.track_id = track.id.clone();
+            if entry.cover.is_none() {
+                entry.cover = track.cover;
+            }
+        }
+        cx.notify();
+    }
+
+    /// Writes the playlist a reviewed import prepared, with the listener's choices applied.
+    pub fn confirm(&mut self, cx: &mut Context<Self>) {
+        if self.stage != Stage::Review {
+            return;
+        }
+        let Some(pending) = self.pending.take() else {
+            return;
+        };
+        self.review = None;
+        let task = self.keep(pending.data, pending.enrichment, cx);
+        self.task = Some(task);
+    }
+
+    /// Drops a reviewed import without writing anything.
+    pub fn discard_review(&mut self, cx: &mut Context<Self>) {
+        if self.stage != Stage::Review {
+            return;
+        }
+        self.review = None;
+        self.pending = None;
+        self.stage = Stage::Idle;
+        cx.notify();
+        cx.emit(ImportEvent::Changed);
+    }
+
     /// The link or path the last attempt used, so reopening the dialog can put it back.
     pub fn link(&self) -> &str {
         &self.link
@@ -241,6 +345,8 @@ impl Import {
         self.stage = Stage::Idle;
         self.report = None;
         self.failure = None;
+        self.review = None;
+        self.pending = None;
         self.link.clear();
         self.read.store(0, Ordering::Relaxed);
         self.total.store(0, Ordering::Relaxed);
@@ -261,6 +367,9 @@ impl Import {
     /// Asks whatever the import is doing to stop. The fetch checks this between requests and
     /// during a rate-limit wait; the write is one transaction and is never cut in half.
     pub fn cancel(&mut self, cx: &mut Context<Self>) {
+        if self.stage == Stage::Review {
+            return self.discard_review(cx);
+        }
         if !self.active() {
             return;
         }
@@ -375,9 +484,9 @@ impl Import {
         }));
     }
 
-    /// Starts importing a Spotify playlist link or URI. This is the only path that can use a
-    /// Spotify session, and only when one is already authorized. Without it the dialog is told
-    /// why the tracklist is unavailable and the file/pasted-list paths remain usable.
+    /// Starts importing a Spotify playlist link or URI. A signed-in Spotify playback session is
+    /// used when there is one; otherwise the importer signs in to Spotify for metadata only, in
+    /// the browser, so a free account can read a playlist without pretending it can stream.
     pub fn start_link(&mut self, input: &str, cx: &mut Context<Self>) {
         if self.active() {
             return;
@@ -386,24 +495,47 @@ impl Import {
             Ok(link) => link,
             Err(failure) => return self.fail(failure, cx),
         };
-        let Some(web) = self
+        let web = self
             .session
             .read(cx)
             .client()
-            .and_then(|client| client.spotify_web())
-        else {
-            return self.fail(ImportFailure::TracklistUnavailable, cx);
-        };
+            .and_then(|client| client.spotify_web());
+        let spotify_playback = web.is_some();
         let label = input.trim().to_owned();
         let id = link.id;
         self.start_with(
             label,
+            spotify_playback,
             move |cancel, read, total| async move {
+                // A playback session's token is refreshed by librespot. Without one the
+                // importer obtains its own metadata token; the config is kept so a token the
+                // Web API refuses can be dropped and a fresh sign-in asked for once, rather
+                // than replaying it until it expires.
+                let (web, metadata) = match web {
+                    Some(web) => (web, None),
+                    None => {
+                        let config = music::spotify::auth::AuthConfig::from_env();
+                        let token = metadata_token(&config, &cancel).await?;
+                        (music::spotify::SpotifyWeb::with_bearer(token), Some(config))
+                    }
+                };
                 let progress = move |seen: usize, all: usize| {
                     read.store(seen, Ordering::Relaxed);
                     total.store(all, Ordering::Relaxed);
                 };
-                web.playlist(&id, &cancel, &progress).await
+                let first = web.playlist(&id, &cancel, &progress).await;
+                match (first, metadata) {
+                    (Err(ImportFailure::Unauthorized), Some(config))
+                        if !cancel.load(Ordering::Relaxed) =>
+                    {
+                        music::spotify::auth::forget_metadata(&config);
+                        let token = metadata_token(&config, &cancel).await?;
+                        music::spotify::SpotifyWeb::with_bearer(token)
+                            .playlist(&id, &cancel, &progress)
+                            .await
+                    }
+                    (first, _) => first,
+                }
             },
             cx,
         );
@@ -420,6 +552,7 @@ impl Import {
         let io = Io::global(cx);
         self.start_with(
             label,
+            false,
             move |_, _, _| async move {
                 match io.spawn_blocking(move || load_file(&path)).await {
                     Ok(parsed) => parsed,
@@ -445,6 +578,7 @@ impl Import {
         let io = Io::global(cx);
         self.start_with(
             "pasted track list".to_owned(),
+            false,
             move |_, _, _| async move {
                 match io
                     .spawn_blocking(move || {
@@ -467,8 +601,13 @@ impl Import {
         );
     }
 
-    fn start_with<F, M>(&mut self, label: String, make: M, cx: &mut Context<Self>)
-    where
+    fn start_with<F, M>(
+        &mut self,
+        label: String,
+        spotify_playback: bool,
+        make: M,
+        cx: &mut Context<Self>,
+    ) where
         F: Future<Output = Result<SourcePlaylist, ImportFailure>> + Send + 'static,
         M: FnOnce(Arc<AtomicBool>, Arc<AtomicUsize>, Arc<AtomicUsize>) -> F,
     {
@@ -501,10 +640,6 @@ impl Import {
         cx.notify();
 
         let io = Io::global(cx);
-        let library = self.library.clone();
-        // Imported playlists are always local ones, and their page may already be cached from
-        // before the import wrote them.
-        let catalog = self.session.read(cx).catalog(music::LOCAL_PLAYLIST_PREFIX);
 
         self.task = Some(cx.spawn(async move |this, cx| {
             let playlist = match io.spawn(fetch).await {
@@ -622,13 +757,19 @@ impl Import {
             }
 
             let mut provider_matches: Vec<Option<Track>> = vec![None; playlist.entries.len()];
+            // The rows with more than one playable provider match, kept for the review screen.
+            let mut review_matches: Vec<Option<Vec<Track>>> = vec![None; playlist.entries.len()];
             let mut external_matches: Vec<Option<String>> = vec![None; playlist.entries.len()];
             let mut provider_cache: HashMap<String, Vec<Track>> = HashMap::new();
             let mut external_cache: HashMap<String, Option<String>> = HashMap::new();
             let mut provider_up = provider.is_some();
-            let mut catalogues_up = playlist.source != "spotify";
+            // A Spotify link with playback behind it needs no search: every row it cannot match
+            // is still streamable through Spotify. A metadata-only link has no such fallback,
+            // so its rows are searched like any other list.
+            let searcheable = playlist.source != "spotify" || !spotify_playback;
+            let mut catalogues_up = searcheable;
             let catalogues = Arc::new(Catalogue::public());
-            let searches = playlist.source != "spotify";
+            let searches = searcheable;
 
             // A row that needs a search asks its provider and then a public catalogue. Rows are
             // matched in chunks of LOOKUPS so a large playlist finishes in a fraction of the
@@ -660,7 +801,11 @@ impl Import {
                         let query = search_query(entry);
                         match provider_cache.get(&query) {
                             Some(results) => {
-                                provider_matches[position] = provider_match(entry, results);
+                                let candidates = provider_candidates(entry, results);
+                                provider_matches[position] = candidates.first().cloned();
+                                if candidates.len() > 1 {
+                                    review_matches[position] = Some(candidates);
+                                }
                             }
                             None => pending.push((position, query)),
                         }
@@ -711,9 +856,14 @@ impl Import {
                         }
                     }
                     for (position, query) in pending {
-                        provider_matches[position] = found.get(&query).and_then(|results| {
-                            provider_match(&playlist.entries[position], results)
-                        });
+                        if let Some(results) = found.get(&query) {
+                            let candidates =
+                                provider_candidates(&playlist.entries[position], results);
+                            provider_matches[position] = candidates.first().cloned();
+                            if candidates.len() > 1 {
+                                review_matches[position] = Some(candidates);
+                            }
+                        }
                     }
                 }
 
@@ -842,17 +992,72 @@ impl Import {
                 return;
             }
 
-            this.update(cx, |this, cx| {
-                this.stage = Stage::Saving;
-                cx.notify();
-            })
-            .ok();
-
             // Every match is known now; assembling the rows only copies strings and runs on the
             // window's thread without a wait.
-            let data =
-                playlist.into_import(&local_matches, &provider_matches, &external_matches, now());
+            let review = review_rows(&playlist, &review_matches);
+            let data = playlist.into_import(
+                &local_matches,
+                &provider_matches,
+                &external_matches,
+                spotify_playback,
+                now(),
+            );
 
+            if let Some(review) = review {
+                this.update(cx, |this, cx| {
+                    this.pending = Some(Pending { data, enrichment });
+                    this.review = Some(review);
+                    this.stage = Stage::Review;
+                    cx.notify();
+                    cx.emit(ImportEvent::Changed);
+                })
+                .ok();
+                return;
+            }
+
+            this.update(cx, |this, cx| {
+                // The analysis task is ending here, so the save runs detached rather than
+                // replacing its own handle, which would cancel it mid-write.
+                this.keep(data, enrichment, cx).detach();
+            })
+            .ok();
+        }));
+
+        self.watch(cx);
+    }
+
+    /// Writes a finished import as a native playlist: the database row, the generated cover when
+    /// the source brought none, and the dropped page cache. Shared by an import that had no
+    /// ambiguity and one the listener confirmed on the review screen. The caller owns the
+    /// returned task, so a save started from inside another task never cancels that task.
+    fn keep(
+        &mut self,
+        data: ImportedPlaylistData,
+        enrichment: music::enrich::Report,
+        cx: &mut Context<Self>,
+    ) -> Task<()> {
+        let Some(local) = self.session.read(cx).local_client() else {
+            self.fail(
+                ImportFailure::Other(
+                    "the local library is still starting; try again in a moment".to_owned(),
+                ),
+                cx,
+            );
+            return Task::ready(());
+        };
+        let io = Io::global(cx);
+        let library = self.library.clone();
+        let catalog = self.session.read(cx).catalog(music::LOCAL_PLAYLIST_PREFIX);
+
+        self.stage = Stage::Saving;
+        self.review = None;
+        self.pending = None;
+        self.read.store(0, Ordering::Relaxed);
+        self.total.store(0, Ordering::Relaxed);
+        self.shown = (0, 0);
+        cx.notify();
+
+        let task = cx.spawn(async move |this, cx| {
             let saved = join(io.spawn({
                 let local = local.clone();
                 let data = data.clone();
@@ -938,8 +1143,16 @@ impl Import {
                 cx.emit(ImportEvent::Changed);
             })
             .ok();
-        }));
+        });
 
+        self.watch(cx);
+        task
+    }
+
+    /// Repaints the progress counts while an import runs, and stops as soon as it is no longer
+    /// running. A review screen is not progress, so its ticker ends; confirming starts a new
+    /// one from `keep`.
+    fn watch(&mut self, cx: &mut Context<Self>) {
         self.ticker = Some(cx.spawn(async move |this, cx| {
             loop {
                 cx.background_executor().timer(PROGRESS_TICK).await;
@@ -988,13 +1201,97 @@ impl Import {
     }
 }
 
-/// The first answer from the active provider that is really the same recording. A preview-only
-/// or id-less result would give a row that cannot be played, so neither counts.
-fn provider_match(entry: &music::import::SourceEntry, results: &[Track]) -> Option<Track> {
-    results
-        .iter()
-        .find(|track| track.playable && track.id.is_some() && track_matches(entry, track))
-        .cloned()
+/// Every answer from the active provider that is really the same recording, in the provider's
+/// own relevance order, at most [`CANDIDATES`]. A preview-only or id-less result would give a
+/// row that cannot be played, so neither counts. One candidate is a match; more than one pauses
+/// the import for the listener to choose.
+fn provider_candidates(entry: &music::import::SourceEntry, results: &[Track]) -> Vec<Track> {
+    let mut seen = HashSet::new();
+    let mut candidates: Vec<Track> = Vec::new();
+    for track in results {
+        if !track.playable || !track_matches(entry, track) {
+            continue;
+        }
+        let Some(id) = track.id.clone() else {
+            continue;
+        };
+        if !seen.insert(id) {
+            continue;
+        }
+        candidates.push(track.clone());
+        if candidates.len() == CANDIDATES {
+            break;
+        }
+    }
+    candidates
+}
+
+/// The rows that matched more than one playable recording, assembled for the review screen. The
+/// first candidate stays preselected, so a review the listener ignores still writes a playable
+/// playlist. The rows are capped; `total` still says how many were ambiguous.
+fn review_rows(playlist: &SourcePlaylist, matches: &[Option<Vec<Track>>]) -> Option<Review> {
+    let mut rows = Vec::new();
+    let mut total = 0;
+    for (position, entry) in playlist.entries.iter().enumerate() {
+        let Some(candidates) = matches.get(position).cloned().flatten() else {
+            continue;
+        };
+        if candidates.len() < 2 {
+            continue;
+        }
+        total += 1;
+        if rows.len() >= REVIEW_ROWS {
+            continue;
+        }
+        rows.push(ReviewRow {
+            position,
+            title: entry.title.clone(),
+            artists: entry.artists.clone(),
+            album: entry.album.clone(),
+            duration: entry.duration,
+            candidates,
+            chosen: 0,
+        });
+    }
+    (total > 0).then_some(Review { rows, total })
+}
+
+/// Answers the importer's metadata-only token off the window thread. The first run opens
+/// Spotify's authorization page and waits for the browser, so it must not block the UI.
+async fn metadata_token(
+    config: &music::spotify::auth::AuthConfig,
+    cancel: &Arc<AtomicBool>,
+) -> Result<String, ImportFailure> {
+    let config = config.clone();
+    let stopping = cancel.clone();
+    tokio::task::spawn_blocking(move || music::spotify::auth::metadata_access(&config, &stopping))
+        .await
+        .map_err(|error| {
+            ImportFailure::Other(format!("cannot start the Spotify sign-in: {error}"))
+        })?
+        .map_err(sign_in_failure)
+}
+
+/// Turns the importer's metadata sign-in into the dialog's own failure vocabulary. A browser
+/// that was closed or a consent that was denied is not a network error, and saying so keeps the
+/// file and pasted-list fallbacks in view.
+fn sign_in_failure(error: anyhow::Error) -> ImportFailure {
+    if let Some(failure) = error.downcast_ref::<music::SignInFailure>() {
+        return match failure.0 {
+            music::SignInProblem::Cancelled => ImportFailure::Cancelled,
+            music::SignInProblem::Network => {
+                ImportFailure::Network("the Spotify sign-in could not reach Spotify".to_owned())
+            }
+            _ => ImportFailure::Unauthorized,
+        };
+    }
+    let message = format!("{error:#}");
+    match message.to_ascii_lowercase() {
+        message if message.contains("timed out") || message.contains("connection") => {
+            ImportFailure::Network(message)
+        }
+        _ => ImportFailure::Other(message),
+    }
 }
 
 /// Reads and parses one list file. The extension picks the parser; a `.txt` is a pasted list.
@@ -1192,5 +1489,73 @@ mod tests {
         std::fs::write(&path, "Title,Artist\n").unwrap();
 
         assert_eq!(load_file(&path), Err(ImportFailure::EmptySource));
+    }
+
+    fn candidate(id: &str, name: &str, album: &str, seconds: u64) -> Track {
+        Track {
+            id: Some(id.to_owned()),
+            name: name.to_owned(),
+            playable: true,
+            artists: "Artist".to_owned(),
+            album: album.to_owned(),
+            duration: Duration::from_secs(seconds),
+            ..Default::default()
+        }
+    }
+
+    fn source(title: &str, seconds: u64) -> music::import::SourceEntry {
+        music::import::SourceEntry {
+            title: title.to_owned(),
+            artists: "Artist".to_owned(),
+            duration: Duration::from_secs(seconds),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn each_distinct_close_response_becomes_one_candidate() {
+        let entry = source("Song", 180);
+        let results = vec![
+            candidate("a", "Song", "Album", 180),
+            // The same recording listed twice must not become two choices.
+            candidate("a", "Song", "Album", 180),
+            candidate("b", "Song", "Deluxe", 181),
+            // A different title is not this recording, however close its length.
+            candidate("c", "Other", "Album", 180),
+        ];
+
+        let candidates = provider_candidates(&entry, &results);
+        assert_eq!(
+            candidates
+                .iter()
+                .map(|track| track.id.as_deref().unwrap())
+                .collect::<Vec<_>>(),
+            ["a", "b"]
+        );
+    }
+
+    #[test]
+    fn only_rows_with_several_matches_are_kept_for_review() {
+        let playlist = SourcePlaylist {
+            entries: vec![source("One", 100), source("Two", 100), source("Three", 100)],
+            ..Default::default()
+        };
+        let matches = vec![
+            Some(vec![
+                candidate("a", "One", "Album", 100),
+                candidate("b", "One", "Deluxe", 101),
+            ]),
+            Some(vec![candidate("c", "Two", "Album", 100)]),
+            None,
+        ];
+
+        let review = review_rows(&playlist, &matches).unwrap();
+        assert_eq!(review.total, 1);
+        assert_eq!(review.rows[0].position, 0);
+        assert_eq!(review.rows[0].chosen, 0);
+        assert_eq!(review.rows[0].candidates.len(), 2);
+        assert_eq!(review.rows[0].duration, Duration::from_secs(100));
+
+        assert!(review_rows(&playlist, &[None, None, None]).is_none());
     }
 }

@@ -1,7 +1,7 @@
 # Test results
 
-Everything below was run on this machine against this source tree. A test that was not run is
-listed as not run, not as passed.
+Everything below was run on this machine against this source tree at the date noted for each
+section. A test that was not run is listed as not run, not as passed.
 
 ## Automated
 
@@ -69,20 +69,21 @@ by default. The live iTunes lookup was run separately and passed (see below).
 - Navigation: the two sidebar groups cover every row without overlap, so a row can never be
   drawn twice.
 
-## Manual verification, release build
+## Manual verification, earlier 1.0.0 build
 
-The release binary `target\release\soundy.exe` (91,252,736 bytes, built 19 November 2026) was
-launched on Windows 11 and driven with real mouse and keyboard input. The dialog is reached
-through **+ → Import playlist…** on the Playlists screen. Provider matching ran against the
-signed-in YouTube Music account. Every row count below was also checked in
-`%LOCALAPPDATA%\soundy\state.sqlite`, not only in the dialog.
+The release binary `target\release\soundy.exe` (91,252,736 bytes, built 19 November 2026 before the
+metadata sign-in and review changes) was launched on Windows 11 and driven with real mouse and
+keyboard input. The dialog is reached through **+ → Import playlist…** on the Playlists screen.
+Provider matching ran against the signed-in YouTube Music account. Every row count below was also
+checked in `%LOCALAPPDATA%\soundy\state.sqlite`, not only in the dialog. The final build's importer
+re-test follows this section; where the two differ, the re-test describes what ships.
 
 | Check | Result |
 | --- | --- |
 | App launches to the library with the restored session | pass |
 | Import dialog opens with Spotify link / M3U or CSV file / Pasted list tabs | pass |
 | Invalid link `https://example.com/not-spotify` | **Import failed**: “That is not a Spotify playlist link. Paste a link like https://open.spotify.com/playlist/… or a spotify:playlist: URI.” |
-| Valid Spotify playlist URL (`37i9dQZF1DXcBWIGoYBM5M`) with no Spotify session | **Import failed**: “Spotify does not publish this playlist's tracks without an authorized Spotify session. Soundy does not scrape the page or bypass that.” The dialog tells the listener to export M3U/CSV or paste the rows; no playlist is created |
+| Valid Spotify playlist URL (`37i9dQZF1DXcBWIGoYBM5M`) with no Spotify session | **Import failed**: “Spotify does not publish this playlist's tracks without an authorized Spotify session. Soundy does not scrape the page or bypass that.” The dialog tells the listener to export M3U/CSV or paste the rows; no playlist is created. (This build predates the metadata-only sign-in; see the re-test below.) |
 | Pasted list of four rows, including a duplicate and a nonexistent song | 4 tracks kept, 2 Full playback, 2 Unavailable, 1 duplicate kept; result dialog and playlist both show the rows in source order |
 | CSV through the real Windows file picker (`Soundy Import Test.csv`) | 6 tracks kept, 2 playable, 4 Unavailable, 1 duplicate kept; durations `5:02` and `3:33` preserved; `Hardwired (Live)` correctly refused as a different recording |
 | M3U through the real file picker, two entries (one local path, one `https://` URL) | local row matched the scanned file and became **Full playback (local)**; HTTP row became **External playback**; order preserved |
@@ -173,23 +174,51 @@ folder configured. Both 60-second windows were flat, showing no leak.
   `https://api.audius.co/v1/tracks/search?query=Hardwired%20Rameses%20B&limit=3` returned
   `Rameses B - Hardwired`, 302 s, streamable, permalink
   `/RamesesB/rameses-b-hardwired-431301`. This is the same query the importer builds for that row.
-- Spotify Web API: not exercised, because no Spotify account is signed in on this machine. The
-  authorized path is covered by unit tests against a local HTTP server only.
+- Spotify Web API: the metadata-only sign-in was launched from a real playlist link. The browser
+  opened Spotify's authorize page with the expected client id, PKCE challenge, `state`, both
+  playlist-read scopes and the `http://127.0.0.1:8989/login` redirect, and Spotify rendered its
+  consent screen for a signed-in free account. Consent was cancelled deliberately, so no playlist
+  was read. The HTTP reader, callback parsing and refresh logic are covered by unit tests against
+  a local HTTP server.
 - Jamendo: not exercised, because `SOUNDY_JAMENDO_CLIENT_ID` is not configured.
 - M3U and CSV imports: exercised with real files written for the test
   (`Soundy Import Test.m3u`, `Soundy Import Test.csv`) and the pasted list
   (`Rameses B - Hardwired`, a duplicate, an unknown song, a title-only row).
+- The import dialog, review screen and playlist page were also driven through the Windows UI
+  Automation tree this build exposes, with real keyboard and mouse input for text entry and the
+  file picker.
+
+## Playlist importer re-test
+
+Run on 19 November 2026 against the rebuilt release binary and the packaged installer and portable
+ZIP:
+
+- **Invalid link.** Pasting `https://open.spotify.com/playlist/this-is-not-a-playlist` showed the
+  invalid-link message and wrote no playlist.
+- **Sign-in launch and cancel.** A real playlist link started the metadata sign-in, opened the
+  browser on Spotify's authorize page (see above), and kept Soundy listening on port 8989. Cancel
+  closed the listener within two seconds, showed "Import cancelled", and left no `metadata.json`.
+- **CSV import with review.** A five-row Spotify export imported in source order. The provider
+  returned six playable matches for one row, the review screen listed them with album and length,
+  a non-first candidate was selected, and the saved playlist contained five playable/personal
+  rows. The reviewed row's saved provider id played; loopback capture of a provider row was
+  non-silent (peak 0.985, RMS 0.228 over eight seconds).
+- **Cancel during matching.** A 100-row pasted list was cancelled at "Matching 0 of 100 tracks";
+  the database still held its previous two playlists and 276 rows. The pre-test database backup
+  was then restored and matched its original SHA-256 exactly.
+- **Packaging.** The rebuilt installer silent-installed to a temporary directory and its app
+  launched; the uninstaller removed it. The rebuilt portable ZIP was unpacked, launched, and
+  carried the updated `docs/`.
 
 ## Not tested
 
-- A real private Spotify playlist and its `Forbidden` answer: no Spotify account.
-- A real Spotify playlist with the authorized path: no Spotify account.
+- A granted Spotify consent and the resulting Web API playlist read: the consent screen was
+  reached, then cancelled, so no authorization code was exchanged with Spotify itself.
+- A playlist owned by another account and its `Forbidden` answer.
 - Jamendo matching with a real client id.
 - A large list of many *distinct* tracks: the 1,000-row test repeated one recording, so it
   exercised row count, duplicate preservation and UI performance but only one distinct provider
-  query. A list with hundreds of distinct queries was not timed.
-- Pixel and accessibility-tree automation of the dialog: GPUI exposes no Windows UI Automation
-  tree in this build, and the project has no GPUI test harness. The dialog was driven by real
-  input instead.
+  query. A list with hundreds of distinct queries was not timed. A 100-row distinct list reached
+  "Matching 0 of 100" but was cancelled before its timing was observed.
 - macOS and Linux builds: only Windows x64 is packaged here.
 - Long-duration soak tests beyond the idle measurement in `PERFORMANCE.md`.

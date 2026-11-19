@@ -28,10 +28,13 @@ The first Soundy release: a native Windows music player built on the Sonora code
 - A fullscreen now-playing view, lyrics with word timing, a queue panel, an equalizer with
   profiles and per-device rules, and a native spectrum visualizer.
 - Playlist import from a Spotify playlist link, M3U/M3U8 or CSV files, or a pasted track list.
-  No Spotify account, Premium, OAuth or API key is required; a link needs an existing Spotify
-  session to read its tracklist, and the dialog says so instead of scraping.
+  No Spotify Premium, developer key or external converter is required. A link uses an existing
+  playback session, or a metadata-only browser sign-in that a free Spotify account can finish;
+  files and pasted lists need no account, and nothing is scraped.
 - Imported playlists keep their order and duplicate counts, get provider-matched metadata and
-  artwork, and fall back to a generated 2x2 cover when no artwork exists.
+  artwork, and fall back to a generated 2x2 cover when no artwork exists. When a provider search
+  finds several playable recordings for one song, a review screen pauses the write until the
+  right one is chosen; leaving a row alone keeps its first match.
 - Optional Last.fm, Libre.fm, ListenBrainz and Maloja scrobbling, Discord rich presence, and
   Sonora Session listening rooms.
 - Portable ZIP and Inno Setup installer, both built from the same release binary.
@@ -57,8 +60,10 @@ The first Soundy release: a native Windows music player built on the Sonora code
 - Windows 11 x64 is the only packaged target. Linux and macOS sources remain in the tree but
   are not released.
 - The executable is unsigned, so Windows SmartScreen may warn on first launch.
-- The Spotify playlist link path needs an existing Spotify session; without one, use a file or
-  a pasted list.
+- The Spotify playlist link path needs Spotify's own authorization: an existing playback session
+  or a one-time browser sign-in. A free account can read a playlist it owns or collaborates on;
+  Spotify does not return another owner's playlist contents through the Web API. Files and pasted
+  lists work with no account.
 - Idle memory is above the 100 MB resident target: 104 MB on a fresh profile (87.8 MB private)
   and 120 MB with a signed-in provider and imported playlists (100.9 MB private). The measured
   figures and method are in [PERFORMANCE.md](./PERFORMANCE.md).
