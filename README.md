@@ -23,7 +23,7 @@ Soundy is a desktop music player written in Rust and rendered with
 the providers it supports through one consistent library, without Electron, a WebView shell or a
 client-side JavaScript framework.
 
-The player is built to feel immediate: a cold start measured at 213 ms, around 0.3 seconds of
+The player is built to feel immediate: a cold start measured at 197 ms, about 0.4 seconds of
 CPU per idle minute, native window management and no background polling beyond what playback
 needs. Those are measured numbers from the release build, not targets.
 
@@ -163,15 +163,18 @@ The full behaviour, formats and privacy notes are in [docs/IMPORTER.md](./docs/I
 
 ## Performance
 
-The release build settles at **110.1 MB** working set with a **98.7 MB** private commit, uses
-**0.344 s** of CPU per idle minute (about 0.6% of one core), and shows its window **213 ms**
-after launch (median of three cold starts). Streaming measures 119.9 MB working / 99.4 MB
-private.
+The release build settles at **104.0 MB** working set with an **87.8 MB** private commit on a
+fresh profile at 936×648. With a signed-in provider, imported playlists and populated shelves it
+settles at **119.9 MB / 100.9 MB**. Idle CPU is **0.37–0.41 s per minute** (about 0.6–0.7% of
+one core), the window appears **197 ms** after launch (median of five cold launches), and
+streaming measures **124.5 MB / 107.6 MB**.
 
-The memory target is below 100 MB. Private commit meets it; resident memory is about 10 MB over,
-and closing that gap would need a smaller renderer than GPUI's `wgpu` baseline. The method and
-profile caveats are in [PERFORMANCE.md](./PERFORMANCE.md). No figure in this repository is
-claimed without a real measurement.
+The memory target is below 100 MB. The private commit meets it on a fresh profile, where resident
+memory is about 4 MB over; a populated profile runs above it because the provider session and
+library data stay in memory. Closing the gap would need a smaller renderer than GPUI's `wgpu`
+baseline. The method, both profiles and the raw figures are in
+[PERFORMANCE.md](./PERFORMANCE.md). No figure in this repository is claimed without a real
+measurement.
 
 ## Documentation
 

@@ -138,16 +138,16 @@ the same tab switch worked when driven by focus and by a different click.
 
 ## Release artifacts
 
-Built on 18 November 2026 from this tree with `scripts\windows\build-soundy-installer.ps1`:
+Built on 19 November 2026 from this tree with `scripts\windows\build-soundy-installer.ps1`:
 
 | Artifact | Size | SHA-256 |
 | --- | ---: | --- |
-| `target\release\soundy.exe` | 91,254,784 bytes | `FBEA4A63A1B6C4D5C1F8FAE4F12F751D1384C7D77A76B13ACFFD9DE8D81A8CCD` |
-| `dist\Soundy-1.0.0-Setup.exe` | 24,081,066 bytes | `6E426749118A891081F7450233980F993345C0E9C8F63EFD7D636455DAE47412` |
-| `dist\Soundy-1.0.0-Portable.zip` | 33,107,367 bytes | `0EEC254CAFE60E60FCB818CAEBF20684B5F412F8900AE4ED31FDDE246D1559B9` |
+| `target\release\soundy.exe` | 90,808,320 bytes | `29FC0319B999ECBAF878168135218DF6622C058D242DADB0A19638B15258CB24` |
 
 Both the installed executable and `dist\Soundy-1.0.0-Portable\soundy.exe` hash to the release
-binary above. The setup file reports version 1.0.0 and product Soundy.
+binary above. The setup and ZIP hashes are published on the release page instead of here: every
+archive bundles this document, so a hash written into it would change the archive it describes.
+The setup file reports version 1.0.0 and product Soundy.
 
 The installer was also executed, not just compiled: silent install to a temporary directory
 returned 0, produced `soundy.exe` with the matching hash, plus `LICENSE`, `THIRD-PARTY.md` and the
@@ -157,13 +157,15 @@ The portable ZIP was unpacked and its `soundy.exe` launched and restored the lib
 
 ## Performance
 
-Final-build figures are in `PERFORMANCE.md`. On the shipped binary at 936×648, with one imported
-playlist and a guest YouTube Music session: a fresh launch settles at **110.1 MB working set /
-98.7 MB private commit**, using **0.344 s of CPU per 60 s idle** (≈0.6% of one core). Streaming
-uses **119.9 MB / 99.4 MB**, and the window becomes visible **213 ms** after launch (median of
-three cold starts). The working set therefore misses the 100 MB resident target by about 10 MB,
-while the private commit is under it. Local-file playback was not measured on this profile
-because it has no local folder; the 60-second idle and stream figures are flat, showing no leak.
+Final-build figures are in `PERFORMANCE.md`. On the shipped binary at 936×648: a fresh profile
+(no account, folders or imports) settles at **104.0 MB working set / 87.8 MB private commit**,
+using **0.374 s of CPU per 60 s idle** (≈0.6% of one core). The maintainer's populated profile
+(signed-in YouTube Music, two imported playlists, 276 rows) settles at **119.9 MB / 100.9 MB**
+and 0.405 s per minute. Streaming uses **124.5 MB / 107.6 MB**, and the window becomes visible
+**197 ms** after launch (median of five cold starts). The 100 MB resident target is missed by
+4 MB on the fresh profile and by more with a populated library; private commit is under it on a
+fresh profile only. Local-file playback was not measured because neither profile had a local
+folder configured. Both 60-second windows were flat, showing no leak.
 
 ## Live checks
 

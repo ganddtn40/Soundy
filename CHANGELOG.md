@@ -59,8 +59,9 @@ The first Soundy release: a native Windows music player built on the Sonora code
 - The executable is unsigned, so Windows SmartScreen may warn on first launch.
 - The Spotify playlist link path needs an existing Spotify session; without one, use a file or
   a pasted list.
-- Idle resident memory measures about 110 MB, roughly 10 MB above the 100 MB target. The
-  measured figures and method are in [PERFORMANCE.md](./PERFORMANCE.md).
+- Idle memory is above the 100 MB resident target: 104 MB on a fresh profile (87.8 MB private)
+  and 120 MB with a signed-in provider and imported playlists (100.9 MB private). The measured
+  figures and method are in [PERFORMANCE.md](./PERFORMANCE.md).
 
 [Unreleased]: https://github.com/ganddtn40/soundy/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/ganddtn40/soundy/releases/tag/v1.0.0

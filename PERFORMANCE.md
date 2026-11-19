@@ -18,60 +18,67 @@ projection. Re-run the commands below on your machine before comparing figures.
 2. Start `target\release\soundy.exe`, leave the window restored at 936×648 and do not minimize it.
    A minimized window lets Windows trim the working set and understates idle memory.
 3. Record the profile state with the numbers; a signed-in profile with imported playlists is not
-   the same as a fresh one. This run used a guest YouTube Music session with no local folders and
-   one imported playlist (`import-test`, five rows, four playable).
+   the same as a fresh one. Two profiles were measured: a fresh install with no account, no local
+   folders and no imports, and the maintainer's populated profile with a signed-in YouTube Music
+   session, two imported playlists (276 rows) and a small playback history.
 4. Sample `Get-Process` once a second and report the settled figure, not the lowest sample. The
    tables below use a 60-second window after the window has settled.
 5. For playback, play a provider stream for 60 seconds, then pause and sample again. Local-file
-   playback was not measured on this profile because it has no local folder configured.
+   playback was not measured because neither profile had a local folder configured.
 6. Record the executable size with `Get-Item target\release\soundy.exe`.
 7. Record startup as the time from `Start-Process` to the first non-zero `MainWindowHandle`, not
-   from log timestamps. Poll with a 5 ms sleep and take the median of three runs.
+   from log timestamps. Poll with a 5 ms sleep and take the median of five runs.
 
 The measurement script is in `scripts/measure-soundy.ps1`.
 
 ## Results
 
 Measured on Windows 11 x64 with the 1.0.0 release executable built from this tree on
-18 November 2026 (`soundy.exe`, 91,254,784 bytes,
-SHA-256 `FBEA4A63A1B6C4D5C1F8FAE4F12F751D1384C7D77A76B13ACFFD9DE8D81A8CCD`).
+19 November 2026 (`soundy.exe`, 90,808,320 bytes,
+SHA-256 `29FC0319B999ECBAF878168135218DF6622C058D242DADB0A19638B15258CB24`).
 
-| State | Working set | Private commit | CPU over 60 s | Threads | Handles |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Fresh launch, Home, 5 s after start | 110.2 MB | 93.1 MB | — | — | — |
-| Fresh launch, Home, settled 60 s | 110.1 MB | 98.7 MB | 0.344 s (≈0.6% of one core) | 42 | 1,312 |
-| Playing a YouTube Music stream (130 kbps AAC) | 119.9 MB | 99.4 MB | 1.969 s (≈3.3% of one core) | 41 | 1,316 |
-| Paused after that stream | 119.9 MB | 105.2 MB | 0.391 s (≈0.7% of one core) | 41 | 1,316 |
+| State | Working set | Private commit | CPU over 60 s |
+| --- | ---: | ---: | ---: |
+| Fresh profile, Home, settled 60 s | 104.0 MB | 87.8 MB | 0.374 s (≈0.6% of one core) |
+| Populated profile, Home, settled 60 s | 119.9 MB | 100.9 MB | 0.405 s (≈0.7% of one core) |
+| Populated profile, playing a YouTube Music stream | 124.5 MB | 107.6 MB | 0.933 s (≈1.6% of one core) |
+| Paused after that stream | 124.5 MB | 107.5 MB | 0.218 s over 45 s (≈0.5% of one core) |
 
-Startup to first visible window, three cold launches of the same binary: **237 ms, 195 ms,
-213 ms** (median 213 ms). The window appears before the provider home request resolves; the
-shelves fill in afterwards without blocking input.
+Startup to first visible window, five cold launches of the same binary: **213 ms, 188 ms,
+181 ms, 205 ms, 197 ms** (median 197 ms). The window appears before the provider home request
+resolves; the shelves fill in afterwards without blocking input.
 
-The working set is flat across the 60-second samples (±0.2 MB), which is the useful signal for a
-leak: no growth appeared while idle or while streaming. The private commit moved between 93 and
-105 MB depending on which artwork and stream buffers were live, then stayed flat.
+The working set is flat across the samples (±0.3 MB), which is the useful signal for a leak: no
+growth appeared while idle or while streaming. The settled difference between the two profiles,
+about 16 MB, is the signed-in provider session, the two imported playlists and the populated Home
+shelves; it is not the importer running, since the importer is inactive while idle.
 
 ### Against the target
 
-The brief asked for idle memory below 100 MB "where realistic". The result is split:
+The brief asked for idle memory below 100 MB "where realistic". The result depends on the
+profile:
 
-- **Private commit is under 100 MB** when idle (98.7 MB fresh, 93.1 MB shortly after launch).
-- **Working set is about 110 MB**, so the literal 100 MB resident target is missed by roughly
-  10 MB.
+- **Fresh profile:** private commit is 87.8 MB, under the 100 MB target. Working set is 104.0 MB,
+  about 4 MB over the literal resident target.
+- **Populated profile:** private commit is 100.9 MB and working set is 119.9 MB, so both are
+  above the target once a provider session and imported playlists are live. Streaming adds about
+  5 MB working and 7 MB private on top of that.
 
-The gap is the baseline cost of GPUI rendering through `wgpu` on DX12: the swapchain, the shader
-and pipeline caches, font and image atlases, and the GPU driver's allocations all count toward
-the process. It is not the importer, the database or the library. Reaching sub-100 MB resident
+The baseline cost is GPUI rendering through `wgpu` on DX12: the swapchain, shader and pipeline
+caches, font and image atlases, and the GPU driver's allocations all count toward the process.
+The remaining profile-dependent cost is the signed-in provider session and the imported library
+data held for instant search and navigation. Reaching sub-100 MB resident in a populated profile
 would need a smaller renderer or a different windowing stack, not tuning of Soundy's own data
 structures.
 
-CPU is close to the renderer's floor: 0.6% of one core averaged over a minute while idle, and
-about 3.3% while decoding and playing a stream, not a polling loop. Startup is fast because
-there is no WebView2 process and no JavaScript boot for the default local/provider path.
+CPU is close to the renderer's floor: about 0.6–0.7% of one core averaged over a minute while
+idle, and about 1.6% while decoding and playing a stream, not a polling loop. Startup is fast
+because there is no WebView2 process and no JavaScript boot for the default local/provider path.
 
-An earlier run of a different build and profile reported 111.7 MB idle RSS with a 100.0 MB
-private working set and a 193 ms median startup. Those numbers are superseded by the table above;
-they are kept here only so older notes are not mistaken for current measurements.
+An earlier build (91,254,784 bytes) measured 110.1 MB working / 98.7 MB private on a lighter
+profile with a guest session and one five-row imported playlist, with a 213 ms median startup.
+Those numbers are superseded by the table above; they are kept here only so older notes are not
+mistaken for current measurements.
 
 ## What keeps it bounded
 

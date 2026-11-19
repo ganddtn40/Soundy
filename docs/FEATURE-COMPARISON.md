@@ -53,8 +53,8 @@ Sonora. **Partial** — present with a stated limit. **No** — not present.
 | Windows installer | Yes | Yes | Yes | Inno Setup, `dist\Soundy-1.0.0-Setup.exe` |
 | Portable build | Yes | No | If practical | `dist\Soundy-1.0.0-Portable.zip` |
 | Code signing | No | Upstream policy | No certificate | Unsigned local build; SmartScreen may warn |
-| Idle memory below 100 MB | No | Not measured here | Yes | 110.1 MB working set, 98.7 MB private commit; resident target missed, commit under it. See `PERFORMANCE.md` |
-| Idle CPU near zero | Yes | Not measured here | Yes | 0.344 s of CPU per 60 s idle (≈0.6% of one core) |
+| Idle memory below 100 MB | No | Not measured here | Yes | 104.0 MB working / 87.8 MB private on a fresh profile; 119.9 / 100.9 MB populated. Resident target missed; private commit under 100 MB fresh only. See `PERFORMANCE.md` |
+| Idle CPU near zero | Yes | Not measured here | Yes | 0.37–0.41 s of CPU per 60 s idle (≈0.6–0.7% of one core) |
 | No background polling | Yes | Yes | Yes | No polling loops; import progress timer only while active |
 
 ## What "unified" means in this build

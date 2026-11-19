@@ -133,13 +133,14 @@ does not stop playback. This is a deliberate layout choice, not a hidden control
 
 ### Idle working set misses the 100 MB target
 
-The shipped binary settles at **110.1 MB working set with a 98.7 MB private commit** when idle at
-936×648, measured over 60 seconds on a profile with one imported playlist and a guest YouTube
-Music session. Private commit is under the 100 MB target; resident memory is about 10 MB over
-it. Streaming measured 119.9 MB working / 99.4 MB private. The gap is the GPUI/`wgpu` window,
-font and image atlases, not the importer or database. Both figures were flat across the sample,
-so this is a baseline, not a leak. See `PERFORMANCE.md` for the method and raw numbers, and note
-that the older 111.7 MB figure was from a different build and profile.
+The shipped binary settles at **104.0 MB working set with an 87.8 MB private commit** on a fresh
+profile at 936×648, measured over 60 seconds with no account, local folders or imports. With the
+maintainer's populated profile (signed-in YouTube Music, two imported playlists covering 276 rows)
+it settles at **119.9 MB / 100.9 MB**, and streaming measures 124.5 MB / 107.6 MB. The 100 MB
+target is met by private commit on a fresh profile only; resident memory is 4 MB over there and
+higher once a library and provider session are live. The gap is the GPUI/`wgpu` window, font and
+image atlases plus the in-memory library data, not a leak: both profiles were flat across the
+sample. See `PERFORMANCE.md` for the method and raw numbers.
 
 ### New labels fall back to English outside en-US
 
