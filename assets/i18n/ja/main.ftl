@@ -615,7 +615,7 @@ settings-discord = Discord に表示
 settings-discord-detail = 再生中の曲を Discord のプロフィールに表示する
 settings-discord-name = ステータス名
 settings-discord-name-detail = フレンドに見える「再生中」の後に続くステータスの名前
-settings-discord-name-sonora = Sonora
+settings-discord-name-sonora = Soundy
 settings-discord-name-provider = サービス
 settings-discord-name-music = 音楽
 settings-discord-name-title = タイトル
@@ -638,7 +638,7 @@ settings-discord-preview-elapsed = { $time } 経過
 settings-discord-preview-listen-on = { $provider } で聴く
 # the Discord status when the track is left out of it
 discord-listening = 音楽を再生中
-get-sonora = Sonora を入手
+get-sonora = Soundy を入手
 settings-fullscreen-controls-autohide-automatic = 自動
 settings-fullscreen-controls-autohide-always-hidden = 常に隠す
 settings-fullscreen-controls-autohide-always-shown = 常に表示

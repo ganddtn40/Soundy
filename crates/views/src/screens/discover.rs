@@ -106,7 +106,7 @@ impl DiscoverView {
     }
 
     fn empty(&self, cx: &Context<Self>) -> AnyElement {
-        let connected = state::Sonora::global(cx).session.read(cx).authenticated();
+        let connected = state::Soundy::global(cx).session.read(cx).authenticated();
 
         let vacancy = Vacancy::new(t!("discover-empty"))
             .detail(t!("discover-empty-detail"))

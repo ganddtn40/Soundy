@@ -1,9 +1,9 @@
-//! Sonora as a Spotify Connect device. It tells Spotify what plays, so Spotify's apps and
+//! Soundy as a Spotify Connect device. It tells Spotify what plays, so Spotify's apps and
 //! Discord show it, takes the commands their controls send, and lists and drives the account's
 //! other devices.
 //!
 //! librespot's own `Spirc` does the same but wants to own the queue, so this speaks the same
-//! protocol straight through the session's dealer and spclient and leaves the queue to Sonora.
+//! protocol straight through the session's dealer and spclient and leaves the queue to Soundy.
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash as _, Hasher as _};
@@ -1289,7 +1289,7 @@ impl Worker {
     }
 
     /// Starts what another device asked to play. A phone names the song by its uid alone, and a
-    /// jam names a context Sonora cannot read itself. Both send no tracks along, so the context
+    /// jam names a context Soundy cannot read itself. Both send no tracks along, so the context
     /// is read back first to find the song and what follows it.
     fn play(&self, mut play: PlayCommand) {
         let uri = play.context.uri.clone();
@@ -2233,7 +2233,7 @@ fn started_by_transfer(state: TransferState, now: i64) -> Start {
     }
 }
 
-/// Whether a play command names a context that Sonora has no collection to read back, such as a
+/// Whether a play command names a context that Soundy has no collection to read back, such as a
 /// jam, so its tracks can only come from the context itself.
 fn collection_is_unread(play: &PlayCommand) -> bool {
     play.context

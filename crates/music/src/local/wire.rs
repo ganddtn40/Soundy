@@ -1051,7 +1051,7 @@ mod tests {
     #[test]
     fn cache_image_data_deduplication_and_empty() {
         let temp = std::env::temp_dir().join(format!(
-            "sonora-img-test-{}",
+            "soundy-img-test-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -1077,7 +1077,7 @@ mod tests {
             return;
         }
         let temp = std::env::temp_dir().join(format!(
-            "sonora-webm-test-{}",
+            "soundy-webm-test-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -1109,7 +1109,7 @@ mod tests {
 
     #[test]
     fn a_track_is_dated_by_the_file_it_came_from() {
-        let dir = scratch("sonora-wire-test-dated");
+        let dir = scratch("soundy-wire-test-dated");
         let path = dir.join("song.mp3");
         std::fs::write(&path, []).unwrap();
 
@@ -1124,7 +1124,7 @@ mod tests {
 
     #[test]
     fn an_album_is_dated_by_its_newest_track() {
-        let dir = scratch("sonora-wire-test-album-dated");
+        let dir = scratch("soundy-wire-test-album-dated");
         let path = dir.join("song.mp3");
         std::fs::write(&path, []).unwrap();
 
@@ -1151,7 +1151,7 @@ mod tests {
 
     #[test]
     fn a_missing_file_has_no_date() {
-        let dir = scratch("sonora-wire-test-missing");
+        let dir = scratch("soundy-wire-test-missing");
         assert_eq!(modified_at(&dir.join("gone.mp3")), None);
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -1162,7 +1162,7 @@ mod tests {
         use std::os::windows::ffi::OsStringExt;
 
         log::set_max_level(log::LevelFilter::Warn);
-        let dir = scratch("sonora-wire-test-not-unicode");
+        let dir = scratch("soundy-wire-test-not-unicode");
         let name = std::ffi::OsString::from_wide(&[0xd800, 0x2e, 0x6d, 0x70, 0x33]);
         let path = dir.join(name);
         std::fs::write(&path, b"ID3\x04\x00\x00\x00\x00\x00\x00").unwrap();
@@ -1173,7 +1173,7 @@ mod tests {
 
     #[test]
     fn the_release_type_comes_from_the_tags() {
-        let dir = scratch("sonora-wire-test-release-type");
+        let dir = scratch("soundy-wire-test-release-type");
         let cases = [
             (
                 "ep.flac",

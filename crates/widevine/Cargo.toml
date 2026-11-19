@@ -3,6 +3,7 @@ name = "widevine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [features]
 # The host for the CDM. Off by default: it compiles the C++ shim under `shim/`, which wants a

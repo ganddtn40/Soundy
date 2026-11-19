@@ -151,7 +151,7 @@ enum Sub {
         /// A provider as `soundy providers` lists it, such as `spotify`.
         slug: Option<String>,
     },
-    /// Print the Sonora Session Soundy is in, or start, join or leave one.
+    /// Print the Soundy Session Soundy is in, or start, join or leave one.
     Session {
         #[command(subcommand)]
         action: Option<SessionSub>,
@@ -160,7 +160,7 @@ enum Sub {
     Completions { shell: Shell },
 }
 
-/// What `soundy session` does with a Sonora Session.
+/// What `soundy session` does with a Soundy Session.
 #[derive(Subcommand)]
 enum SessionSub {
     /// Start a session on the current provider and print its code.
@@ -235,8 +235,8 @@ enum RepeatArg {
 }
 
 /// Reads the command line, `args` including the program name, with `version` for `--version`.
-/// A mistake in a subcommand is refused. Any other, such as a flag a launcher added that Sonora
-/// does not know, leaves the flags out and keeps the rest as things to open, so Sonora still
+/// A mistake in a subcommand is refused. Any other, such as a flag a launcher added that Soundy
+/// does not know, leaves the flags out and keeps the rest as things to open, so Soundy still
 /// starts.
 pub fn parse(args: Vec<OsString>, version: &'static str) -> Result<CommandType, Refusal> {
     let mut command = Args::command().version(version);

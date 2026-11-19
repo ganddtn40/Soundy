@@ -5,7 +5,7 @@ use anyhow::{Context as _, Result, anyhow, bail};
 use crate::youtube::YouTubeProvider;
 use crate::{MusicApi, MusicProvider, Playlist, ProviderSession};
 
-const NAME: &str = "Sonora live ownership test - safe to delete";
+const NAME: &str = "Soundy live ownership test - safe to delete";
 const QUERY: &str = "Rick Astley Never Gonna Give You Up";
 const VERIFY_ATTEMPTS: usize = 30;
 
@@ -89,7 +89,7 @@ async fn connected(provider: &dyn MusicProvider) -> Result<ProviderSession> {
     let session = provider
         .restore()
         .await?
-        .with_context(|| format!("{} has no stored Sonora session", provider.name()))?;
+        .with_context(|| format!("{} has no stored Soundy session", provider.name()))?;
     if !session.authenticated {
         bail!(
             "{} restored a guest session, not an account",

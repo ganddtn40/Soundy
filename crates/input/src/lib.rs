@@ -16,7 +16,7 @@ pub use shortcuts::{
 };
 
 actions!(
-    sonora,
+    soundy,
     [
         Quit,
         SignOut,

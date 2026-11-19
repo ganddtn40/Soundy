@@ -640,7 +640,7 @@ settings-discord = Discord'da göster
 settings-discord-detail = Dinlediğin parçayı Discord profilinde göster
 settings-discord-name = Durum adı
 settings-discord-name-detail = Arkadaşlarının gördüğü "Dinliyor" ifadesinden sonra durumun adı
-settings-discord-name-sonora = Sonora
+settings-discord-name-sonora = Soundy
 settings-discord-name-provider = Servis
 settings-discord-name-music = Müzik
 settings-discord-name-title = Başlık
@@ -663,7 +663,7 @@ settings-discord-preview-elapsed = { $time } geçti
 settings-discord-preview-listen-on = { $provider } üzerinde dinle
 # the Discord status when the track is left out of it
 discord-listening = Müzik dinliyor
-get-sonora = Sonora'yı edin
+get-sonora = Soundy'yi edin
 settings-fullscreen-controls-autohide-automatic = Otomatik
 settings-fullscreen-controls-autohide-always-hidden = Her zaman gizli
 settings-fullscreen-controls-autohide-always-shown = Her zaman görünür

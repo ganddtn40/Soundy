@@ -997,7 +997,7 @@ impl Queue {
             .map(|entry| entry.track.as_ref())
     }
 
-    /// Makes `tracks` what plays after the current track, as a Sonora Session shares it. Local
+    /// Makes `tracks` what plays after the current track, as a Soundy Session shares it. Local
     /// files and suggestions are never shared, so the ones here stay after them.
     pub(crate) fn share_upcoming(&mut self, tracks: Vec<Track>, cx: &mut Context<Self>) {
         let origin = self.origin().cloned();

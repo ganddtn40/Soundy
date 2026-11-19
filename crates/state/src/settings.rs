@@ -42,14 +42,14 @@ use crate::equalizer::DeviceRule;
 use crate::pins::PinSort;
 use crate::queue::{Resume, gap_target};
 use crate::updates::{Channel, updates_itself};
-use crate::{Hit, Outcome, Repeat, Sonora, Toasts};
+use crate::{Hit, Outcome, Repeat, Soundy, Toasts};
 
-/// How Sonora is named on the device list of the provider's apps. `Both` is the app's name with
+/// How Soundy is named on the device list of the provider's apps. `Both` is the app's name with
 /// the computer's in brackets, so two machines on one account tell apart.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ConnectName {
-    Sonora,
+    Soundy,
     #[default]
     Both,
     Computer,
@@ -57,11 +57,11 @@ pub enum ConnectName {
 }
 
 impl ConnectName {
-    pub const ALL: [Self; 4] = [Self::Sonora, Self::Both, Self::Computer, Self::Custom];
+    pub const ALL: [Self; 4] = [Self::Soundy, Self::Both, Self::Computer, Self::Custom];
 
     pub fn id(self) -> &'static str {
         match self {
-            Self::Sonora => "sonora",
+            Self::Soundy => "sonora",
             Self::Both => "both",
             Self::Computer => "computer",
             Self::Custom => "custom",
@@ -70,7 +70,7 @@ impl ConnectName {
 
     pub fn key(self) -> &'static str {
         match self {
-            Self::Sonora => "settings-spotify-connect-name-soundy",
+            Self::Soundy => "settings-spotify-connect-name-soundy",
             Self::Both => "settings-spotify-connect-name-both",
             Self::Computer => "settings-spotify-connect-name-computer",
             Self::Custom => "settings-spotify-connect-name-custom",
@@ -85,7 +85,7 @@ impl ConnectName {
 #[serde(rename_all = "kebab-case")]
 pub enum DiscordName {
     #[default]
-    Sonora,
+    Soundy,
     Provider,
     Music,
     Title,
@@ -96,7 +96,7 @@ pub enum DiscordName {
 
 impl DiscordName {
     pub const ALL: [Self; 7] = [
-        Self::Sonora,
+        Self::Soundy,
         Self::Provider,
         Self::Music,
         Self::Title,
@@ -107,7 +107,7 @@ impl DiscordName {
 
     pub fn id(self) -> &'static str {
         match self {
-            Self::Sonora => "sonora",
+            Self::Soundy => "sonora",
             Self::Provider => "provider",
             Self::Music => "music",
             Self::Title => "title",
@@ -119,7 +119,7 @@ impl DiscordName {
 
     pub fn key(self) -> &'static str {
         match self {
-            Self::Sonora => "settings-discord-name-sonora",
+            Self::Soundy => "settings-discord-name-sonora",
             Self::Provider => "settings-discord-name-provider",
             Self::Music => "settings-discord-name-music",
             Self::Title => "settings-discord-name-title",
@@ -179,7 +179,7 @@ pub enum SideTab {
     #[default]
     Queue,
     Lyrics,
-    /// The people in the Sonora Session or Spotify Jam the listener is in.
+    /// The people in the Soundy Session or Spotify Jam the listener is in.
     Members,
 }
 
@@ -351,7 +351,7 @@ const DEFAULT_LYRICS_SCALE: f32 = 1.;
 const DEFAULT_STARTUP: &str = "home";
 /// "Whatever the platform uses".
 pub const SYSTEM_FONT: &str = "auto";
-/// Every lyrics source Sonora knows by the name its provider reports, in the order a fresh
+/// Every lyrics source Soundy knows by the name its provider reports, in the order a fresh
 /// install prefers them.
 pub const LYRICS_SOURCES: [&str; 10] = [
     LOCAL,
@@ -397,11 +397,11 @@ struct Values {
     keep_tracks: bool,
     /// How many gigabytes the cache of played tracks may take. Downloads do not count.
     cache_gb: u32,
-    /// Whether the listener put Sonora offline, so it shows and plays only what was downloaded
+    /// Whether the listener put Soundy offline, so it shows and plays only what was downloaded
     /// until they go online again.
     offline_mode: bool,
     equalizer: bool,
-    /// The ten band gains an older Sonora saved. Read once to seed the profiles when there are
+    /// The ten band gains an older Soundy saved. Read once to seed the profiles when there are
     /// none, never written back, and read leniently like the keys that replaced it.
     #[serde(skip_serializing, deserialize_with = "equalizer::read_gains")]
     equalizer_bands: Vec<f32>,
@@ -432,9 +432,9 @@ struct Values {
     spotify_connect_custom_name: String,
     /// Whether the player bar shows the Sessions button.
     sessions_button: bool,
-    /// Whether Sonora Sessions go through the official server rather than `sessions_server`.
+    /// Whether Sessions go through the public community server rather than `sessions_server`.
     sessions_official: bool,
-    /// The WebSocket address of the Sonora Sessions server to use instead of the official one.
+    /// The WebSocket address of the Sessions server to use instead of the community one.
     sessions_server: String,
     discord_presence: bool,
     discord_name: DiscordName,
@@ -454,7 +454,7 @@ struct Values {
     /// The sample rate to open the output device at, in hertz, or `None` for the rate it runs
     /// at. A device that does not offer it opens at its own.
     output_rate: Option<u32>,
-    /// The buffer to ask the output device for, in frames, or `None` for Sonora's own. A device
+    /// The buffer to ask the output device for, in frames, or `None` for Soundy's own. A device
     /// that does not allow it gets the nearest it does.
     output_buffer: Option<u32>,
     /// Whether a direct output device is switched to the sample rate of each track that plays.
@@ -729,7 +729,7 @@ impl Default for Values {
             sessions_official: true,
             sessions_server: String::new(),
             discord_presence: false,
-            discord_name: DiscordName::Sonora,
+            discord_name: DiscordName::Soundy,
             discord_show_paused: false,
             discord_badge: false,
             discord_without_details: false,
@@ -787,7 +787,7 @@ impl Default for Values {
 }
 
 impl Values {
-    /// The values as they are used, with whatever a hand edit or an older Sonora left settled.
+    /// The values as they are used, with whatever a hand edit or an older Soundy left settled.
     fn settled(mut self) -> Self {
         self.settle_equalizer();
         self
@@ -1123,17 +1123,17 @@ impl AppSettings {
         self.values.offline_mode
     }
 
-    /// Whether Sonora shows up as a Spotify Connect device while a Spotify account is signed in.
+    /// Whether Soundy shows up as a Spotify Connect device while a Spotify account is signed in.
     pub fn spotify_connect(&self) -> bool {
         self.values.spotify_connect
     }
 
-    /// How Sonora is named in the device list of Spotify's apps.
+    /// How Soundy is named in the device list of Spotify's apps.
     pub fn spotify_connect_name(&self) -> ConnectName {
         self.values.spotify_connect_name
     }
 
-    /// The name Sonora goes by in that list when it is `ConnectName::Custom`.
+    /// The name Soundy goes by in that list when it is `ConnectName::Custom`.
     pub fn spotify_connect_custom_name(&self) -> &str {
         &self.values.spotify_connect_custom_name
     }
@@ -1143,7 +1143,7 @@ impl AppSettings {
         self.values.sessions_button
     }
 
-    /// Whether Sonora Sessions go through the official server.
+    /// Whether Sessions go through the public community server.
     pub fn sessions_official(&self) -> bool {
         self.values.sessions_official
     }
@@ -1184,8 +1184,8 @@ impl AppSettings {
         self.values.discord_without_details
     }
 
-    /// Whether the Discord status carries a button that opens the Sonora project page.
-    pub fn discord_sonora_button(&self) -> bool {
+    /// Whether the Discord status carries a button that opens the Soundy project page.
+    pub fn discord_soundy_button(&self) -> bool {
         self.values.discord_sonora_button
     }
 
@@ -1539,7 +1539,7 @@ impl AppSettings {
         }
     }
 
-    /// Whether the visualizer ignores Sonora's volume and draws the track at its own level.
+    /// Whether the visualizer ignores Soundy's volume and draws the track at its own level.
     pub fn visualizer_absolute(&self) -> bool {
         self.values.appearance.visualizer_absolute
     }
@@ -1858,7 +1858,7 @@ impl AppSettings {
         self.schedule_save(cx);
     }
 
-    pub fn set_discord_sonora_button(&mut self, enabled: bool, cx: &mut Context<Self>) {
+    pub fn set_discord_soundy_button(&mut self, enabled: bool, cx: &mut Context<Self>) {
         self.values.discord_sonora_button = enabled;
         self.schedule_save(cx);
     }
@@ -2988,7 +2988,7 @@ impl AppSettings {
 
 /// The saved window frame and its display, if its centre still lands on a connected display.
 pub fn window_placement(least: Size<Pixels>, cx: &App) -> Option<(WindowBounds, DisplayId)> {
-    let frame = Sonora::global(cx).settings.read(cx).state.window?;
+    let frame = Soundy::global(cx).settings.read(cx).state.window?;
     if !frame.sane() {
         return None;
     }
@@ -3003,7 +3003,7 @@ pub fn window_placement(least: Size<Pixels>, cx: &App) -> Option<(WindowBounds, 
 
 /// Starts saving the window frame for the next launch.
 pub fn remember_window(window: &mut Window, cx: &mut App) {
-    let settings = Sonora::global(cx).settings.clone();
+    let settings = Soundy::global(cx).settings.clone();
     settings.update(cx, |settings, cx| settings.watch_window(window, cx));
 }
 
@@ -3154,7 +3154,7 @@ fn absolute_path(path: &Path) -> PathBuf {
         .unwrap_or_else(|_| path.to_owned())
 }
 
-/// Keeps the previous valid settings in `sonora.backup.json` before saving a new version.
+/// Keeps the previous valid settings in `soundy.backup.json` before saving a new version.
 /// Unchanged saves and empty or broken previous files leave the backup alone. The caller must
 /// check that `previous` still matches the last contents it accepted from disk.
 fn save_settings(path: &Path, bytes: &[u8], previous: Option<&[u8]>) -> Result<()> {

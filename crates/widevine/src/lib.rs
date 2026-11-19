@@ -3,7 +3,7 @@
 //! Nothing here is about one service. A provider that streams CENC audio needs the same five
 //! things, and they are all this crate does:
 //!
-//! - [`find`] settles which CDM this process uses: one the user named, one in Sonora's own
+//! - [`find`] settles which CDM this process uses: one the user named, one in Soundy's own
 //!   store, or one a browser on the machine has. [`offer`] and [`Offer::install`] put one into
 //!   that store from Google's component update service, the way Chrome and Kodi get theirs,
 //!   with Google's terms shown in between. Google publishes nothing anyone may redistribute,
@@ -51,7 +51,7 @@ pub const CDM_PATH: &str = "SOUNDY_WIDEVINE_CDM";
 /// the download on a machine that has a browser's copy.
 pub const SKIP_BROWSERS: &str = "SOUNDY_WIDEVINE_SKIP_BROWSERS";
 
-/// The argument that starts the Sonora executable as the CDM host rather than the app. The
+/// The argument that starts the Soundy executable as the CDM host rather than the app. The
 /// module path follows it.
 pub const HOST_ARG: &str = "--widevine-host";
 

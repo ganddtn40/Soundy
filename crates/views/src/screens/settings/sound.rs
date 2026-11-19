@@ -80,7 +80,7 @@ impl SettingsView {
         )
     }
 
-    /// The rate the device runs at. Where Sonora can open the device at other rates it steps
+    /// The rate the device runs at. Where Soundy can open the device at other rates it steps
     /// through them, otherwise it offers a way into the system's own settings where there is one.
     /// The row keeps its shape while the stream reopens, showing the rate it reopens at.
     pub(super) fn sample_rate_row(&self, cx: &mut Context<Self>) -> AnyElement {
@@ -174,7 +174,7 @@ impl SettingsView {
         .into_any_element()
     }
 
-    /// The buffer Sonora asks the device for, in frames, with the buffers the device allows to
+    /// The buffer Soundy asks the device for, in frames, with the buffers the device allows to
     /// step through. The row keeps its shape while the stream reopens, showing the buffer it
     /// reopens with.
     pub(super) fn buffer_row(&self, cx: &mut Context<Self>) -> AnyElement {

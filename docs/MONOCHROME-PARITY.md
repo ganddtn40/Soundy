@@ -27,12 +27,12 @@ Soundy has no Tauri, no JavaScript runtime, no embedded web UI and no second pla
 
 | Monochrome feature | Monochrome source | Soundy status | Soundy location / notes |
 | --- | --- | --- | --- |
-| One-window desktop shell | `src-tauri`, `index.html` | **Native** | GPUI window; `crates/sonora`, `crates/views` |
+| One-window desktop shell | `src-tauri`, `index.html` | **Native** | GPUI window; `crates/soundy`, `crates/views` |
 | Left sidebar navigation | `index.html` sidebar, `js/router.js` | **Native** | `crates/views/src/chrome/sidebar_left.rs`; Home, Search, Recents, Songs, Albums, Artists, Playlists, Downloads, Favorites. Settings opens from the title bar |
 | Collapsible sidebar / icon rail | `themeStore.js`, sidebar CSS | **Native** | Sidebar width drag, fold and persisted state in `state::Settings` |
 | Hide or show individual nav rows | `Show … in Sidebar` settings | **Native** | Settings → Entries (`crates/views/src/screens/settings/general.rs`); every row is regular and hideable |
 | Pinned playlists/albums/artists | `renderPinnedItems`, `pinned` state | **Native** | `crates/state/src/pins.rs`, drag list in `sidebar_left.rs` |
-| Right side panel | `js/side-panel.js` | **Partial** | `crates/views/src/chrome/aside.rs` provides Lyrics and Queue, plus Members inside a Sonora Session. Monochrome's Info and Related tabs are not present |
+| Right side panel | `js/side-panel.js` | **Partial** | `crates/views/src/chrome/aside.rs` provides Lyrics and Queue, plus Members inside a Session. Monochrome's Info and Related tabs are not present |
 | Fullscreen now-playing view | `js/ui.js` fullscreen renderer | **Native** | `crates/views/src/shells/fullscreen.rs`; large artwork, artwork palette background, transport, modes, Escape |
 | Windowed / fullscreen / immersive modes | fullscreen CSS classes | **Native** | `ToggleWindowFullscreen`, `ToggleFullscreen`, fullscreen shell; persisted per session |
 | Command palette | `js/commandPalette.js` | **Not integrated** | Destination search covers navigation; there is no fuzzy action palette over every command |
@@ -70,7 +70,7 @@ Soundy has no Tauri, no JavaScript runtime, no embedded web UI and no second pla
 | Mix pages | `renderMixPage` | **Partial** | Provider playlist/mix rows render as ordinary playlists; no dedicated mix page |
 | Uploaded tracks | upload API | **Not integrated** | No Monochrome upload backend |
 | Podcasts browse/search/episodes | `podcasts-api.js`, `renderPodcasts*` | **Not integrated** | No podcast catalogue or episode feed is exposed by the wired providers; YouTube's saved-episode shelf was deliberately rejected as a fake catalogue. Nav has no dead Podcasts row |
-| Listening parties | `listening-party.js`, `party-socket.js` | **Equivalent, separate** | Sonora Sessions (opt-in server, player-bar button, Members panel); not interoperable with Monochrome's party protocol |
+| Listening parties | `listening-party.js`, `party-socket.js` | **Equivalent, separate** | Sessions (opt-in server, player-bar button, Members panel); not interoperable with Monochrome's party protocol |
 
 ## Playback and audio
 
@@ -109,7 +109,7 @@ Soundy has no Tauri, no JavaScript runtime, no embedded web UI and no second pla
 | Lyrics side panel | side panel | **Native** | Aside → Lyrics, pinned/follow behaviour |
 | Queue panel and reorder | queue UI | **Native** | Aside → Queue; drag reorder, reset, clear, radio |
 | Queue radio | player radio | **Native** | Queue header toggle when the provider offers stations |
-| Members panel | parties | **Native** | Shown only inside a Sonora Session; Spotify Jam members are provider-driven |
+| Members panel | parties | **Native** | Shown only inside a Session; Spotify Jam members are provider-driven |
 | Track info / credits panel | metadata UI | **Not integrated** | No dedicated Info tab; metadata is shown in rows, player bar and detail pages |
 | Related tracks/albums panel | recommendations | **Not integrated** | Related content is not a panel; discovery lives in Home/Discover |
 
@@ -133,7 +133,7 @@ Soundy has no Tauri, no JavaScript runtime, no embedded web UI and no second pla
 | Monochrome feature | Monochrome source | Soundy status | Soundy location / notes |
 | --- | --- | --- | --- |
 | Multiple themes | `themeStore.js` | **Native** | Settings → Appearance; built-in themes and theme links |
-| Community theme gallery | community site | **Equivalent** | "Explore community themes" opens sonorahq.org; install links are handled natively |
+| Community theme gallery | community site | **Equivalent** | "Explore community themes" opens the upstream community gallery; install links are handled natively |
 | Custom theme colours | custom theme | **Native** | Theme editor and `ui::Theme` |
 | Accent / dynamic colours | `vibrant-color.js` | **Native** | Emerald accent; artwork-derived ambient colour in fullscreen/aside |
 | Album-cover background | appearance setting | **Partial** | Artwork palette drives the fullscreen/ambient background; the whole app does not paint the cover behind every page |

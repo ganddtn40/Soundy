@@ -10,7 +10,7 @@ use gpui::{
 };
 use i18n::t;
 use music::GenreItem;
-use state::{Home, Network, Playback, Sonora};
+use state::{Home, Network, Playback, Soundy};
 use ui::{ActiveTheme as _, Button, Lazy, Mode, Popup, Scrollbar, Scroller, Vacancy};
 
 use crate::shared::cells;
@@ -70,7 +70,7 @@ impl HomeView {
         let chrome = Chrome::entity(cx);
         cx.observe(&chrome, |_, _, cx| cx.notify()).detach();
 
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
 
         let shelves = cx.new(|_| Shelves::new("home-shelf", me, playback.clone()));

@@ -7,7 +7,7 @@ use gpui::{AnyElement, App, Entity, SharedString, TextAlign};
 use i18n::t;
 use music::Album;
 use state::{
-    Collection, Library, LibraryPart, LibraryState, Network, Origin, Playback, Shelf, Sonora,
+    Collection, Library, LibraryPart, LibraryState, Network, Origin, Playback, Shelf, Soundy,
 };
 use ui::rank::{HANDY, NICE, SPARE, USEFUL};
 use ui::{Cell, ColumnSpec, Menu, Pin, Sort, TableSource, Width};
@@ -282,7 +282,7 @@ impl TableSource for AlbumSource {
             }));
         }
         // Offline mode already keeps the shelf to its downloads, so the filter would do nothing.
-        let offered = self.downloaded || !Sonora::global(cx).downloads.read(cx).is_empty();
+        let offered = self.downloaded || !Soundy::global(cx).downloads.read(cx).is_empty();
         if offered && !self.downloads_only(cx) {
             axes.push(Filter::Flag(FlagAxis {
                 key: "filter-downloaded",
@@ -478,7 +478,7 @@ fn year(album: &Album) -> String {
 
 /// Whether an album was downloaded whole, or is on its way.
 fn downloaded(id: &str, cx: &App) -> bool {
-    Sonora::global(cx)
+    Soundy::global(cx)
         .downloads
         .read(cx)
         .set(Collection::Album, id)

@@ -96,11 +96,11 @@ mod tests {
 
     #[test]
     fn header_names_the_client_and_carries_the_token() {
-        let header = header("desk top", "sonora-1", Some("abc123"));
+        let header = header("desk top", "soundy-1", Some("abc123"));
         assert_eq!(
             header,
             format!(
-                "MediaBrowser Client=\"Soundy\", Device=\"desk%20top\", DeviceId=\"sonora-1\", \
+                "MediaBrowser Client=\"Soundy\", Device=\"desk%20top\", DeviceId=\"soundy-1\", \
                  Version=\"{}\", Token=\"abc123\"",
                 env!("CARGO_PKG_VERSION")
             )

@@ -31,7 +31,7 @@ const LOOKUPS: usize = 4;
 /// it could not reach keep the honest placeholder and are counted.
 pub const MAX_ALBUM_LOOKUPS: usize = 160;
 /// The most distinct recordings one import will search for after the album pass.
-pub const MAX_TRACK_LOOKUPS: usize = 80;
+pub const MAX_TRACK_LOOKUPS: usize = 120;
 /// A cover larger than this is not needed for a collage tile and is not downloaded.
 const MAX_COVER_BYTES: usize = 6 * 1024 * 1024;
 const SEARCH_LIMIT: &str = "10";
@@ -45,6 +45,8 @@ pub struct Report {
     pub covers: usize,
     /// Rows whose missing length was filled in.
     pub durations: usize,
+    /// Rows whose missing album name was filled in.
+    pub albums: usize,
     /// Lookups that returned nothing that matched.
     pub failed: usize,
     /// Albums or recordings left alone because the request cap was reached.
@@ -54,7 +56,7 @@ pub struct Report {
 impl Report {
     /// The number of rows the pass touched in any way.
     pub fn enriched(&self) -> usize {
-        self.covers + self.durations
+        self.covers + self.durations + self.albums
     }
 }
 
@@ -236,6 +238,12 @@ impl Enricher {
                                 entries[position].duration = duration;
                                 report.durations += 1;
                             }
+                            if entries[position].album.trim().is_empty()
+                                && let Some(album) = found.album.clone()
+                            {
+                                entries[position].album = album;
+                                report.albums += 1;
+                            }
                         }
                     }
                     None => report.failed += 1,
@@ -352,7 +360,12 @@ impl Enricher {
                 )
             })
             .map(|found| Found {
-                cover: found.album.and_then(|album| album.cover()),
+                cover: found.album.as_ref().and_then(|album| album.cover()),
+                album: found
+                    .album
+                    .as_ref()
+                    .map(|album| album.title.clone())
+                    .filter(|title| !title.trim().is_empty()),
                 duration: Some(Duration::from_secs(found.duration))
                     .filter(|value| !value.is_zero()),
             })
@@ -397,6 +410,7 @@ impl Enricher {
             })
             .map(|found| Found {
                 cover: found.artwork_url_100.map(|url| large_cover(&url)),
+                album: found.collection_name.filter(|name| !name.trim().is_empty()),
                 duration: found
                     .track_time_millis
                     .filter(|value| *value > 0)
@@ -434,6 +448,7 @@ impl Enricher {
 struct Found {
     cover: Option<String>,
     duration: Option<Duration>,
+    album: Option<String>,
 }
 
 /// The widest version of a catalogue thumbnail. iTunes serves the same picture at several
@@ -624,8 +639,11 @@ struct DeezerAlbum {
 }
 
 impl DeezerAlbum {
-    fn cover(self) -> Option<String> {
-        self.cover_xl.or(self.cover_big).or(self.cover_medium)
+    fn cover(&self) -> Option<String> {
+        self.cover_xl
+            .clone()
+            .or_else(|| self.cover_big.clone())
+            .or_else(|| self.cover_medium.clone())
     }
 }
 

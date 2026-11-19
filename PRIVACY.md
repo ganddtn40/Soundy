@@ -32,9 +32,9 @@ When you use an online feature, Soundy talks to the service behind it:
   and, when you ask, download for offline use. Their own privacy policies apply.
 - **Lyrics and artwork** - lyric catalogues and public cover-art catalogues receive the artist,
   title and album needed to look a track up, when those features are enabled.
-- **Sonora Sessions** - if you start or join a listening session, the session server receives
+- **Sessions** - if you start or join a listening session, the session server receives
   the session code and the playback information the feature needs to synchronize. The default
-  server is the upstream Sonora service, not a Soundy service.
+  community server is operated by the upstream Sonora project, not by Soundy.
 - **Discord** - rich presence is off by default. When enabled and Discord is running, Soundy
   sends the track, artist, album, a cover link and the start time so Discord can show them on
   your profile. The settings can hide the details or turn the presence off.

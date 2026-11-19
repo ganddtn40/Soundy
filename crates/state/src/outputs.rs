@@ -15,7 +15,7 @@ const SWITCH_TIMEOUT: Duration = Duration::from_secs(10);
 /// Perhaps rearchitect SHARED
 const HANDOVER: Duration = Duration::from_secs(2);
 
-/// The output devices the system offers, the one chosen, and what the stream Sonora plays into
+/// The output devices the system offers, the one chosen, and what the stream Soundy plays into
 /// runs at. The list is read off the main thread, since that opens devices on some platforms, and
 /// both are read again whenever a stream opens or closes or its sink changes. A device picked
 /// here is opened first and only moved onto, and saved, once it has. One that will not open
@@ -125,7 +125,7 @@ impl Outputs {
         self.listed
     }
 
-    /// The device Sonora plays on, or `None` while no stream is open.
+    /// The device Soundy plays on, or `None` while no stream is open.
     pub fn active(&self) -> Option<&DeviceInfo> {
         self.active.as_ref()
     }
@@ -136,7 +136,7 @@ impl Outputs {
     }
 
     /// The key device rules know the output the sound plays on by, from `output::output_key`,
-    /// with the device's name. That is the device Sonora's stream is open on, or last was, and
+    /// with the device's name. That is the device Soundy's stream is open on, or last was, and
     /// before any stream opens the device one would open on, so a rule applies from the start.
     pub fn binding_key(&self) -> Option<OutputId> {
         let (id, name, sink) = self.playing()?;
@@ -165,7 +165,7 @@ impl Outputs {
         Some((&device.id, &device.name, device.sink.as_ref()))
     }
 
-    /// Reads the device Sonora plays on again.
+    /// Reads the device Soundy plays on again.
     fn read_device(&mut self) {
         self.active = output::active_device_info();
         if self.active.is_some() {
@@ -245,8 +245,8 @@ impl Outputs {
         self.failing
     }
 
-    /// The device playing or being tried, or `None` when Sonora follows the system's default.
-    /// It may not be connected, in which case Sonora plays on the default until it is.
+    /// The device playing or being tried, or `None` when Soundy follows the system's default.
+    /// It may not be connected, in which case Soundy plays on the default until it is.
     pub fn chosen(&self) -> Option<&str> {
         match &self.trying {
             Some(trying) => trying.as_deref(),

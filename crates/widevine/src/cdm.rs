@@ -1,7 +1,7 @@
 //! The system CDM, hosted in a helper process the way a browser runs its CDM in a utility
 //! process.
 //!
-//! The module never maps into the app. [`Cdm::open`] starts the Sonora executable again as the
+//! The module never maps into the app. [`Cdm::open`] starts the Soundy executable again as the
 //! host in [`crate::host`] and talks to it over its stdin and stdout, and every [`Cdm`] is a
 //! lease on that one process. There is one host at a time, every call to it is serialized, and
 //! its session accumulates content keys rather than replacing them, so more than one track can

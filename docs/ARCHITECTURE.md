@@ -7,7 +7,7 @@ or Tauri shell, no embedded browser as the application UI, and no second player 
 
 ```
 crates/
-  sonora/     binary: window, actions, tray, assets, HTTP shim, provider wiring
+  soundy/     binary: window, actions, tray, assets, HTTP shim, provider wiring
   views/      screens, shells, dialogs and reusable app chrome
   state/      GPUI entities: session, library, playback, queue, import, settings
   music/      provider traits and models; one module per provider; playback engine

@@ -1,4 +1,4 @@
-//! The theme miniature: the Sonora window drawn as a few soft, flat shapes in a theme's
+//! The theme miniature: the Soundy window drawn as a few soft, flat shapes in a theme's
 //! colours, the picture on a theme card and in the dialog that offers a linked theme.
 
 use gpui::prelude::*;
@@ -95,7 +95,7 @@ pub(crate) fn sliced(palettes: &[Theme], radius: Pixels, scale: f32) -> Div {
     )
 }
 
-/// The Sonora window in `palette`'s colours as a few soft, flat shapes, `WIDTH` by `HEIGHT`
+/// The Soundy window in `palette`'s colours as a few soft, flat shapes, `WIDTH` by `HEIGHT`
 /// pixels times `scale`: the sidebar with three entries, a heading over a row of tiles, the first
 /// in the accent, and a floating player with its play button. Nothing is outlined. The window
 /// and the sidebar round the outer corners by `outer`, and `mark` rounds the tiles.

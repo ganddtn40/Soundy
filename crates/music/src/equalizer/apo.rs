@@ -65,11 +65,11 @@ pub enum Reason {
     NoGain,
     /// A peak or an all-pass without a Q or a bandwidth.
     NoWidth,
-    /// A value written as an expression in backticks, which Sonora does not work out.
+    /// A value written as an expression in backticks, which Soundy does not work out.
     Expression,
     /// A preamp that is not a number.
     NoPreamp,
-    /// A value outside what Sonora plays.
+    /// A value outside what Soundy plays.
     Invalid(Invalid),
     /// A command or filter type APO knows that one curve for every channel cannot carry, by
     /// its name.

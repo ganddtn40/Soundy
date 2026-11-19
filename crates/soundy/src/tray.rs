@@ -11,7 +11,7 @@ use gpui::http_client::{AsyncBody, HttpClient};
 use gpui::{App, AppContext as _, Context, Entity, Global, SharedString, Task};
 use i18n::t;
 use router::Destination;
-use state::{Outcome, PlaybackState, Repeat, Sonora, Toasts};
+use state::{Outcome, PlaybackState, Repeat, Soundy, Toasts};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 #[cfg(any(target_os = "macos", windows))]
@@ -87,7 +87,7 @@ struct Installed {
 
 impl Global for Installed {}
 
-/// Sets up the tray icon and its menu. Returns whether Sonora may keep running once its window
+/// Sets up the tray icon and its menu. Returns whether Soundy may keep running once its window
 /// closes, which it only does when the desktop has a tray to bring it back from.
 pub fn install(
     show: impl Fn(&mut App) + 'static,
@@ -141,7 +141,7 @@ impl Tray {
                     | Event::Next
                     | Event::Repeat
                     | Event::Shuffle => {
-                        let playback = Sonora::global(cx).playback.clone();
+                        let playback = Soundy::global(cx).playback.clone();
                         playback.update(cx, |playback, cx| match event {
                             Event::Toggle => playback.toggle_play(cx),
                             Event::Previous => playback.previous(cx),
@@ -154,19 +154,19 @@ impl Tray {
             }
         });
 
-        let playback = Sonora::global(cx).playback.clone();
+        let playback = Soundy::global(cx).playback.clone();
         cx.observe(&playback, |this, _, cx| this.publish(cx))
             .detach();
-        let queue = Sonora::global(cx).queue.clone();
+        let queue = Soundy::global(cx).queue.clone();
         cx.observe(&queue, |this, _, cx| this.publish(cx)).detach();
         // the track of a device that is steered, a jam's host included, changes here and not in
         // `Playback`
-        let devices = Sonora::global(cx).devices.clone();
+        let devices = Soundy::global(cx).devices.clone();
         cx.observe(&devices, |this, _, cx| this.publish(cx))
             .detach();
         // only `place` here: settings notifies on every window move, and rebuilding `Shown`
         // allocates the caption and clones the cover each time
-        let settings = Sonora::global(cx).settings.clone();
+        let settings = Soundy::global(cx).settings.clone();
         cx.observe(&settings, |this, _, cx| this.place(cx)).detach();
 
         let shown = shown(None, cx);
@@ -189,7 +189,7 @@ impl Tray {
     /// Puts the icon in the tray, or takes it out, following `tray_icon` alone. An icon that cannot
     /// be placed turns `tray_icon` off and says so.
     fn place(&mut self, cx: &mut Context<Self>) {
-        let placed = Sonora::global(cx).settings.read(cx).tray_icon();
+        let placed = Soundy::global(cx).settings.read(cx).tray_icon();
         if placed == self.placed {
             return;
         }
@@ -197,7 +197,7 @@ impl Tray {
             log::warn!("tray: cannot place the tray icon: {error:#}");
             if placed {
                 Toasts::show(Outcome::Failed, "toast-tray-unavailable", cx);
-                let settings = Sonora::global(cx).settings.clone();
+                let settings = Soundy::global(cx).settings.clone();
                 settings.update(cx, |settings, cx| settings.set_tray_icon(false, cx));
                 return;
             }
@@ -230,7 +230,7 @@ impl Tray {
     /// Starts loading the cover of the track that is playing now. Dropping the task cancels the
     /// load for the track that was playing before, so a run of skips only draws the last cover.
     fn follow(&mut self, cx: &mut Context<Self>) {
-        let cover = Sonora::global(cx)
+        let cover = Soundy::global(cx)
             .playback
             .read(cx)
             .shown_track(cx)
@@ -267,7 +267,7 @@ impl Tray {
 /// Opens the song page of whatever is playing. A track without an id is not an error: the caption
 /// row is only enabled when there is one.
 fn open(cx: &mut App) {
-    let playing = Sonora::global(cx).playback.read(cx).shown_track(cx);
+    let playing = Soundy::global(cx).playback.read(cx).shown_track(cx);
     let Some(id) = playing.and_then(|track| track.id) else {
         return;
     };
@@ -317,7 +317,7 @@ async fn fetch(http: &Arc<dyn HttpClient>, url: &str) -> Result<Vec<u8>> {
 }
 
 fn shown(artwork: Option<Arc<Art>>, cx: &App) -> Shown {
-    let playback = Sonora::global(cx).playback.read(cx);
+    let playback = Soundy::global(cx).playback.read(cx);
     let playing = match playback.steered(cx) {
         Some(remote) => remote.state.playing,
         None => matches!(
@@ -337,7 +337,7 @@ fn shown(artwork: Option<Arc<Art>>, cx: &App) -> Shown {
         None => t!("player-nothing-playing").to_string(),
     };
     let song = track.is_some_and(|track| track.id.is_some());
-    let shuffle_on = Sonora::global(cx).queue.read(cx).shuffle();
+    let shuffle_on = Soundy::global(cx).queue.read(cx).shuffle();
     let repeat_on = playback.repeat() != Repeat::Off;
     Shown {
         artwork,

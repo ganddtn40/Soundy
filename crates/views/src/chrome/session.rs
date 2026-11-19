@@ -1,4 +1,4 @@
-//! Sonora Session as the app shows it: the dialog that takes a friend's code, the code of the
+//! Soundy Session as the app shows it: the dialog that takes a friend's code, the code of the
 //! session the listener started, and the people in it as faces. All of it is `state::Listening`'s
 //! to answer, and this only draws it.
 
@@ -7,7 +7,7 @@ use gpui::prelude::*;
 use gpui::{App, ClipboardItem, Context, Entity, FocusHandle, Render, SharedString, Window, div};
 use i18n::t;
 use music::connect::JamMember;
-use state::{Listening, Outcome, Room, SESSION_CODE_LENGTH, Session, Sonora, Toasts};
+use state::{Listening, Outcome, Room, SESSION_CODE_LENGTH, Session, Soundy, Toasts};
 use ui::{
     ActiveTheme as _, Button, Dismiss, FORM_CONTEXT, Field, Form, Modal, OtpInput, OtpSlots, Submit,
 };
@@ -29,7 +29,7 @@ pub(crate) struct SessionJoin {
 
 impl SessionJoin {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let listening = Sonora::global(cx).listening.clone();
+        let listening = Soundy::global(cx).listening.clone();
         cx.observe(&listening, |_, _, cx| cx.notify()).detach();
         let code = cx.new(|cx| {
             OtpInput::new(SESSION_CODE_LENGTH, "devices-session-code", cx).grouped(GROUP)
@@ -140,8 +140,8 @@ pub(crate) struct SessionCode {
 
 impl SessionCode {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let listening = Sonora::global(cx).listening.clone();
-        let session = Sonora::global(cx).session.clone();
+        let listening = Soundy::global(cx).listening.clone();
+        let session = Soundy::global(cx).session.clone();
         cx.observe(&listening, |_, _, cx| cx.notify()).detach();
         Self {
             listening,

@@ -17,7 +17,7 @@ use std::time::Instant;
 
 use gpui::prelude::*;
 use gpui::{App, Context, Hsla, Pixels, Render, Rgba, Task, Window, div, px};
-use state::Sonora;
+use state::Soundy;
 use ui::{ActiveTheme as _, CoverPalette, Theme};
 
 use crate::shared::adaptive;
@@ -72,7 +72,7 @@ struct Sampled {
 
 impl Ambient {
     pub(crate) fn new(cx: &mut Context<Self>) -> Self {
-        let settings = Sonora::global(cx).settings.clone();
+        let settings = Soundy::global(cx).settings.clone();
         // Turning the drift back on has no frame of its own to land in: with
         // motion off nothing asks for one.
         cx.observe(&settings, |_, _, cx| cx.notify()).detach();
@@ -258,7 +258,7 @@ impl Render for Ambient {
         // fullscreen stops redrawing once settled. Either the system preference
         // or the setting of its own is enough to stop it.
         let animates =
-            ui::motion::animates(cx) && Sonora::global(cx).settings.read(cx).ambient_motion();
+            ui::motion::animates(cx) && Soundy::global(cx).settings.read(cx).ambient_motion();
         let colors = self.wash(Self::colors(&theme), animates);
         let elapsed = match animates {
             true => {
@@ -320,13 +320,13 @@ impl Render for Ambient {
 /// Whether the ambient background is on. Fullscreen reads it for the frosted
 /// glass on its controls as well, which only has the field to blur.
 pub(crate) fn shown(cx: &App) -> bool {
-    Sonora::global(cx).settings.read(cx).ambient()
+    Soundy::global(cx).settings.read(cx).ambient()
 }
 
 /// The radius of the window's own corners, where the chrome rounds them.
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 fn window_radius(window: &Window, cx: &App) -> Option<Pixels> {
-    crate::chrome::window_radius(Sonora::global(cx).settings.read(cx), cx, window)
+    crate::chrome::window_radius(Soundy::global(cx).settings.read(cx), cx, window)
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]

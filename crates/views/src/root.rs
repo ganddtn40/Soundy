@@ -10,7 +10,7 @@ use router::{Destination, NavigationEvent, back, forward, navigate};
 use state::{
     ArtistDetail, Detail, GenreDetails, Genres, HistoryState, Home, Io, Library, LibraryState,
     Network, Playback, Profile, Queue, Reconnected, SYSTEM_FONT, Scan, Search, Session,
-    SessionState, Shelf, SideTab, SongDetail, Sonora,
+    SessionState, Shelf, SideTab, SongDetail, Soundy,
 };
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 use ui::WindowFrame;
@@ -264,7 +264,7 @@ impl Root {
         let io = Io::global(cx);
         let home_state = cx.new(|cx| Home::new(library.clone(), session.clone(), io.clone(), cx));
         let home = cx.new(|cx| HomeView::new(home_state, playback.clone(), cx));
-        let history = Sonora::global(cx).history.clone();
+        let history = Soundy::global(cx).history.clone();
         let history = cx.new(|cx| HistoryView::new(history, playback.clone(), window, cx));
 
         let queries = cx.new(|cx| Search::new(session.clone(), library.clone(), io.clone(), cx));
@@ -291,7 +291,7 @@ impl Root {
         });
 
         let settings = cx.new(|cx| SettingsView::new(session.clone(), playback.clone(), cx));
-        let equalizer = Sonora::global(cx).equalizer.clone();
+        let equalizer = Soundy::global(cx).equalizer.clone();
         let equalizer = cx.new(|cx| EqualizerView::new(equalizer, window, cx));
         let settings_header =
             cx.new(|cx| SettingsHeader::new(settings.clone(), equalizer.clone(), cx));
@@ -334,14 +334,14 @@ impl Root {
             if !window.is_window_active() {
                 return;
             }
-            // Pick up plays made on other devices while Sonora was in the background, off the
+            // Pick up plays made on other devices while Soundy was in the background, off the
             // window coming back to the foreground rather than a poll.
-            Sonora::global(cx)
+            Soundy::global(cx)
                 .history
                 .clone()
                 .update(cx, |history, cx| history.refresh(cx));
             ui::refresh_primary_paste(cx);
-            let settings = Sonora::global(cx).settings.clone();
+            let settings = Soundy::global(cx).settings.clone();
             let (stillness, pace) = {
                 let settings = settings.read(cx);
                 (settings.stillness(), settings.pace())
@@ -361,7 +361,7 @@ impl Root {
         window
             .observe_window_appearance(|window, cx| {
                 ui::WindowBlur::update(window, cx);
-                let settings = Sonora::global(cx).settings.clone();
+                let settings = Soundy::global(cx).settings.clone();
                 let reported = ThemeKind::reported(cx);
                 let changed = ThemeKind::assumed() != Some(reported);
                 if changed {
@@ -442,7 +442,7 @@ impl Root {
             #[cfg(target_os = "macos")]
             framed: None,
             #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-            decorations: Sonora::global(cx).settings.read(cx).window_decorations(),
+            decorations: Soundy::global(cx).settings.read(cx).window_decorations(),
         };
         root.show(start, cx);
         root
@@ -456,7 +456,7 @@ impl Root {
         let detail = cx.new(|cx| {
             ArtistDetail::new(
                 self.session.clone(),
-                Sonora::global(cx).library.clone(),
+                Soundy::global(cx).library.clone(),
                 self.io.clone(),
                 cx,
             )
@@ -489,7 +489,7 @@ impl Root {
         let detail = cx.new(|cx| {
             Detail::new(
                 self.session.clone(),
-                Sonora::global(cx).library.clone(),
+                Soundy::global(cx).library.clone(),
                 self.io.clone(),
                 cx,
             )
@@ -517,7 +517,7 @@ impl Root {
         let detail = cx.new(|cx| {
             Detail::new(
                 self.session.clone(),
-                Sonora::global(cx).library.clone(),
+                Soundy::global(cx).library.clone(),
                 self.io.clone(),
                 cx,
             )
@@ -587,7 +587,7 @@ impl Root {
     fn announce_fullscreen(&self, fullscreen: bool, cx: &mut Context<Self>) {
         self.adaptive
             .update(cx, |adaptive, cx| adaptive.set_fullscreen(fullscreen, cx));
-        let wake = Sonora::global(cx).wake.clone();
+        let wake = Soundy::global(cx).wake.clone();
         wake.update(cx, |wake, cx| wake.set_fullscreen(fullscreen, cx));
     }
 
@@ -600,7 +600,7 @@ impl Root {
         };
         match opening {
             true => {
-                if Sonora::global(cx).settings.read(cx).os_fullscreen() && !window.is_fullscreen() {
+                if Soundy::global(cx).settings.read(cx).os_fullscreen() && !window.is_fullscreen() {
                     window.toggle_fullscreen();
                     self.os_entered = true;
                 }
@@ -703,7 +703,7 @@ impl Root {
     /// How to tell whether `destination` is still loading, or `None` for a page with nothing
     /// to reload.
     fn loading(&self, destination: &Destination, cx: &App) -> Option<Busy> {
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         let shelf = |shelf: Shelf| -> Busy {
             let library = library.clone();
             Box::new(move |cx| matches!(library.read(cx).state(shelf), LibraryState::Loading))
@@ -714,7 +714,7 @@ impl Root {
                 Box::new(move |cx| home.read(cx).is_loading(cx))
             }
             Destination::History => {
-                let history = Sonora::global(cx).history.clone();
+                let history = Soundy::global(cx).history.clone();
                 Box::new(move |cx| matches!(history.read(cx).state(), HistoryState::Loading))
             }
             Destination::Discover => {
@@ -722,7 +722,7 @@ impl Root {
                 Box::new(move |cx| discover.read(cx).is_loading(cx))
             }
             Destination::Library(_) | Destination::Favorites | Destination::Downloads => {
-                let session = Sonora::global(cx).session.clone();
+                let session = Soundy::global(cx).session.clone();
                 let streaming = shelf(Shelf::Streaming);
                 let local = shelf(Shelf::Local);
                 Box::new(move |cx| session.read(cx).scanning() || streaming(cx) || local(cx))
@@ -760,11 +760,11 @@ impl Root {
 
     /// Drops what `destination` shows and asks its provider for it again, past the caches.
     fn reload_page(&mut self, destination: Destination, cx: &mut Context<Self>) {
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         match destination {
             Destination::Home => self.screens.home.update(cx, |home, cx| home.refresh(cx)),
             Destination::History => {
-                let history = Sonora::global(cx).history.clone();
+                let history = Soundy::global(cx).history.clone();
                 history.update(cx, |history, cx| history.reload(cx));
             }
             Destination::Discover => self
@@ -882,7 +882,7 @@ impl Root {
 
     /// The font the window is set in, built again only once a different font is chosen.
     fn font(&mut self, cx: &App) -> Font {
-        let chosen = Sonora::global(cx).settings.read(cx).font();
+        let chosen = Soundy::global(cx).settings.read(cx).font();
         match &self.font {
             Some((name, font)) if name == chosen => font.clone(),
             _ => {
@@ -1169,7 +1169,7 @@ fn scripts(custom: bool) -> &'static FontFallbacks {
 /// Tells the wake lock whether the window has focus, which the display lock needs.
 fn update_focus_for_wake(window: &Window, cx: &mut App) {
     let focused = window.is_window_active();
-    let wake = Sonora::global(cx).wake.clone();
+    let wake = Soundy::global(cx).wake.clone();
     wake.update(cx, |wake, cx| wake.set_focused(focused, cx));
 }
 
@@ -1230,7 +1230,7 @@ impl Render for Root {
         {
             let rounding = match window.is_fullscreen() {
                 true => ui::Rounding::Square,
-                false => Sonora::global(cx).settings.read(cx).window_rounding(),
+                false => Soundy::global(cx).settings.read(cx).window_rounding(),
             };
             if self.rounded != Some(rounding) {
                 self.rounded = Some(rounding);
@@ -1252,7 +1252,7 @@ impl Render for Root {
                 }
             }
             false => {
-                let settings = Sonora::global(cx).settings.read(cx);
+                let settings = Soundy::global(cx).settings.read(cx);
                 let framed = (
                     settings.window_rounding(),
                     crate::chrome::traffic_lights(
@@ -1272,7 +1272,7 @@ impl Render for Root {
 
         #[cfg(any(target_os = "linux", target_os = "freebsd"))]
         {
-            let decorations = Sonora::global(cx).settings.read(cx).window_decorations();
+            let decorations = Soundy::global(cx).settings.read(cx).window_decorations();
             if self.decorations != decorations {
                 self.decorations = decorations;
                 window.request_decorations(decorations);
@@ -1285,7 +1285,7 @@ impl Render for Root {
         // `PlayerBar` for the top and bottom edges. Rounding the root too keeps its own
         // background quad correct and costs nothing.
         #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-        let radius = crate::chrome::window_radius(Sonora::global(cx).settings.read(cx), cx, window);
+        let radius = crate::chrome::window_radius(Soundy::global(cx).settings.read(cx), cx, window);
         #[cfg(any(target_os = "linux", target_os = "freebsd"))]
         window.set_window_corner_radius(radius.unwrap_or_default());
         #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]

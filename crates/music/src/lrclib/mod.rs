@@ -12,7 +12,7 @@ const ENDPOINT: &str = "https://lrclib.net/api/search";
 const AGENT: &str = concat!(
     "soundy/",
     env!("CARGO_PKG_VERSION"),
-    " (Sonora fork; https://github.com/sonorahq/sonora)"
+    " (+https://github.com/ganddtn40/soundy)"
 );
 
 pub struct LrcLib {

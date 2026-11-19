@@ -3,7 +3,7 @@
 //! holds, up to 24-bit FLAC.
 //!
 //! Lossless arrives as one FLAC file and hi-res as DASH segments of FLAC in fMP4. Both decode
-//! in Sonora's own engine, so the equalizer, normalisation and the gapless join apply to Tidal
+//! in Soundy's own engine, so the equalizer, normalisation and the gapless join apply to Tidal
 //! as to any other provider.
 
 mod auth;

@@ -9,7 +9,7 @@ use music::equalizer::{Curve, MAX_FILTERS, PREAMP_RANGE, Preamp, Preset, TONE_RA
 use music::output::{DeviceOption, OutputId, Port};
 use router::Destination;
 use state::{
-    AppSettings, Equalizer, Outputs, RuleDevice, Signal, Sonora, Sound, equalizer_profile_label,
+    AppSettings, Equalizer, Outputs, RuleDevice, Signal, Sound, Soundy, equalizer_profile_label,
 };
 use ui::{
     ActiveTheme as _, Button, Dismiss, FORM_CONTEXT, Field, Form, Input, Lazy, MenuItem, Modal,
@@ -210,9 +210,9 @@ impl EqualizerView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let settings = Sonora::global(cx).settings.clone();
-        let signal = Sonora::global(cx).signal.clone();
-        let outputs = Sonora::global(cx).outputs.clone();
+        let settings = Soundy::global(cx).settings.clone();
+        let signal = Soundy::global(cx).signal.clone();
+        let outputs = Soundy::global(cx).outputs.clone();
         let id = cx.entity_id();
         let preamp = cx.new(|cx| {
             Input::new("equalizer-decibels", cx)

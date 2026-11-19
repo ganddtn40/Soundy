@@ -1,4 +1,4 @@
-//! The messages traded with the Sonora Session server, one JSON object per WebSocket text frame.
+//! The messages traded with the Soundy Session server, one JSON object per WebSocket text frame.
 //! The server keeps the same types in its own repository, so a field added on either side has to
 //! be optional until both know it.
 

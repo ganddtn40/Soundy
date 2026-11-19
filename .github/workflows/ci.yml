@@ -219,7 +219,7 @@ jobs:
       # repository's quota. release.yml builds nightlies and releases with the full profile.
       - name: build
         run: >-
-          cargo build --release --locked --package sonora --target ${{ matrix.target }} --timings
+          cargo build --release --locked --package soundy --target ${{ matrix.target }} --timings
           --config profile.release.lto=false
           --config profile.release.package.music.codegen-units=16
           --config profile.release.package.state.codegen-units=16

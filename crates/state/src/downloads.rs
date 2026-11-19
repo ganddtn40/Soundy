@@ -1288,7 +1288,7 @@ impl Downloads {
 
 /// Whether a track is downloaded, for code with no handle on the [`Downloads`] entity.
 pub fn downloaded(id: &str, cx: &App) -> bool {
-    cx.try_global::<crate::Sonora>()
+    cx.try_global::<crate::Soundy>()
         .is_some_and(|sonora| sonora.downloads.read(cx).has(id))
 }
 

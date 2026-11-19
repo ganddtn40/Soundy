@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use gpui::App;
-use state::Sonora;
+use state::Soundy;
 
 /// How often the footprint is logged under debug logging.
 const INTERVAL: Duration = Duration::from_secs(10);
@@ -23,7 +23,7 @@ pub fn tune() {}
 
 /// Logs the memory footprint every `INTERVAL` when debug logging is on for this module, and does
 /// nothing otherwise. The log file keeps it off, so it runs only when `RUST_LOG` or `SOUNDY_LOG`
-/// asks for `sonora::memory=debug`.
+/// asks for `soundy::memory=debug`.
 pub fn watch(cx: &mut App) {
     if !log::log_enabled!(log::Level::Debug) {
         return;
@@ -44,7 +44,7 @@ pub fn watch(cx: &mut App) {
 fn report(probed: (Footprint, Option<usize>), cx: &mut App) {
     let (footprint, resident) = probed;
     let (entries, bytes) = ui::artwork_usage(cx).unwrap_or((0, 0));
-    let queue = Sonora::global(cx).queue.read(cx);
+    let queue = Soundy::global(cx).queue.read(cx);
     let past = queue.past().len();
     let ahead = queue.upcoming().len();
 

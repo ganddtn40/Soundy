@@ -7,7 +7,7 @@
 //!
 //! A theme link carries a whole theme file in the link itself, so installing one never fetches
 //! anything. A link may instead carry a family, an object with the folder's name in `family` and
-//! its files by name in `variants`, which installs as a folder. Sonora checks every file as
+//! its files by name in `variants`, which installs as a folder. Soundy checks every file as
 //! strictly as one in the folder and writes clean copies rebuilt from what it parsed.
 
 use std::collections::BTreeSet;
@@ -26,7 +26,7 @@ include!(concat!(env!("OUT_DIR"), "/themes.rs"));
 const FORMAT_VERSION: u32 = 1;
 /// The scheme every link meant for Soundy itself uses.
 const SCHEME: &str = "soundy:";
-/// The scheme Sonora used, read so links shared before the fork still install.
+/// The scheme Soundy used, read so links shared before the fork still install.
 const LEGACY_SCHEME: &str = "sonora:";
 /// What a theme link starts with. The theme file or family follows as unpadded base64url.
 const THEME_LINK: &str = "soundy://theme/";
@@ -323,7 +323,7 @@ pub(super) fn load(directory: &Path, previous: &[ThemeVariant]) -> Loaded {
     Loaded { themes, retry }
 }
 
-/// Whether `text` is a link in Soundy's own scheme, or the scheme Sonora used, which no
+/// Whether `text` is a link in Soundy's own scheme, or the scheme Soundy used, which no
 /// provider reads and which is never a file to play.
 pub fn is_own_link(text: &str) -> bool {
     let text = text.trim();
@@ -390,7 +390,7 @@ pub fn read_link(text: &str) -> Result<ThemeOffer> {
 
 /// Reads the family object of a theme link into the family and its files, the variants sorted
 /// by file name the way the themes folder lists them. The folder and file names have to be what
-/// `slug` makes of them, so a link never names anything on disk Sonora would not name itself.
+/// `slug` makes of them, so a link never names anything on disk Soundy would not name itself.
 fn read_family(value: &serde_json::Value) -> Result<(ThemeFamily, Vec<Vec<u8>>)> {
     let object = value
         .as_object()

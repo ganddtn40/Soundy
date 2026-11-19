@@ -6,7 +6,7 @@ use ui::{ActiveTheme as _, Filter, FilterChange, FlagAxis};
 use gpui::{AnyElement, App, Entity, SharedString};
 use i18n::t;
 use music::SavedArtist;
-use state::{Library, LibraryPart, LibraryState, Network, Origin, Playback, Shelf, Sonora};
+use state::{Library, LibraryPart, LibraryState, Network, Origin, Playback, Shelf, Soundy};
 use ui::rank::{ESSENTIAL, HANDY};
 use ui::{Cell, ColumnSpec, Menu, Pin, Sort, TableSource, Width};
 
@@ -117,7 +117,7 @@ impl ArtistSource {
     /// a downloaded song of the streaming shelf. This is what offline mode keeps its artists to.
     fn downloaded(&self, id: &str, cx: &App) -> bool {
         let tracks = self.library.read(cx).state(Shelf::Streaming).tracks();
-        let downloads = Sonora::global(cx).downloads.read(cx);
+        let downloads = Soundy::global(cx).downloads.read(cx);
         let stamp = (tracks.len(), downloads.len());
         let mut heard = self.heard.borrow_mut();
         if heard.as_ref().is_none_or(|heard| heard.stamp != stamp) {

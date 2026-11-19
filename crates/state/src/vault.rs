@@ -2,7 +2,7 @@
 //!
 //! The key lives in the OS keychain, so a kept track opens only for this user on this machine.
 //! A desktop with no keychain service, such as a bare Wayland compositor with no Secret Service
-//! running, gets a key file readable by the owner alone instead. That file sits in Sonora's data
+//! running, gets a key file readable by the owner alone instead. That file sits in Soundy's data
 //! folder beside the downloads, so anyone who can read that folder as the owner can open them.
 //!
 //! Every entry's name and contents depend on the key, so it must never change once a download is

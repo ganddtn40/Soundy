@@ -1,14 +1,14 @@
 use gpui::prelude::*;
 use gpui::{AnyElement, App, Context, div};
 use i18n::t;
-use state::Sonora;
+use state::Soundy;
 use ui::{Button, Field, Form, Picker, Switch};
 
 use super::{Group, SettingsView, Slot};
 
 impl SettingsView {
     /// The Sessions group: whether the player bar shows the Sessions button, and which server
-    /// Sonora Sessions go through. The address row stands only while the official server is off.
+    /// Sessions go through. The address row stands only while the community server is off.
     pub(super) fn sessions_groups(&self, cx: &App) -> Vec<Group> {
         let mut slots = vec![Slot::SessionsButton, Slot::SessionsOfficial];
         if !self.settings.read(cx).sessions_official() {
@@ -46,7 +46,7 @@ impl SettingsView {
                 .on_click(cx.listener(move |this, _, window, cx| {
                     this.settings
                         .update(cx, |settings, cx| settings.set_sessions_official(!on, cx));
-                    // turning the official server off is asking for an address, so the field
+                    // turning the community server off is asking for an address, so the field
                     // that takes it gets the keys
                     if on {
                         this.sessions_server
@@ -62,7 +62,7 @@ impl SettingsView {
     /// compact and the button small, so the two stand the same height. On a narrow page the field
     /// narrows and the label stays whole.
     pub(super) fn sessions_server_row(&self, cx: &mut Context<Self>) -> AnyElement {
-        let saving = Sonora::global(cx).listening.read(cx).saving();
+        let saving = Soundy::global(cx).listening.read(cx).saving();
         let save = Button::new("sessions-server-save")
             .flex_none()
             .secondary()
@@ -97,7 +97,7 @@ impl SettingsView {
     /// Checks that the server typed in the field answers and keeps it once it does.
     fn save_sessions_server(&mut self, cx: &mut Context<Self>) {
         let typed = self.sessions_server.read(cx).text().to_owned();
-        Sonora::global(cx)
+        Soundy::global(cx)
             .listening
             .clone()
             .update(cx, |listening, cx| listening.save_server(&typed, cx));

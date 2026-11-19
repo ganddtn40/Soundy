@@ -2,7 +2,7 @@
 //!
 //! librespot asks for audio keys the way Spotify's desktop app does, and Spotify denies them to
 //! some accounts. Soloist is Spotify's own client for third parties, so it plays for every
-//! Premium account, lossless included. It is a separate program. Sonora downloads it from
+//! Premium account, lossless included. It is a separate program. Soundy downloads it from
 //! Spotify on the listener's word, starts it with the listener's own API key and drives it over
 //! the WebSocket it opens on loopback. It plays to the system's output by itself, so the
 //! equalizer, the visualizer and the output setting do not reach its sound.
@@ -42,7 +42,7 @@ pub const DASHBOARD: &str = "https://developer.spotify.com/dashboard/soloist";
 /// Spotify's terms of use, which running Soloist accepts.
 pub const TERMS: &str = "https://www.spotify.com/legal/end-user-agreement/";
 
-/// What the program is called on the account's device list. It differs from the name Sonora
+/// What the program is called on the account's device list. It differs from the name Soundy
 /// lists itself under, so the listener can tell the two apart while pairing.
 pub const DEVICE: &str = "Soundy Soloist";
 

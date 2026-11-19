@@ -469,6 +469,9 @@ pub struct ImportedPlaylistData {
     pub duplicates: u32,
     /// Rows the list carried that could not be read as a track. Nothing is invented for them.
     pub skipped: usize,
+    /// Whether the source published only its first page of rows. A full public Spotify page
+    /// may be incomplete and is reported as such rather than as the whole playlist.
+    pub limited: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

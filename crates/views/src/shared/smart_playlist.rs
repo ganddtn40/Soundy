@@ -16,7 +16,7 @@ use music::{
     Condition, FieldKind, Operand, OperandShape, Operator, Playlist, Problem, Rule, RuleGroup,
     SmartPlaylistUpdate, SmartRules, field_kind, parse_number,
 };
-use state::{LibraryEvent, SessionEvent, Shelf, Sonora};
+use state::{LibraryEvent, SessionEvent, Shelf, Soundy};
 use ui::{
     ActiveTheme as _, Button, Dismiss, FORM_CONTEXT, Input, MenuItem, Modal, NextField, Notice,
     Picker, Popovers, PreviousField, Submit, step_focus,
@@ -274,7 +274,7 @@ impl SmartPlaylistEditor {
     pub fn entity(cx: &mut App) -> Entity<Self> {
         if cx.try_global::<Installed>().is_none() {
             let editor = cx.new(|cx| {
-                let library = Sonora::global(cx).library.clone();
+                let library = Soundy::global(cx).library.clone();
                 let listen = cx.subscribe(&library, |this: &mut Self, _, event, cx| {
                     if let LibraryEvent::SmartPlaylistReady(_) = event {
                         this.ready(cx);
@@ -283,7 +283,7 @@ impl SmartPlaylistEditor {
                 // A sign-out or a new account closes the editor, creating included: the
                 // working rules belong to the account that was signed in when they were
                 // read or started, and a save under the next one would go to its library.
-                let session = Sonora::global(cx).session.clone();
+                let session = Soundy::global(cx).session.clone();
                 let listen_session = cx.subscribe(&session, |this: &mut Self, _, event, cx| {
                     if matches!(event, SessionEvent::SignedIn | SessionEvent::SignedOut) {
                         this.reset(cx);
@@ -345,7 +345,7 @@ impl SmartPlaylistEditor {
                     .update(cx, |input, cx| input.set_text(playlist.name.clone(), cx));
                 let id = playlist.id.clone();
                 let shelf = Shelf::of(&playlist.id);
-                let library = Sonora::global(cx).library.clone();
+                let library = Soundy::global(cx).library.clone();
                 library.update(cx, |library, cx| library.open_smart_playlist(id, shelf, cx));
             }
         }
@@ -360,7 +360,7 @@ impl SmartPlaylistEditor {
         let Some(SmartEdit::Rules { playlist }) = &self.edit else {
             return;
         };
-        let Some(editing) = Sonora::global(cx).library.read(cx).smart_editing.clone() else {
+        let Some(editing) = Soundy::global(cx).library.read(cx).smart_editing.clone() else {
             return;
         };
         if editing.id != playlist.id {
@@ -403,7 +403,7 @@ impl SmartPlaylistEditor {
     }
 
     fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         library.update(cx, |library, cx| library.close_smart_playlist(cx));
         let restore = self.restore.take();
         self.reset(cx);
@@ -676,7 +676,7 @@ impl SmartPlaylistEditor {
         self.saving = true;
 
         let editor = cx.entity();
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         match edit {
             SmartEdit::Create { shelf } => {
                 library.update(cx, |library, cx| {

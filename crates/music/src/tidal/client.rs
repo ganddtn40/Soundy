@@ -72,7 +72,7 @@ pub(crate) const QUALITIES: &[Offer] = &[
         up_to: false,
     },
 ];
-/// What a track is asked for again at when the stream it was given is one Sonora cannot play,
+/// What a track is asked for again at when the stream it was given is one Soundy cannot play,
 /// such as a protected or spatial one. CD quality comes as one plain FLAC file.
 const FALLBACK_QUALITY: &str = "LOSSLESS";
 
@@ -996,7 +996,7 @@ impl TidalClient {
     }
 
     /// Resolves a track to a stream at `quality`, or the best below it the account and the track
-    /// allow, and reads what Tidal says about its loudness on the way. A stream Sonora cannot
+    /// allow, and reads what Tidal says about its loudness on the way. A stream Soundy cannot
     /// play is asked for once more at `FALLBACK_QUALITY` before the track counts as unplayable.
     pub async fn playback(&self, track_id: &str, quality: Quality) -> Result<Playback> {
         let asked = audio_quality(quality);

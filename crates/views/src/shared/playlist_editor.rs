@@ -5,7 +5,7 @@ use gpui::{
 };
 use i18n::t;
 use music::Playlist;
-use state::{Addition, CoverEdit, Leaving, Outcome, Shelf, Sonora, Toasts, cover_problem};
+use state::{Addition, CoverEdit, Leaving, Outcome, Shelf, Soundy, Toasts, cover_problem};
 use ui::{ActiveTheme as _, Artwork, Button, Modal, PinKind, TabBar};
 use ui::{Dismiss, FORM_CONTEXT, Field, Form, Input, Submit};
 
@@ -140,7 +140,7 @@ impl PlaylistEditor {
         match &self.cover {
             CoverEdit::Replace(path) => Some(format!("file://{}", path.display()).into()),
             CoverEdit::Remove => None,
-            CoverEdit::Keep => Sonora::global(cx)
+            CoverEdit::Keep => Soundy::global(cx)
                 .library
                 .read(cx)
                 .playlist(&playlist.id)
@@ -159,7 +159,7 @@ impl PlaylistEditor {
             window.focus(&focus, cx);
         }
         let name = self.name.read(cx).text().trim().to_owned();
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
 
         match edit {
             Edit::Create { addition, shelf } if !name.is_empty() => {
@@ -209,7 +209,7 @@ impl PlaylistEditor {
         let Edit::Create { addition, shelf } = edit else {
             return None;
         };
-        let session = Sonora::global(cx).session.read(cx);
+        let session = Soundy::global(cx).session.read(cx);
         let provider = session
             .provider_name()
             .filter(|_| session.authenticated())?;
@@ -246,7 +246,7 @@ impl PlaylistEditor {
 
     fn details(&self, playlist: &Playlist, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = *cx.theme();
-        let covers = Sonora::global(cx)
+        let covers = Soundy::global(cx)
             .session
             .read(cx)
             .capabilities_of(Shelf::of(&playlist.id))

@@ -1,4 +1,4 @@
-//! A replica of the activity card Discord shows in a profile for the status Sonora sets, in
+//! A replica of the activity card Discord shows in a profile for the status Soundy sets, in
 //! Discord's own dark theme, sizes and type. It follows every setting on the page and draws the
 //! status the way `state::discord` would send it for a track from listening history. Screen
 //! readers hear it as a named group of its text lines, buttons and provider badge.
@@ -41,7 +41,7 @@ const BAR_FILL: u32 = 0xdbdee1;
 const BUTTON: u32 = 0x4e5058;
 const BUTTON_HOVER: u32 = 0x6d6f78;
 const BUTTON_TEXT: u32 = 0xffffff;
-/// Sonora's application icon, which Discord shows in place of art the status leaves out: the
+/// Soundy's application icon, which Discord shows in place of art the status leaves out: the
 /// mark in black on white.
 const APP_ICON: u32 = 0xffffff;
 const APP_MARK: u32 = 0x000000;
@@ -61,7 +61,7 @@ const ART_GAP: Pixels = px(12.);
 const BADGE_SIZE: Pixels = px(32.);
 const BADGE_RING: Pixels = px(4.);
 const BADGE_OVERHANG: Pixels = px(4.);
-/// Sonora's mark on the application icon, as a share of the icon.
+/// Soundy's mark on the application icon, as a share of the icon.
 const APP_MARK_SHARE: f32 = 0.56;
 /// A provider's mark on the badge, as a share of the badge.
 const BADGE_MARK_SHARE: f32 = 0.5;
@@ -83,8 +83,8 @@ const BUTTON_RADIUS: Pixels = px(8.);
 const BUTTON_GAP: Pixels = px(8.);
 /// How far through the track the card starts, as a share of its length, before it counts on.
 const START_SHARE: f32 = 0.3;
-/// What the status calls itself when the setting names Sonora, Discord's name for the app.
-const SONORA: &str = "Sonora";
+/// What the status calls itself when the setting names Soundy, Discord's name for the app.
+const SOUNDY: &str = "Soundy";
 
 /// What the Discord page's preview keeps between frames.
 pub(in crate::screens::settings) struct DiscordPreview {
@@ -116,9 +116,9 @@ impl DiscordPreview {
     }
 }
 
-/// The Discord page's preview, the card Discord shows for the status Sonora sets. It shows a
-/// track picked from listening history, playing while Sonora plays or has nothing loaded and
-/// paused while Sonora is paused, and dims only while Discord presence is disabled.
+/// The Discord page's preview, the card Discord shows for the status Soundy sets. It shows a
+/// track picked from listening history, playing while Soundy plays or has nothing loaded and
+/// paused while Soundy is paused, and dims only while Discord presence is disabled.
 pub(in crate::screens::settings) fn preview(
     state: &DiscordPreview,
     view: &SettingsView,
@@ -133,7 +133,7 @@ pub(in crate::screens::settings) fn preview(
     let name = settings.discord_name();
     let badge = settings.discord_badge();
     let hidden = settings.discord_without_details();
-    let sonora_button = settings.discord_sonora_button();
+    let soundy_button = settings.discord_soundy_button();
     let provider_button = settings.discord_provider_button();
     let local_art = settings.artwork_for_local_files();
 
@@ -151,10 +151,10 @@ pub(in crate::screens::settings) fn preview(
     let local = sample.id.as_deref().is_some_and(music::is_local_id);
 
     let listening: SharedString = match name {
-        DiscordName::Sonora => SONORA.into(),
+        DiscordName::Soundy => SOUNDY.into(),
         DiscordName::Provider => provider
             .map(|(_, _, listening)| SharedString::from(listening))
-            .unwrap_or_else(|| SONORA.into()),
+            .unwrap_or_else(|| SOUNDY.into()),
         DiscordName::Music => t!("settings-discord-preview-music"),
         DiscordName::Title => sample.title.clone(),
         DiscordName::Artist => sample.artist.clone(),
@@ -199,7 +199,7 @@ pub(in crate::screens::settings) fn preview(
     {
         buttons.push(t!("settings-discord-preview-listen-on", provider = name));
     }
-    if sonora_button {
+    if soundy_button {
         buttons.push(t!("get-sonora"));
     }
 
@@ -278,7 +278,7 @@ pub(in crate::screens::settings) fn preview(
     )
 }
 
-/// The large image with the provider's badge at its bottom right, or Sonora's application
+/// The large image with the provider's badge at its bottom right, or Soundy's application
 /// icon when the status carries no art, as Discord falls back to it. The badge, given as the
 /// provider's slug and name, reads to screen readers as an image named after the provider.
 fn image(art: Option<String>, badge: Option<(&'static str, &'static str)>, cx: &gpui::App) -> Div {

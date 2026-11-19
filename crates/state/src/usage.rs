@@ -1,5 +1,5 @@
-//! Install reporting. Upstream Sonora asks whether it may send an anonymous install ping to
-//! Sonora's own server. Soundy has no reporting endpoint of its own and must not send a fork's
+//! Install reporting. Upstream Soundy asks whether it may send an anonymous install ping to
+//! Soundy's own server. Soundy has no reporting endpoint of its own and must not send a fork's
 //! users to the upstream one, so this build keeps the interface the login screen expects and
 //! reports nothing.
 

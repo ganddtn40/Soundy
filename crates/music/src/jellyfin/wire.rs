@@ -1,4 +1,4 @@
-//! What Jellyfin answers with, and how it becomes Sonora's models.
+//! What Jellyfin answers with, and how it becomes Soundy's models.
 //!
 //! Every field is optional or defaulted, so an item the server describes in less detail than
 //! expected still reads, with the missing parts left empty, rather than failing the whole page.
@@ -47,7 +47,7 @@ pub struct Items {
     pub total_record_count: Option<usize>,
 }
 
-/// The parts of a `BaseItemDto` that Sonora reads, for tracks, albums, artists, playlists and
+/// The parts of a `BaseItemDto` that Soundy reads, for tracks, albums, artists, playlists and
 /// genres alike.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(rename_all = "PascalCase", default)]
@@ -110,7 +110,7 @@ pub struct Person {
     pub kind: Option<String>,
 }
 
-/// One stream of a file, of which Sonora reads the audio one.
+/// One stream of a file, of which Soundy reads the audio one.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(rename_all = "PascalCase", default)]
 pub struct MediaStream {
@@ -198,7 +198,7 @@ pub struct QuickConnect {
 }
 
 impl Item {
-    /// Whether the server lists this item as an audio track, the only kind Sonora plays.
+    /// Whether the server lists this item as an audio track, the only kind Soundy plays.
     pub fn is_audio(&self) -> bool {
         self.kind.as_deref() == Some("Audio")
     }
@@ -337,7 +337,7 @@ impl Covers {
         }
     }
 
-    /// An album as Sonora shows it. A tag that holds only a year reaches Jellyfin as the first
+    /// An album as Soundy shows it. A tag that holds only a year reaches Jellyfin as the first
     /// of January, so a release dated then shows as its year alone.
     pub fn album(&self, item: Item) -> Album {
         let cover = self.of(&item, COVER);

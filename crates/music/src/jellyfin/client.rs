@@ -1591,7 +1591,7 @@ mod tests {
                 user_id: "user-1".to_owned(),
                 username: "liam".to_owned(),
                 token: "secret-token".to_owned(),
-                device_id: "sonora-test".to_owned(),
+                device_id: "soundy-test".to_owned(),
             })
         }
     }
@@ -1673,14 +1673,14 @@ mod tests {
         })
         .await;
 
-        let credentials = authenticate(&mock.base, "liam", "hunter2", "desk", "sonora-1")
+        let credentials = authenticate(&mock.base, "liam", "hunter2", "desk", "soundy-1")
             .await
             .unwrap();
 
         assert_eq!(credentials.user_id, "user-1");
         assert_eq!(credentials.username, "Liam");
         assert_eq!(credentials.token, "tok-1");
-        assert_eq!(credentials.device_id, "sonora-1");
+        assert_eq!(credentials.device_id, "soundy-1");
         assert_eq!(credentials.server, mock.base);
         let seen = mock.seen();
         assert_eq!(seen.len(), 1);
@@ -1696,7 +1696,7 @@ mod tests {
                 .authorization
                 .starts_with("MediaBrowser Client=\"Soundy\", Device=\"desk\"")
         );
-        assert!(seen[0].authorization.contains("DeviceId=\"sonora-1\""));
+        assert!(seen[0].authorization.contains("DeviceId=\"soundy-1\""));
         assert!(!seen[0].authorization.contains("Token="));
     }
 
@@ -1705,7 +1705,7 @@ mod tests {
         crypto();
         let mock = Mock::start(|_| (401, String::new())).await;
 
-        let error = authenticate(&mock.base, "liam", "wrong", "desk", "sonora-1")
+        let error = authenticate(&mock.base, "liam", "wrong", "desk", "soundy-1")
             .await
             .unwrap_err();
 
@@ -1721,7 +1721,7 @@ mod tests {
         crypto();
         let mock = Mock::start(|_| (200, r#"{"User":{"Id":"user-1"}}"#.to_owned())).await;
 
-        let error = authenticate(&mock.base, "liam", "pw", "desk", "sonora-1")
+        let error = authenticate(&mock.base, "liam", "pw", "desk", "soundy-1")
             .await
             .unwrap_err();
 
@@ -1735,7 +1735,7 @@ mod tests {
         let base = format!("http://{}", listener.local_addr().unwrap());
         drop(listener);
 
-        let error = authenticate(&base, "liam", "pw", "desk", "sonora-1")
+        let error = authenticate(&base, "liam", "pw", "desk", "soundy-1")
             .await
             .unwrap_err();
 

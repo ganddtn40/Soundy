@@ -25,8 +25,8 @@ const MAX_TEXT_UTF16_UNITS: usize = 128;
 const MAX_IMAGE_UTF16_UNITS: usize = 300;
 /// What the status says when it names the music rather than a service.
 const MUSIC: &str = "Music";
-/// Where the Sonora button sends a friend who presses it.
-const SONORA_URL: &str = "https://sonorahq.org";
+/// Where the Soundy button sends a friend who presses it.
+const SOUNDY_URL: &str = "https://github.com/ganddtn40/soundy";
 /// How long an uploaded cover is shown before it is uploaded again. Uguu keeps it for three
 /// hours, so a status that runs longer never points at a picture that has gone.
 const UPLOAD_FRESH: Duration = Duration::from_secs(150 * 60);
@@ -644,23 +644,23 @@ fn buttons(
             url,
         });
     }
-    if settings.discord_sonora_button() {
+    if settings.discord_soundy_button() {
         buttons.push(Button {
-            label: "Get Sonora".to_string(),
-            url: SONORA_URL.to_string(),
+            label: "Get Soundy".to_string(),
+            url: SOUNDY_URL.to_string(),
         });
     }
     (!buttons.is_empty()).then_some(buttons)
 }
 
 /// What the status calls itself for `name`, or `None` to leave Discord's own name, which is
-/// Sonora. `provider` is what the provider the track came from calls listening to it. A value
+/// Soundy. `provider` is what the provider the track came from calls listening to it. A value
 /// the track leaves empty, such as an album artist the provider does not name, says Music
 /// rather than borrowing another field.
 fn listening(name: DiscordName, track: &Track, provider: &str) -> Option<String> {
     let music = || Some(MUSIC.to_owned());
     match name {
-        DiscordName::Sonora => None,
+        DiscordName::Soundy => None,
         DiscordName::Provider => Some(provider.to_owned()),
         DiscordName::Music => music(),
         DiscordName::Title => fit_text(&track.name).or_else(music),

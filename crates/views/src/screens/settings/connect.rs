@@ -1,7 +1,7 @@
 use gpui::prelude::*;
 use gpui::{AnyElement, App, Context};
 use i18n::t;
-use state::{ConnectName, Sonora};
+use state::{ConnectName, Soundy};
 use ui::{Field, Form, MenuItem, Picker, Switch};
 
 use super::{Group, SettingsView, Slot};
@@ -13,7 +13,7 @@ impl SettingsView {
     /// Connect, whose name rows only stand while the device is on, which it never is while
     /// Soloist plays, or Jellyfin's remote control, named by the sign-in.
     pub(super) fn connect_groups(&self, cx: &App) -> Vec<Group> {
-        if !Sonora::global(cx).devices.read(cx).supported() {
+        if !Soundy::global(cx).devices.read(cx).supported() {
             return Vec::new();
         }
         if jellyfin(cx) {
@@ -100,5 +100,5 @@ impl SettingsView {
 /// Whether the signed-in provider is Jellyfin, whose device list is its remote control and
 /// takes its device name from the sign-in.
 pub(super) fn jellyfin(cx: &App) -> bool {
-    Sonora::global(cx).session.read(cx).provider_slug() == Some("jellyfin")
+    Soundy::global(cx).session.read(cx).provider_slug() == Some("jellyfin")
 }

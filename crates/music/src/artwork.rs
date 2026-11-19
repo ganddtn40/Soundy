@@ -35,7 +35,7 @@ const UPLOAD_LIMITS: CoverLimits = CoverLimits {
 const AGENT: &str = concat!(
     "soundy/",
     env!("CARGO_PKG_VERSION"),
-    " (Sonora fork; https://github.com/sonorahq/sonora)"
+    " (+https://github.com/ganddtn40/soundy)"
 );
 
 /// Finds cover art by name in public catalogues that need no account and serve every image from
@@ -354,7 +354,7 @@ impl ArtworkSearch {
         };
         let jpeg = square_jpeg(&picture, UPLOAD_LIMITS)?;
 
-        let boundary = format!("sonora{:016x}", fastrand::u64(..));
+        let boundary = format!("soundy{:016x}", fastrand::u64(..));
         let mut body = format!(
             "--{boundary}\r\nContent-Disposition: form-data; name=\"files[]\"; filename=\"cover.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n"
         )

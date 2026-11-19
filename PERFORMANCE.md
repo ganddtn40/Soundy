@@ -14,7 +14,7 @@ projection. Re-run the commands below on your machine before comparing figures.
 
 ## Method
 
-1. Build with the release profile: `cargo build --release -p sonora`.
+1. Build with the release profile: `cargo build --release -p soundy`.
 2. Start `target\release\soundy.exe`, leave the window restored at 936×648 and do not minimize it.
    A minimized window lets Windows trim the working set and understates idle memory.
 3. Record the profile state with the numbers; a signed-in profile with imported playlists is not
@@ -33,36 +33,62 @@ The measurement script is in `scripts/measure-soundy.ps1`.
 
 ## Results
 
-Measured on Windows 11 x64 with the 1.0.0 release executable built from this tree on
-19 November 2026 (`soundy.exe`, 90,808,320 bytes,
-SHA-256 `29FC0319B999ECBAF878168135218DF6622C058D242DADB0A19638B15258CB24`).
+Measured on Windows 11 x64 on 19 November 2026 with the window restored at 936×648. Each run
+settled for 45 seconds, then sampled `Get-Process` once a second for 60 seconds. Memory is the
+median of those samples; CPU is the process's total processor time over the window.
 
-| State | Working set | Private commit | CPU over 60 s |
-| --- | ---: | ---: | ---: |
-| Fresh profile, Home, settled 60 s | 104.0 MB | 87.8 MB | 0.374 s (≈0.6% of one core) |
-| Populated profile, Home, settled 60 s | 119.9 MB | 100.9 MB | 0.405 s (≈0.7% of one core) |
-| Populated profile, playing a YouTube Music stream | 124.5 MB | 107.6 MB | 0.933 s (≈1.6% of one core) |
-| Paused after that stream | 124.5 MB | 107.5 MB | 0.218 s over 45 s (≈0.5% of one core) |
+Two binaries were compared: the shipped 1.0.0 baseline (`soundy.exe` from
+`Soundy-1.0.0-Portable`, 90,892,800 bytes, SHA-256
+`445AC4DCBEE3480C06365BCE66A04D2FA8CC58C4E68A8C3AD06B25D4A9A47B06`) and the 1.0.1 release
+(`target\release\soundy.exe`, 90,958,848 bytes, SHA-256
+`32E7ED68E39DEFACE41FED52CDFF09DA8A059B3F7D6FF832BB7BD31BD6DAC38A`). Each profile was measured
+twice per binary, the second pair in reverse order, so drift over the session could not favour
+one version.
 
-Startup to first visible window, five cold launches of the same binary: **213 ms, 188 ms,
-181 ms, 205 ms, 197 ms** (median 197 ms). The window appears before the provider home request
-resolves; the shelves fill in afterwards without blocking input.
+| Profile | Build | Working set | Private commit | CPU over 60 s |
+| --- | --- | ---: | ---: | ---: |
+| Populated, pair 1 | 1.0.0 | 119.99 MB | 100.46 MB | 0.391 s |
+| Populated, pair 1 | 1.0.1 | 119.35 MB | 99.96 MB | 0.531 s |
+| Populated, pair 2 | 1.0.0 | 120.88 MB | 102.06 MB | 0.344 s |
+| Populated, pair 2 | 1.0.1 | 120.81 MB | 101.48 MB | 0.344 s |
+| Fresh, pair 1 | 1.0.0 | 107.89 MB | 99.05 MB | 0.328 s |
+| Fresh, pair 1 | 1.0.1 | 104.00 MB | 87.92 MB | 0.406 s |
+| Fresh, pair 2 | 1.0.0 | 103.88 MB | 87.88 MB | 0.562 s |
+| Fresh, pair 2 | 1.0.1 | 104.33 MB | 89.89 MB | 0.297 s |
+
+Startup to the first visible window, five cold launches each:
+
+- 1.0.0: 298, 192, 186, 191, 202 ms (median 192 ms).
+- 1.0.1: 198, 201, 203, 191, 202 ms (median 201 ms).
+
+The populated profile is the maintainer's: a signed-in YouTube Music session, two imported
+playlists (276 rows) and a small playback history. The fresh profile has no account, no local
+folders and no imports. Memory differences between versions are no larger than the spread within
+one version: 1.0.0's fresh private commit ranged 87.9–99.1 MB across its two runs, against
+87.9–89.9 MB for 1.0.1, and the versions trade places in the populated pairs. CPU spans
+0.30–0.56 s per idle minute on both versions with no ordering effect, which is redraw and
+compositor noise rather than a new loop. The 1.0.1 executable is 66,048 bytes (0.07%) larger
+because it carries the anonymous page reader and its dialog copy.
 
 The working set is flat across the samples (±0.3 MB), which is the useful signal for a leak: no
-growth appeared while idle or while streaming. The settled difference between the two profiles,
-about 16 MB, is the signed-in provider session, the two imported playlists and the populated Home
-shelves; it is not the importer running, since the importer is inactive while idle.
+growth appeared while idle. The settled difference between the two profiles, about 16 MB, is the
+signed-in provider session and the imported library data held for instant navigation, not the
+importer: `Import` is inactive and polling nothing between imports.
+
+Streaming was measured on the earlier 1.0.0 build at 124.5 MB working / 107.6 MB private. The
+playback path did not change in 1.0.1, so it was not re-measured and is not presented as a 1.0.1
+figure.
 
 ### Against the target
 
 The brief asked for idle memory below 100 MB "where realistic". The result depends on the
 profile:
 
-- **Fresh profile:** private commit is 87.8 MB, under the 100 MB target. Working set is 104.0 MB,
-  about 4 MB over the literal resident target.
-- **Populated profile:** private commit is 100.9 MB and working set is 119.9 MB, so both are
-  above the target once a provider session and imported playlists are live. Streaming adds about
-  5 MB working and 7 MB private on top of that.
+- **Fresh profile:** private commit is 87.9–89.9 MB, under the 100 MB target. Working set is
+  104.0–104.3 MB, about 4 MB over the literal resident target.
+- **Populated profile:** private commit is 99.96–102.06 MB and working set is
+  119.35–120.88 MB, so both are above the target once a provider session and imported playlists
+  are live.
 
 The baseline cost is GPUI rendering through `wgpu` on DX12: the swapchain, shader and pipeline
 caches, font and image atlases, and the GPU driver's allocations all count toward the process.
@@ -71,13 +97,15 @@ data held for instant search and navigation. Reaching sub-100 MB resident in a p
 would need a smaller renderer or a different windowing stack, not tuning of Soundy's own data
 structures.
 
-CPU is close to the renderer's floor: about 0.6–0.7% of one core averaged over a minute while
-idle, and about 1.6% while decoding and playing a stream, not a polling loop. Startup is fast
-because there is no WebView2 process and no JavaScript boot for the default local/provider path.
+CPU is close to the renderer's floor: 0.30–0.56 s per idle minute, or about 0.5–0.9% of one core,
+not a polling loop. Startup is fast because there is no WebView2 process and no JavaScript boot
+for the default local/provider path.
 
-An earlier build (91,254,784 bytes) measured 110.1 MB working / 98.7 MB private on a lighter
-profile with a guest session and one five-row imported playlist, with a 213 ms median startup.
-Those numbers are superseded by the table above; they are kept here only so older notes are not
+An earlier pre-release build (91,254,784 bytes) measured 110.1 MB working / 98.7 MB private on a
+lighter profile with a guest session and one five-row imported playlist, with a 213 ms median
+startup. A previous version of this document also named a 90,808,320-byte binary with SHA-256
+`29FC0319…CB24`; that binary was not the published 1.0.0 asset. The figures above use the
+published baseline. The older numbers are kept only so notes written against them are not
 mistaken for current measurements.
 
 ## What keeps it bounded
@@ -97,12 +125,15 @@ the queue, the right panel, the player bar and the fullscreen player. A cover is
 
 ### Import and enrichment (`crates/music/src/enrich.rs`, `collage.rs`)
 
-- At most 160 album lookups and 80 track lookups per import, with 4 concurrent requests.
+- At most 160 album lookups and 120 track lookups per import, with 4 concurrent requests.
 - 12-second request timeout and a 6 MB cap per downloaded cover.
 - Rows already carrying provider artwork are not looked up again; remaining rows are grouped by
   album so one fetch can serve several tracks.
 - A provider that refuses or throttles is disabled for the rest of that import by a circuit
   breaker, instead of retrying every row.
+- The anonymous Spotify page reader makes one bounded request (20-second timeout) with at most
+  two retries at exponential backoff, checks cancellation between steps, and never starts on its
+  own; there is no background importer or polling.
 - Collage sources are at most four distinct album pictures, and the 2×2/3/2/1 collage is written
   once as JPEG rather than kept as decoded bitmaps.
 
@@ -148,8 +179,8 @@ when it becomes non-zero.
 
 ## Notes and limits
 
-- The profile is realistic but not a fresh-install minimum: it carries one imported playlist and
-  a guest provider session.
+- The profiles are realistic but the populated one is not a fresh-install minimum: it carries two
+  imported playlists and a signed-in provider session.
 - The measurements are process-level. Shared DLL pages and the GPU driver's own allocations are
   counted in the working set but not the private commit.
 - No long-duration soak test beyond the 60-second windows is claimed here; the flat samples show

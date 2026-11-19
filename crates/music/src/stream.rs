@@ -711,7 +711,7 @@ fn announced(total: Option<u64>, ceiling: usize) -> Option<usize> {
         .filter(|total| *total <= ceiling)
 }
 
-/// A file in Sonora's cache directory with no name, so nothing is left behind however the
+/// A file in Soundy's cache directory with no name, so nothing is left behind however the
 /// process ends.
 fn spool_file() -> io::Result<File> {
     let folder = dirs::cache_dir()

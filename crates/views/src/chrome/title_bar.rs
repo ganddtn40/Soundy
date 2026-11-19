@@ -16,7 +16,7 @@ use crate::chrome::downloads::DownloadsButton;
 use i18n::t;
 use input::Refresh;
 use router::{Destination, Navigation, SettingsPage, navigate, open_settings};
-use state::{AppSettings, Sonora};
+use state::{AppSettings, Soundy};
 
 const SYSTEM_ZOOMS: bool = cfg!(target_os = "windows");
 /// The rule between the current screen's controls and the account and sidebar segment.
@@ -91,7 +91,7 @@ impl EventEmitter<TitleBarEvent> for TitleBar {}
 impl TitleBar {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let navigation = router::trail(cx);
-        let settings = Sonora::global(cx).settings.clone();
+        let settings = Soundy::global(cx).settings.clone();
 
         cx.observe(&navigation, |this, _, cx| {
             this.busy = None;
@@ -99,7 +99,7 @@ impl TitleBar {
         })
         .detach();
         cx.observe(&settings, |_, _, cx| cx.notify()).detach();
-        cx.observe(&Sonora::global(cx).session.clone(), |_, _, cx| cx.notify())
+        cx.observe(&Soundy::global(cx).session.clone(), |_, _, cx| cx.notify())
             .detach();
         Self {
             navigation,
@@ -230,7 +230,7 @@ impl TitleBar {
     /// way to manage them, then History and Settings. A guest session shows as guest mode, and
     /// only while it is the one in use.
     fn account(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let session = Sonora::global(cx).session.clone();
+        let session = Soundy::global(cx).session.clone();
         let guest = session
             .read(cx)
             .providers()

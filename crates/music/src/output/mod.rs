@@ -1,4 +1,4 @@
-//! Which output device Sonora plays on, and what the stream on it runs at. Every engine mixes into
+//! Which output device Soundy plays on, and what the stream on it runs at. Every engine mixes into
 //! one stream on the chosen device, or on the system's default when none is chosen or the chosen
 //! one is not connected. A device picked in settings is opened first, with `open`; only once it
 //! opens does `choose_device` make it the one to play on, and the engines are restarted onto it.
@@ -126,8 +126,8 @@ pub struct DeviceOption {
     pub system: bool,
 
     /// Whether it is played on directly, for bit-perfect output: a sound card's own device,
-    /// opened past the sound server, or on macOS a device's second listing, which Sonora takes
-    /// from every other app with hog mode. Nothing else can play on it while Sonora holds it,
+    /// opened past the sound server, or on macOS a device's second listing, which Soundy takes
+    /// from every other app with hog mode. Nothing else can play on it while Soundy holds it,
     /// and on Linux it does not open while the server does.
     pub direct: bool,
 
@@ -201,11 +201,11 @@ pub enum Server {
     PulseAudio,
 }
 
-/// The device Sonora holds when a direct device is chosen, and why a hold or a rate went wrong. The
+/// The device Soundy holds when a direct device is chosen, and why a hold or a rate went wrong. The
 /// hold is the chosen device's, never the system default's, which can change under it. Only macOS
 /// holds a device.
 struct Hold {
-    /// The chosen device while Sonora has it to itself.
+    /// The chosen device while Soundy has it to itself.
     hog: Option<Hog>,
     /// Why the chosen device could not be taken the last time it was tried.
     taken: Option<String>,
@@ -365,7 +365,7 @@ pub struct DeviceInfo {
     /// channels, and integer samples wrap past full scale where floats clip.
     pub format: Format,
 
-    /// The buffer Sonora asks the device for, in frames.
+    /// The buffer Soundy asks the device for, in frames.
     pub buffer: u32,
 
     /// The rates `choose_rate` can open the device at, lowest first, the format's among them.
@@ -373,7 +373,7 @@ pub struct DeviceInfo {
     pub rates: Vec<u32>,
 
     /// Whether the device is opened directly: a sound card's own device on Linux, or a device
-    /// Sonora holds on macOS. Only such a device is switched to the rate of each track.
+    /// Soundy holds on macOS. Only such a device is switched to the rate of each track.
     pub direct: bool,
 
     /// The buffers `choose_buffer` can open the device with, in frames, lowest first, `buffer`
@@ -511,7 +511,7 @@ impl Device {
     }
 
     /// Opens the device at the rate chosen in settings when it offers it, otherwise at the rate
-    /// it runs at, so nothing between here and the hardware converts what Sonora plays.
+    /// it runs at, so nothing between here and the hardware converts what Soundy plays.
     fn open(device: cpal::Device, id: String) -> Result<Self> {
         let default = device
             .default_output_config()
@@ -725,7 +725,7 @@ pub(crate) fn raise_decoder_priority() {
 ///
 /// From a single-threaded apartment WASAPI now and then fails to open the default device just
 /// after the system switches it, with `RPC_E_CHANGED_MODE`. A bare cpal program does not hit that,
-/// so something else in Sonora that uses COM plays a part, but from the multithreaded apartment
+/// so something else in Soundy that uses COM plays a part, but from the multithreaded apartment
 /// the new default opens every time. A thread already in an apartment, such as the UI thread,
 /// stays in it.
 #[cfg(windows)]
@@ -1063,7 +1063,7 @@ fn sync_hold_in_background() {
     thread::spawn(sync_hold);
 }
 
-/// Makes what Sonora holds the chosen device when that is a direct one, and nothing otherwise. A
+/// Makes what Soundy holds the chosen device when that is a direct one, and nothing otherwise. A
 /// device already held is kept, so this costs nothing when nothing changed. A device that is not
 /// connected is not an error: it is taken once it is. Only macOS holds a device, since on Linux
 /// opening a direct device is what keeps the sound server off it.
@@ -1145,7 +1145,7 @@ fn held_rates(current: u32) -> Option<Vec<u32>> {
 }
 
 /// Whether the device with cpal id `id` is played on directly: it is the chosen one, it is a
-/// direct device, and where that takes a hold, Sonora has it.
+/// direct device, and where that takes a hold, Soundy has it.
 fn played_directly(id: &str) -> bool {
     let chosen = DeviceSelection::lock().chosen.clone();
     let direct = chosen
@@ -1211,7 +1211,7 @@ pub fn choose_rate(rate: Option<u32>) {
 }
 
 /// Has the stream on the device run at the rate now wanted: the track's while following tracks,
-/// otherwise the one chosen in settings. A device Sonora holds is set to it, and its stream
+/// otherwise the one chosen in settings. A device Soundy holds is set to it, and its stream
 /// follows once the device has. Any other is reopened at it, where it offers it. With no rate
 /// wanted a held device goes back to the rate it had before it was taken.
 fn reopen_at_wanted() {
@@ -1317,7 +1317,7 @@ pub fn system_audio_settings_uri(device: Option<&str>) -> Option<String> {
     }
 }
 
-/// Picks the device Sonora should play on right now.
+/// Picks the device Soundy should play on right now.
 ///
 /// 1. The device chosen in settings, if one is chosen, it is connected, and it has not failed to
 ///    open.
@@ -1416,7 +1416,7 @@ pub fn output_key(device: &str, port: Option<&Port>) -> String {
     }
 }
 
-/// The key an output saved by an older Sonora goes by now, or `None` when `key` is current.
+/// The key an output saved by an older Soundy goes by now, or `None` when `key` is current.
 /// Device rules once keyed a sound server's sink by its bare name, which cpal now puts behind its
 /// `pulseaudio` host.
 #[cfg(target_os = "linux")]
@@ -1428,7 +1428,7 @@ pub fn upgrade_output_key(key: &str) -> Option<String> {
     Some(format!("{}:{key}", cpal::HostId::PulseAudio))
 }
 
-/// The key an output saved by an older Sonora goes by now. Every key is current here, since only
+/// The key an output saved by an older Soundy goes by now. Every key is current here, since only
 /// Linux ever keyed a sound server's sink.
 #[cfg(not(target_os = "linux"))]
 pub fn upgrade_output_key(_key: &str) -> Option<String> {
@@ -1463,7 +1463,7 @@ fn forget_gone(host: &cpal::Host) {
     }
 }
 
-/// The host Sonora plays through. On Windows the calling thread joins COM's multithreaded
+/// The host Soundy plays through. On Windows the calling thread joins COM's multithreaded
 /// apartment first, see `Apartment`.
 #[cfg(not(target_os = "linux"))]
 fn host() -> cpal::Host {
@@ -1500,7 +1500,7 @@ fn find_device(host: &cpal::Host, id: &str) -> Option<cpal::Device> {
     host.device_by_id(&id)
 }
 
-/// The id Sonora saves for `device`, or `None` when cpal cannot read one. It is cpal's id, with an
+/// The id Soundy saves for `device`, or `None` when cpal cannot read one. It is cpal's id, with an
 /// ALSA sound card named rather than numbered, since the numbers change as cards come and go.
 fn cpal_ident(device: &cpal::Device) -> Option<String> {
     let id = device.id().ok()?;
@@ -1650,7 +1650,7 @@ fn spawn_watcher(device: Weak<Device>) {
     }
 }
 
-/// Whether opening a device failed because something else, perhaps a stream of Sonora's own that
+/// Whether opening a device failed because something else, perhaps a stream of Soundy's own that
 /// is still closing, holds it.
 fn is_busy(error: &anyhow::Error) -> bool {
     error

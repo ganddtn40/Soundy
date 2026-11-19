@@ -1,5 +1,5 @@
 //! The Jam as the app shows it: the question before a shared link is joined, the code a phone
-//! scans to join the one the listener started, and the faces of the people in a Jam or a Sonora
+//! scans to join the one the listener started, and the faces of the people in a Jam or a Soundy
 //! Session. All of it is `state::Devices`' to answer, and this only draws it.
 
 use gpui::prelude::*;
@@ -11,7 +11,7 @@ use gpui::{
 };
 use i18n::t;
 use music::connect::{Jam, JamMember};
-use state::{Devices, Outcome, Sonora, Toasts};
+use state::{Devices, Outcome, Soundy, Toasts};
 use ui::{
     ActiveTheme as _, Avatar, Button, Dismiss, FORM_CONTEXT, Field, Form, Input, Modal, Qr, Submit,
     Text, Theme, single_line, snapped,
@@ -56,7 +56,7 @@ pub(crate) struct JamInvite {
 
 impl JamInvite {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let devices = Sonora::global(cx).devices.clone();
+        let devices = Soundy::global(cx).devices.clone();
         cx.observe(&devices, |_, _, cx| cx.notify()).detach();
         Self {
             devices,
@@ -158,7 +158,7 @@ pub(crate) struct JamJoin {
 
 impl JamJoin {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let devices = Sonora::global(cx).devices.clone();
+        let devices = Soundy::global(cx).devices.clone();
         cx.observe(&devices, |_, _, cx| cx.notify()).detach();
         let link = cx.new(|cx| Input::new("devices-jam-link-hint", cx));
         cx.observe(&link, |_, _, cx| cx.notify()).detach();
@@ -294,7 +294,7 @@ pub(crate) struct JamCode {
 
 impl JamCode {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let devices = Sonora::global(cx).devices.clone();
+        let devices = Soundy::global(cx).devices.clone();
         cx.observe(&devices, |_, _, cx| cx.notify()).detach();
         Self {
             devices,

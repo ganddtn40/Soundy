@@ -384,7 +384,7 @@ pub fn saved_artist(value: &Value) -> Option<SavedArtist> {
     })
 }
 
-/// The sections of a `page.get` answer that hold at least one card Sonora can draw, in the
+/// The sections of a `page.get` answer that hold at least one card Soundy can draw, in the
 /// order Deezer lays them out. A section without a title takes `fallback`, which is how a
 /// module page names its one untitled grid.
 pub fn sections(page: &Value, user_id: &str, fallback: &str) -> Vec<GenreSection> {
@@ -530,7 +530,7 @@ fn undated(title: &str) -> &str {
     }
 }
 
-/// The music channels of the `channels/explore` page. Podcasts are not something Sonora
+/// The music channels of the `channels/explore` page. Podcasts are not something Soundy
 /// plays, so the podcasts channel goes, and so does any section where a channel's picture
 /// comes from a podcast, which is how the podcast categories show.
 pub fn explore(page: &Value) -> Vec<Genre> {

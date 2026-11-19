@@ -1,4 +1,4 @@
-//! Apple Music's JSON turned into Sonora's models.
+//! Apple Music's JSON turned into Soundy's models.
 //!
 //! Every resource arrives in the same envelope: an `id`, a `type`, an `attributes` object and
 //! sometimes `relationships`. A library resource carries its own id (`i.`, `l.`, `r.`, `p.`)
@@ -1162,7 +1162,7 @@ pub fn library_artist(answer: &Answer<Search>, id: &str) -> Option<String> {
         .and_then(|row| row.id.as_str().map(str::to_owned))
 }
 
-/// The uri Sonora knows an Apple item by in the sidebar. It is Spotify-shaped on purpose: a
+/// The uri Soundy knows an Apple item by in the sidebar. It is Spotify-shaped on purpose: a
 /// sidebar pin is built by taking what follows the last colon.
 pub fn pin_uri(kind: PinTargetKind, id: &str) -> Option<String> {
     let part = match kind {

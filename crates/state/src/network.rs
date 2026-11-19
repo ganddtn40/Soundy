@@ -4,7 +4,7 @@ use gpui::{App, Context, Entity, EventEmitter, Task};
 
 use crate::library::Shelf;
 use crate::session::Session;
-use crate::{AppSettings, Io, Sonora};
+use crate::{AppSettings, Io, Soundy};
 
 /// How long to wait before each check of whether the network is back. The last one repeats
 /// for as long as the network stays gone.
@@ -52,13 +52,13 @@ impl Network {
     }
 
     pub fn global(cx: &App) -> Entity<Self> {
-        Sonora::global(cx).network.clone()
+        Soundy::global(cx).network.clone()
     }
 
     /// Whether the network is gone, or offline mode is on. Every screen that needs one asks this
     /// rather than waiting for its own load to fail.
     pub fn lost(cx: &App) -> bool {
-        match cx.try_global::<Sonora>() {
+        match cx.try_global::<Soundy>() {
             Some(sonora) => {
                 let network = sonora.network.read(cx);
                 network.lost || network.offline
@@ -70,7 +70,7 @@ impl Network {
     /// Whether the listener turned offline mode on, which a screen tells apart from a lost
     /// connection by offering to go online rather than to try again.
     pub fn offline(cx: &App) -> bool {
-        cx.try_global::<Sonora>()
+        cx.try_global::<Soundy>()
             .is_some_and(|sonora| sonora.network.read(cx).offline)
     }
 
@@ -115,7 +115,7 @@ impl Network {
             return;
         }
         let Some(network) = cx
-            .try_global::<Sonora>()
+            .try_global::<Soundy>()
             .map(|sonora| sonora.network.clone())
         else {
             return;
@@ -135,7 +135,7 @@ impl Network {
     /// Notes that something reached the network, which is the quickest way back online.
     pub fn reached(cx: &mut App) {
         let Some(network) = cx
-            .try_global::<Sonora>()
+            .try_global::<Soundy>()
             .map(|sonora| sonora.network.clone())
         else {
             return;
@@ -160,7 +160,7 @@ impl Network {
 
     /// Opens a connection to the active provider's host until one succeeds, waiting longer
     /// between tries as they keep failing. Nothing is asked of the host but the connection, and
-    /// it is one the app talks to anyway, so no other service ever learns Sonora is running. A
+    /// it is one the app talks to anyway, so no other service ever learns Soundy is running. A
     /// provider that needs no network hands back no host, and then nothing is tried at all.
     fn watch(&mut self, cx: &mut Context<Self>) {
         let io = self.io.clone();

@@ -13,7 +13,7 @@ use music::SignInPrompt;
 use router::{Destination, SettingsPage, SettingsTab, navigate};
 use state::{
     AppSettings, Drm, Equalizer, Io, Outputs, Playback, Scan, Scrobbling, Session, SessionState,
-    Sleep, Soloist, Sonora,
+    Sleep, Soloist, Soundy,
 };
 use ui::{
     Activate, ActiveTheme as _, Card, Deck, Dismiss, Input, Lazy, Popovers, Scrollbar,
@@ -280,9 +280,9 @@ pub struct SettingsView {
     scrobbling: Entity<Scrobbling>,
     scrobble_first: Entity<Input>,
     scrobble_second: Entity<Input>,
-    /// The field for the custom name Sonora goes by in Spotify's device list.
+    /// The field for the custom name Soundy goes by in Spotify's device list.
     connect_name: Entity<Input>,
-    /// The address of the listener's own Sonora Sessions server.
+    /// The address of the listener's own Sessions server.
     sessions_server: Entity<Input>,
     /// The service whose link dialog is open, by slug.
     scrobble_prompt: Option<&'static str>,
@@ -330,12 +330,12 @@ impl SettingsView {
         playback: Entity<Playback>,
         cx: &mut Context<Self>,
     ) -> Self {
-        let settings = Sonora::global(cx).settings.clone();
-        let scrobbling = Sonora::global(cx).scrobbling.clone();
-        let drm = Sonora::global(cx).drm.clone();
-        let equalizer = Sonora::global(cx).equalizer.clone();
-        let outputs = Sonora::global(cx).outputs.clone();
-        let soloist = Sonora::global(cx).soloist.clone();
+        let settings = Soundy::global(cx).settings.clone();
+        let scrobbling = Soundy::global(cx).scrobbling.clone();
+        let drm = Soundy::global(cx).drm.clone();
+        let equalizer = Soundy::global(cx).equalizer.clone();
+        let outputs = Soundy::global(cx).outputs.clone();
+        let soloist = Soundy::global(cx).soloist.clone();
         cx.observe(&drm, |this, _, cx| this.remeasure(cx)).detach();
         cx.observe(&soloist, |this, _, cx| this.remeasure(cx))
             .detach();
@@ -431,7 +431,7 @@ impl SettingsView {
         sessions_server.update(cx, |input, cx| input.set_text(typed, cx));
         // the Save button stands held while the server it saves is checked, and the field wears a
         // red border from a save that was turned down until one goes through
-        let listening = Sonora::global(cx).listening.clone();
+        let listening = Soundy::global(cx).listening.clone();
         cx.observe(&listening, |this: &mut Self, listening, cx| {
             let rejected = listening.read(cx).rejected();
             this.sessions_server

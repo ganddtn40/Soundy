@@ -5,7 +5,7 @@ use gpui::prelude::*;
 use gpui::{AnyView, App, Context, Entity, FocusHandle, Pixels, Render, StyleRefinement};
 use gpui::{Window, deferred, div};
 use input::WORKSPACE_CONTEXT;
-use state::{AppSettings, Playback, Queue, SideTab, Sonora};
+use state::{AppSettings, Playback, Queue, SideTab, Soundy};
 use ui::{
     Activate, ActiveTheme as _, Deselect, Entrance, Remove, SelectNext, SelectPrevious, entering,
     shown_listing, veiled,
@@ -47,7 +47,7 @@ impl Workspace {
         let sidebar = cx.new(SidebarLeft::new);
         let sidebar_right = cx.new(|cx| SidebarRight::new(queue.clone(), playback.clone(), cx));
         let player_bar = cx.new(|cx| PlayerBar::new(playback.clone(), queue, cx));
-        let settings = Sonora::global(cx).settings.clone();
+        let settings = Soundy::global(cx).settings.clone();
         cx.observe(&settings, |_, _, cx| cx.notify()).detach();
 
         Self {

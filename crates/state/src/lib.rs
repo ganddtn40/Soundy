@@ -225,7 +225,7 @@ pub(crate) fn settled<T>(result: Result<T>, cx: &mut gpui::App) -> std::result::
     }
 }
 
-pub struct Sonora {
+pub struct Soundy {
     pub session: Entity<Session>,
     pub control: Entity<Control>,
     pub cover: Entity<Cover>,
@@ -259,9 +259,9 @@ pub struct Sonora {
     pub wake: Entity<Wake>,
 }
 
-impl Global for Sonora {}
+impl Global for Soundy {}
 
-impl Sonora {
+impl Soundy {
     pub fn global(cx: &App) -> &Self {
         cx.global()
     }
@@ -438,7 +438,7 @@ pub fn init(
         cx,
     );
 
-    cx.set_global(Sonora {
+    cx.set_global(Soundy {
         sponsorblock,
         session,
         control,

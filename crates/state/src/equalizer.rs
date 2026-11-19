@@ -19,7 +19,7 @@ const GLIDE_STORE: Duration = Duration::from_millis(300);
 /// How many equalizer edits can be undone.
 const UNDO_STEPS: usize = 50;
 
-/// The equalizer as it plays. Created once in `Sonora`, it hands every engine the same reader
+/// The equalizer as it plays. Created once in `Soundy`, it hands every engine the same reader
 /// and meter, so a change reaches the output without a restart. It follows the output the sound
 /// plays on and plays the sound that output's device rule names.
 pub struct Equalizer {

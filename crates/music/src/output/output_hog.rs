@@ -1,6 +1,6 @@
 //! Exclusive access to an output device, which CoreAudio calls hog mode. It is what "Direct to
-//! hardware" means on macOS: while Sonora hogs a device no other app can play through it, and
-//! Sonora can set the device's own sample rate, so nothing between Sonora and the hardware
+//! hardware" means on macOS: while Soundy hogs a device no other app can play through it, and
+//! Soundy can set the device's own sample rate, so nothing between Soundy and the hardware
 //! converts what it plays.
 //!
 //! Only macOS has hog mode. Elsewhere a `Hog` can never be made, so the code that holds one
@@ -105,7 +105,7 @@ mod macos {
         changed: bool,
         /// The rates the device offers, lowest first.
         rates: Vec<u32>,
-        /// Whether this took the device, rather than finding Sonora already had it. Only the `Hog`
+        /// Whether this took the device, rather than finding Soundy already had it. Only the `Hog`
         /// that took a device lets it go, so a second one for the same device can drop freely.
         took: bool,
     }

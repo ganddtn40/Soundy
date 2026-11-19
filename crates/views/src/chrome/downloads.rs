@@ -9,7 +9,7 @@ use gpui::{
 };
 use i18n::t;
 use router::{Destination, navigate};
-use state::{Active, Collection, Downloads, Pending, Sonora, Subject};
+use state::{Active, Collection, Downloads, Pending, Soundy, Subject};
 use ui::{
     ActiveTheme as _, ArrowRing, Artwork, Button, Glowing as _, Menu, Picker, Popovers, Scrollbar,
     Scroller, Text, Theme, faint,
@@ -62,7 +62,7 @@ pub(crate) struct DownloadsButton {
 
 impl DownloadsButton {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let downloads = Sonora::global(cx).downloads.clone();
+        let downloads = Soundy::global(cx).downloads.clone();
         cx.observe(&downloads, |_, _, cx| cx.notify()).detach();
         let me = cx.entity_id();
         let scroll = UniformListScrollHandle::new();

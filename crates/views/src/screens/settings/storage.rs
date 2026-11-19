@@ -1,7 +1,7 @@
 use gpui::prelude::*;
 use gpui::{AnyElement, App, Context, SharedString, div};
 use i18n::t;
-use state::{Network, Sonora};
+use state::{Network, Soundy};
 use ui::{ActiveTheme as _, Button, Switch};
 
 use super::rows::outward;
@@ -62,7 +62,7 @@ impl SettingsView {
         self.row(t!("settings-cache-used"), control.into_any_element())
     }
 
-    /// Offline mode, which keeps Sonora to what was downloaded until it is turned off again.
+    /// Offline mode, which keeps Soundy to what was downloaded until it is turned off again.
     pub(super) fn offline_mode_row(&self, cx: &mut Context<Self>) -> AnyElement {
         let on = Network::offline(cx);
         self.row(
@@ -120,7 +120,7 @@ impl SettingsView {
                         Confirm::ask(
                             Kind::Downloads,
                             |cx| {
-                                let downloads = Sonora::global(cx).downloads.clone();
+                                let downloads = Soundy::global(cx).downloads.clone();
                                 downloads.update(cx, |downloads, cx| downloads.remove_all(cx));
                             },
                             cx,

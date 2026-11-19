@@ -6,7 +6,7 @@ use i18n::t;
 use music::Playlist;
 use router::Destination;
 use state::{
-    Collection, Library, LibraryPart, LibraryState, Network, Origin, Playback, Shelf, Sonora,
+    Collection, Library, LibraryPart, LibraryState, Network, Origin, Playback, Shelf, Soundy,
 };
 use ui::rank::{ESSENTIAL, HANDY, NICE, SPARE};
 use ui::{Cell, ColumnSpec, Menu, Pin, TableSource, Width};
@@ -159,7 +159,7 @@ impl TableSource for PlaylistSource {
             on: self.owned,
         })];
         // Offline mode already keeps the shelf to its downloads, so the filter would do nothing.
-        let offered = self.downloaded || !Sonora::global(cx).downloads.read(cx).is_empty();
+        let offered = self.downloaded || !Soundy::global(cx).downloads.read(cx).is_empty();
         if offered && !self.downloads_only(cx) {
             axes.push(Filter::Flag(FlagAxis {
                 key: "filter-downloaded",
@@ -294,7 +294,7 @@ impl TableSource for PlaylistSource {
 
 /// Whether a playlist was downloaded whole, or is on its way.
 fn downloaded(id: &str, cx: &App) -> bool {
-    Sonora::global(cx)
+    Soundy::global(cx)
         .downloads
         .read(cx)
         .set(Collection::Playlist, id)

@@ -53,8 +53,8 @@ modules:
     sources:
       # Use source from GitHub:
       #- type: git
-      #  url: https://github.com/sonorahq/sonora.git
-      #  tag: v0.28.0
+      #  url: https://github.com/ganddtn40/soundy.git
+      #  tag: v1.0.1
 
       # Use source from this machine:
       - type: dir
@@ -77,7 +77,7 @@ modules:
       - test -f cargo/config && mv cargo/config cargo/config.toml || true
 
       # Build directly - Cargo will automatically use $CARGO_HOME/config
-      - cargo build --offline --locked --release --package sonora
+      - cargo build --offline --locked --release --package soundy
 
       # Collect info as suggested by: https://v2.tauri.app/distribute/flatpak/
       # Install binary to /app/bin

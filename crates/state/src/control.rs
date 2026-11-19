@@ -20,18 +20,18 @@ use tokio::sync::{mpsc, oneshot};
 use crate::search::{self, Catalog};
 use crate::{
     Hit, Io, Library, LibraryPart, LyricsState, Origin, Playback, PlaybackState, QueueKind,
-    QueuePlacement, QueuePosition, Repeat, Session, SessionState, Shelf, Sonora, Whence, join,
+    QueuePlacement, QueuePosition, Repeat, Session, SessionState, Shelf, Soundy, Whence, join,
     noted,
 };
 
-/// What `sonora current` calls the provider of a local file, the slug `sonora providers` gives it.
+/// What `soundy current` calls the provider of a local file, the slug `soundy providers` gives it.
 const LOCAL: &str = "local";
 
 /// How often a watch looks again on its own, for the position it reports and for a change made
 /// somewhere that does not go through `Playback`, such as the volume of a steered device.
 const WATCH_TICK: Duration = Duration::from_secs(1);
 
-/// Carries out what the command line asks of the running Sonora. Playback goes through
+/// Carries out what the command line asks of the running Soundy. Playback goes through
 /// `Playback`, so a device steered over Connect is the one that obeys. A command that fetches
 /// tracks first answers once they are queued, so a failure reaches the terminal.
 pub struct Control {
@@ -43,14 +43,14 @@ pub struct Control {
     issued: u64,
     /// A provider switch waiting for the session to settle before it answers.
     switching: Option<Switching>,
-    /// Command lines following what plays, as `sonora watch`.
+    /// Command lines following what plays, as `soundy watch`.
     watchers: Vec<Watcher>,
     /// What keeps the watchers told, held only while there are any.
     watching: Option<([Subscription; 2], Task<()>)>,
     _session: Subscription,
 }
 
-/// A `sonora watch` and what it was last told.
+/// A `soundy watch` and what it was last told.
 struct Watcher {
     sink: mpsc::UnboundedSender<Reply>,
     /// Whether a new position alone is worth a line.
@@ -118,7 +118,7 @@ impl Control {
         }
     }
 
-    /// Follows what plays for a `sonora watch`: what plays now at once, then again on every
+    /// Follows what plays for a `soundy watch`: what plays now at once, then again on every
     /// change, until the command line hangs up and `sink` closes.
     pub fn watch(
         &mut self,
@@ -626,7 +626,7 @@ impl Control {
         // with nothing playing the tracks start by themselves, so only a queue that already
         // plays is skipped forward into them
         let playing = self.playback.read(cx).steered(cx).is_some()
-            || Sonora::global(cx).queue.read(cx).current().is_some();
+            || Soundy::global(cx).queue.read(cx).current().is_some();
         self.playback.update(cx, |playback, cx| match placement {
             Place::Now => {
                 playback.insert_all(tracks, 0, origin, cx);
@@ -648,10 +648,10 @@ fn favorite_target(saved: bool, switch: Switch) -> bool {
     }
 }
 
-/// Starts, joins or leaves a Sonora Session, or says which one Sonora is in. A start or join
-/// answers before the server does, so `sonora session` tells whether it went through.
+/// Starts, joins or leaves a Soundy Session, or says which one Soundy is in. A start or join
+/// answers before the server does, so `soundy session` tells whether it went through.
 fn session(command: SessionCommand, cx: &mut App) -> Reply {
-    let listening = Sonora::global(cx).listening.clone();
+    let listening = Soundy::global(cx).listening.clone();
     match command {
         SessionCommand::Status => {
             let listening = listening.read(cx);
@@ -841,7 +841,7 @@ fn current(playback: &Playback, cx: &App) -> Option<Current> {
             (state, playback.live_position())
         }
     };
-    let sonora = Sonora::global(cx);
+    let sonora = Soundy::global(cx);
     let id = track.id.as_deref();
     let provider = match id.is_some_and(|id| Shelf::of(id).local()) {
         true => Some(LOCAL.to_owned()),
@@ -860,7 +860,7 @@ fn current(playback: &Playback, cx: &App) -> Option<Current> {
     })
 }
 
-/// A read-only snapshot of the queue as `sonora queue` prints it, in play order. It reads
+/// A read-only snapshot of the queue as `soundy queue` prints it, in play order. It reads
 /// only what the queue already holds: on a steered device that is the metadata already read
 /// in, whose sections stop at the first track not read in yet, so nothing is fetched from a
 /// provider to answer. With nothing queued it is empty in every section.
@@ -885,11 +885,11 @@ fn queue_snapshot(playback: &Playback, cx: &App) -> QueueSnapshot {
     QueueSnapshot::bounded(previous, current, upcoming)
 }
 
-/// The lyrics of the current track as `sonora lyrics` prints them. It reads only what `Lyrics`
+/// The lyrics of the current track as `soundy lyrics` prints them. It reads only what `Lyrics`
 /// already holds for the track shown, on the steered device when there is one, and never asks
 /// a source for anything.
 fn lyrics(playback: &Playback, cx: &App) -> wire::LyricsSnapshot {
-    let sonora = Sonora::global(cx);
+    let sonora = Soundy::global(cx);
     let held = sonora.lyrics.read(cx);
     let at = match playback.steered(cx) {
         Some(steered) => steered.state.live_position(),

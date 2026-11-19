@@ -651,7 +651,7 @@ settings-discord = 在 Discord 上显示
 settings-discord-detail = 将你正在播放的歌曲显示在 Discord 个人资料上
 settings-discord-name = 状态名称
 settings-discord-name-detail = 状态在“正在收听”后显示的名称，你的好友会看到
-settings-discord-name-sonora = Sonora
+settings-discord-name-sonora = Soundy
 settings-discord-name-provider = 服务提供商
 settings-discord-name-music = 音乐
 settings-discord-name-title = 标题
@@ -674,7 +674,7 @@ settings-discord-preview-elapsed = 已播放 { $time }
 settings-discord-preview-listen-on = 在 { $provider } 上收听
 # the Discord status when the track is left out of it
 discord-listening = 正在听音乐
-get-sonora = 获取 Sonora
+get-sonora = 获取 Soundy
 settings-fullscreen-controls-autohide-automatic = 自动
 settings-fullscreen-controls-autohide-always-hidden = 始终隐藏
 settings-fullscreen-controls-autohide-always-shown = 始终显示

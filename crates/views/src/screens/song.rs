@@ -7,7 +7,7 @@ use gpui::{
 use i18n::t;
 use music::{Credit, Track};
 use router::{Destination, Link as _};
-use state::{Playback, SongDetail, Sonora};
+use state::{Playback, SongDetail, Soundy};
 use ui::{
     ActiveTheme as _, Avatar, Button, Fact, Glowing as _, InfoCard, Initials, Popup, Scrollbar,
     Scroller, Skeleton, Tails as _, Text, clock,
@@ -76,7 +76,7 @@ impl SongView {
         })
         .detach();
         cx.observe(&playback, |_, _, cx| cx.notify()).detach();
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
         let chrome = crate::chrome::Chrome::entity(cx);
         cx.observe(&chrome, |_, _, cx| cx.notify()).detach();

@@ -18,7 +18,7 @@ const SPECTRUM_TICK: Duration = Duration::from_millis(16);
 /// How many spectrum ticks pass between two reads of the output meter: every one, so the meter
 /// moves as smoothly as the spectrum.
 const METER_EVERY: u32 = 1;
-/// How many bits of a sample the 32-bit floats Sonora works in carry.
+/// How many bits of a sample the 32-bit floats Soundy works in carry.
 pub const FLOAT_BITS: u8 = 24;
 
 /// The spectrum heard ahead of the equalizer, the signal path and the output meter, read while a
@@ -53,7 +53,7 @@ pub struct SignalPath {
     pub level: f32,
     /// The gain the volume applies, 1 at full volume.
     pub volume: f32,
-    /// The stream Sonora plays into, which every track is resampled to, with what the sound
+    /// The stream Soundy plays into, which every track is resampled to, with what the sound
     /// server says of the sink it plays on. `None` while none is open.
     pub stream: Option<DeviceInfo>,
 }
@@ -66,21 +66,21 @@ pub struct Equalizing {
     pub passes_through: bool,
 }
 
-/// Something Sonora does that changes the samples it decoded.
+/// Something Soundy does that changes the samples it decoded.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Change {
-    /// The track carries more bits than the floats Sonora works in, so they are rounded.
+    /// The track carries more bits than the floats Soundy works in, so they are rounded.
     Rounded {
         from: u8,
     },
     /// The engine plays the track to the system's output by itself, as Soloist does, so what
-    /// happens to the sound after it is not Sonora's to tell.
+    /// happens to the sound after it is not Soundy's to tell.
     Direct,
     /// A fixed normalisation gain, in decibels.
     Normalised(f32),
     /// librespot's normaliser, whose gain follows the music.
     Limited,
-    /// Sonora's resampler, for a track at another rate than the stream.
+    /// Soundy's resampler, for a track at another rate than the stream.
     Resampled {
         from: u32,
         to: u32,
@@ -93,7 +93,7 @@ pub enum Change {
         to: u16,
     },
     /// The device takes fewer bits than the track carries, or integers for a track that has
-    /// no bit depth of its own. `from` is the bits Sonora carries, `None` for such a track.
+    /// no bit depth of its own. `from` is the bits Soundy carries, `None` for such a track.
     Requantized {
         from: Option<u8>,
         to: u8,
@@ -101,8 +101,8 @@ pub enum Change {
 }
 
 impl SignalPath {
-    /// Everything that keeps what leaves Sonora from being the decoded track bit for bit, in
-    /// the order it happens. Empty means bit-perfect from Sonora.
+    /// Everything that keeps what leaves Soundy from being the decoded track bit for bit, in
+    /// the order it happens. Empty means bit-perfect from Soundy.
     pub fn changes(&self) -> Vec<Change> {
         if self.direct() {
             return vec![Change::Direct];
@@ -151,13 +151,13 @@ impl SignalPath {
         changes
     }
 
-    /// Whether the engine plays the track past Sonora's own sound path, straight to the system.
+    /// Whether the engine plays the track past Soundy's own sound path, straight to the system.
     /// The equalizer and the stream are left out of such a path.
     pub fn direct(&self) -> bool {
         self.track.as_ref().is_some_and(|track| track.direct)
     }
 
-    /// The track's rate and the stream's, when Sonora resamples one to the other.
+    /// The track's rate and the stream's, when Soundy resamples one to the other.
     pub fn resampled(&self) -> Option<(u32, u32)> {
         let (from, to) = (self.track.as_ref()?.rate, self.stream.as_ref()?.format.rate);
         (from != to).then_some((from, to))

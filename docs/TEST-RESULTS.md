@@ -11,7 +11,7 @@ Command:
 cargo test --workspace
 ```
 
-Result: **691 passed, 0 failed, 21 ignored** across 13 test binaries with tests, plus doc-tests (0 tests).
+Result: **706 passed, 0 failed, 21 ignored** across 13 test binaries with tests, plus doc-tests (0 tests). Run on 19 November 2026 against the 1.0.1 tree.
 
 | Crate / binary | Tests | Result |
 | --- | ---: | --- |
@@ -19,9 +19,9 @@ Result: **691 passed, 0 failed, 21 ignored** across 13 test binaries with tests,
 | `i18n` | 8 | pass |
 | `icons` | 1 | pass |
 | `input` | 5 | pass |
-| `music` | 336 | pass (21 ignored) |
-| `sonora` (binary) | 15 | pass |
-| `state` | 110 | pass |
+| `music` | 349 | pass (21 ignored) |
+| `soundy` (binary) | 15 | pass |
+| `state` | 112 | pass |
 | `storage` | 4 | pass |
 | `ui` | 74 | pass |
 | `ui` accessibility tree | 32 | pass |
@@ -33,12 +33,19 @@ The 21 ignored `music` tests are the live-network suite (`crates/music/src/live_
 iTunes artwork lookup, which need real provider credentials or the public catalogue and are skipped
 by default. The live iTunes lookup was run separately and passed (see below).
 
-`cargo fmt --all -- --check` passes. `cargo build --release -p sonora` completes with no errors.
+The new 1.0.1 tests include seven for the anonymous public-page reader: HTML entity and NBSP
+cleanup, track and artist extraction, preview and playable flags, the 100-row limit notice, a
+missing entity mapping to not found, a changed page shape mapping to `PublicPageChanged`, and retry
+and backoff behaviour.
+
+`cargo fmt --all -- --check` passes. `cargo build --release --locked -p soundy` completes with no
+errors.
 
 ### What the importer tests cover
 
 - Spotify link forms: web URL with and without query, `/intl-*/`, `/embed/`, trailing slash,
-  bare host, `spotify:playlist:` and the legacy `spotify:user:…:playlist:` form.
+  bare host, a bare 22-character ID, `spotify:playlist:` and the legacy
+  `spotify:user:…:playlist:` form.
 - Refusal of track, album and artist links, other services and empty input.
 - M3U/M3U8: `#EXTINF` duration and credit, relative paths, `file://` with percent-encoding and
   Windows drive letters, absolute paths, HTTP(S) entries kept as external rows, Latin-1 files,
@@ -69,21 +76,23 @@ by default. The live iTunes lookup was run separately and passed (see below).
 - Navigation: the two sidebar groups cover every row without overlap, so a row can never be
   drawn twice.
 
-## Manual verification, earlier 1.0.0 build
+## Manual verification, 1.0.0 build (historical)
 
-The release binary `target\release\soundy.exe` (91,252,736 bytes, built 19 November 2026 before the
-metadata sign-in and review changes) was launched on Windows 11 and driven with real mouse and
-keyboard input. The dialog is reached through **+ → Import playlist…** on the Playlists screen.
+This section records the 1.0.0 manual pass and is kept as the regression baseline for file and
+pasted-list imports. The 1.0.1 Spotify import is verified separately below. The release binary
+`target\release\soundy.exe` (91,252,736 bytes, built 19 November 2026 before the metadata sign-in
+and review changes) was launched on Windows 11 and driven with real mouse and keyboard input. The
+dialog is reached through **+ → Import playlist…** on the Playlists screen.
 Provider matching ran against the signed-in YouTube Music account. Every row count below was also
-checked in `%LOCALAPPDATA%\soundy\state.sqlite`, not only in the dialog. The final build's importer
-re-test follows this section; where the two differ, the re-test describes what ships.
+checked in `%LOCALAPPDATA%\soundy\state.sqlite`, not only in the dialog. The 1.0.1 re-test
+follows this section; where the two differ, the re-test describes what ships.
 
 | Check | Result |
 | --- | --- |
 | App launches to the library with the restored session | pass |
 | Import dialog opens with Spotify link / M3U or CSV file / Pasted list tabs | pass |
 | Invalid link `https://example.com/not-spotify` | **Import failed**: “That is not a Spotify playlist link. Paste a link like https://open.spotify.com/playlist/… or a spotify:playlist: URI.” |
-| Valid Spotify playlist URL (`37i9dQZF1DXcBWIGoYBM5M`) with no Spotify session | **Import failed**: “Spotify does not publish this playlist's tracks without an authorized Spotify session. Soundy does not scrape the page or bypass that.” The dialog tells the listener to export M3U/CSV or paste the rows; no playlist is created. (This build predates the metadata-only sign-in; see the re-test below.) |
+| Valid Spotify playlist URL (`37i9dQZF1DXcBWIGoYBM5M`) with no Spotify session | 1.0.0 baseline: **Import failed** because no Spotify session could read the playlist. The 1.0.1 anonymous public-page path replaces this behaviour; see the 1.0.1 section. |
 | Pasted list of four rows, including a duplicate and a nonexistent song | 4 tracks kept, 2 Full playback, 2 Unavailable, 1 duplicate kept; result dialog and playlist both show the rows in source order |
 | CSV through the real Windows file picker (`Soundy Import Test.csv`) | 6 tracks kept, 2 playable, 4 Unavailable, 1 duplicate kept; durations `5:02` and `3:33` preserved; `Hardwired (Live)` correctly refused as a different recording |
 | M3U through the real file picker, two entries (one local path, one `https://` URL) | local row matched the scanned file and became **Full playback (local)**; HTTP row became **External playback**; order preserved |
@@ -137,58 +146,106 @@ tests above were repeated with keyboard focus or a different position and confir
 UI and the database. This is a limitation of the harness, not a claim that the tab is broken —
 the same tab switch worked when driven by focus and by a different click.
 
+## Manual verification, 1.0.1 build
+
+Run on 19 November 2026 against the 1.0.1 release binary (`target\release\soundy.exe`,
+90,958,848 bytes, SHA-256 `32E7ED68…DAC38A`) at 936×648 on Windows 11, with real mouse and
+keyboard input. The database was inspected after every step. Before testing, the profile was
+backed up; it was restored afterwards and matched its original `state.sqlite` and `settings.json`
+hashes byte-for-byte.
+
+| Check | Result |
+| --- | --- |
+| Import dialog copy | opens from **+ → Import playlist…** with “Paste a public Spotify playlist link, URI or 22-character playlist ID… no account, sign-in or Premium…” and Import disabled while the field is empty |
+| Non-Spotify URL `https://example.com/not-spotify` | stays quiet while typing, Import stays disabled, and no request is made |
+| Spotify track link | inline “That is not a Spotify playlist link…” and Import disabled |
+| Nonexistent playlist ID (`0000000000000000000000`) | **Import failed — Spotify could not find that playlist. Check the link and that the playlist still exists.**; the Choose a file / Paste a list fallbacks are offered and no playlist or row is written |
+| Supplied playlist pasted with its `?si=` parameter | fetched anonymously; 91 tracks read from the public page; 37 ambiguous rows were offered for review and the preselected first matches were accepted; saved as `idgaf world!` |
+| Result screen | 91 tracks kept, 83 playable, 8 from local files, 0 preview, 8 external, 0 unavailable, 90 with artwork; the original Spotify cover is shown |
+| Database | playlist `local-playlist:1795083989485-0`, source `spotify`, source_id `3nBdBqQO6hVxIR6TMwF52H`, owner `zyvx`, total 91, duplicates 0, `cover_generated` 0, cover URL on Spotify's CDN; positions 0–90; statuses 75 available + 8 personal + 8 external; order preserved |
+| Duplicate rows | two `Coming Down` rows kept at positions 2 and 49 with distinct Spotify ids and durations (295,453 ms and 295,435 ms) |
+| Artwork | 90 of 91 rows carry a cover; only position 24 lacks one, and it is an external row with no catalogue answer |
+| Playlist detail | `idgaf world!`, `zyvx • 91 songs • 6h 12m`, original cover, album names and covers on the rows, **Full playback** and **Full playback (local)** badges |
+| Result footer **Open playlist** | closes the dialog and opens the saved playlist |
+| Result footer **Import another** | returns to an empty Link field with Import disabled |
+| Re-import by bare ID `3nBdBqQO6hVxIR6TMwF52H` | replaced `local-playlist:1795083989485-0` in place; still 3 playlists and 367 rows, not a second copy |
+| Cancel during matching | **Import cancelled — The import was cancelled before anything was saved.**; the database kept its previous 3 playlists and 367 rows |
+| Limit notice | not shown; the playlist has 91 tracks, below the public page's 100-row cap |
+
+A second pass in guest mode, after the saved YouTube Music cookies expired mid-session, read the
+same 91 tracks and reached the same result screen. It produced 85 playable, 8 local and 6
+external rows because no provider search was available. The import therefore does not depend on a
+provider session; only the number of playable matches does.
+
+### Harness note
+
+The first attempt to click the result footer landed at y≈511, on the explanatory text above the
+buttons, and did nothing; the buttons sit at y≈555 in the 936×648 window. Clicking the correct row
+exercised both actions. This was a coordinate error in the harness, not a hit-testing defect.
+
 ## Release artifacts
 
 Built on 19 November 2026 from this tree with `scripts\windows\build-soundy-installer.ps1`:
 
 | Artifact | Size | SHA-256 |
 | --- | ---: | --- |
-| `target\release\soundy.exe` | 90,808,320 bytes | `29FC0319B999ECBAF878168135218DF6622C058D242DADB0A19638B15258CB24` |
+| `target\release\soundy.exe` | 90,958,848 bytes | `32E7ED68E39DEFACE41FED52CDFF09DA8A059B3F7D6FF832BB7BD31BD6DAC38A` |
 
-Both the installed executable and `dist\Soundy-1.0.0-Portable\soundy.exe` hash to the release
-binary above. The setup and ZIP hashes are published on the release page instead of here: every
-archive bundles this document, so a hash written into it would change the archive it describes.
-The setup file reports version 1.0.0 and product Soundy.
+The installed executable and `dist\Soundy-1.0.1-Portable\soundy.exe` hash to the release binary
+above. The setup and ZIP hashes are published on the release page instead of here: every archive
+bundles this document, so a hash written into it would change the archive it describes. The setup
+file reports version 1.0.1 and product Soundy.
 
-The installer was also executed, not just compiled: silent install to a temporary directory
+The installer was executed, not just compiled: a silent install to a temporary directory
 returned 0, produced `soundy.exe` with the matching hash, plus `LICENSE`, `THIRD-PARTY.md` and the
 uninstaller. The uninstaller returned 0 and removed the install directory and Start Menu shortcut.
-The portable ZIP was unpacked and its `soundy.exe` launched and restored the library; it carries
+The portable ZIP was unpacked and its `soundy.exe` launched with the restored profile; it carries
 `README.md` and `PERFORMANCE.md` beside the licence and notices.
 
 ## Performance
 
-Final-build figures are in `PERFORMANCE.md`. On the shipped binary at 936×648: a fresh profile
-(no account, folders or imports) settles at **104.0 MB working set / 87.8 MB private commit**,
-using **0.374 s of CPU per 60 s idle** (≈0.6% of one core). The maintainer's populated profile
-(signed-in YouTube Music, two imported playlists, 276 rows) settles at **119.9 MB / 100.9 MB**
-and 0.405 s per minute. Streaming uses **124.5 MB / 107.6 MB**, and the window becomes visible
-**197 ms** after launch (median of five cold starts). The 100 MB resident target is missed by
-4 MB on the fresh profile and by more with a populated library; private commit is under it on a
-fresh profile only. Local-file playback was not measured because neither profile had a local
-folder configured. Both 60-second windows were flat, showing no leak.
+The 1.0.1 release and the published 1.0.0 baseline were measured on the same machine at 936×648,
+with 45-second settle and 60-second samples, each profile measured twice in opposite order. Full
+tables are in `PERFORMANCE.md`.
+
+- **1.0.1 fresh profile:** 104.0–104.3 MB working set / 87.9–89.9 MB private commit, 0.30–0.41 s
+  of CPU per idle minute, 201 ms median startup (198, 201, 203, 191, 202).
+- **1.0.1 populated profile** (signed-in provider, two imported playlists, 276 rows):
+  119.4–120.8 MB / 100.0–101.5 MB, 0.34–0.53 s per minute.
+- **1.0.0 on the same profiles:** 103.9–107.9 MB / 87.9–99.1 MB fresh and 120.0–120.9 MB /
+  100.5–102.1 MB populated, 0.33–0.56 s per minute, 192 ms median startup.
+
+The spread within one version is larger than the gap between versions, so the comparison shows no
+measurable regression. The 100 MB resident target is missed by about 4 MB on a fresh profile;
+private commit meets it there and is at the boundary on a populated profile. Streaming was not
+re-measured because the playback path did not change; the earlier 1.0.0 figure is 124.5 MB /
+107.6 MB. Both 60-second windows were flat, showing no leak.
 
 ## Live checks
 
+- Anonymous Spotify public page: `https://open.spotify.com/embed/playlist/3nBdBqQO6hVxIR6TMwF52H`
+  returned HTTP 200 to a `Soundy/1.0.1` user agent with 91 rows in `__NEXT_DATA__`, owner `zyvx`,
+  the playlist title and cover URL. A nonexistent ID also returned HTTP 200, with
+  `pageProps.status: 404`, which the reader maps to `NotFound`. A page with 100 rows is flagged
+  `limited`; this playlist is below the cap.
 - Audius search without an account:
   `https://api.audius.co/v1/tracks/search?query=Hardwired%20Rameses%20B&limit=3` returned
   `Rameses B - Hardwired`, 302 s, streamable, permalink
   `/RamesesB/rameses-b-hardwired-431301`. This is the same query the importer builds for that row.
-- Spotify Web API: the metadata-only sign-in was launched from a real playlist link. The browser
-  opened Spotify's authorize page with the expected client id, PKCE challenge, `state`, both
-  playlist-read scopes and the `http://127.0.0.1:8989/login` redirect, and Spotify rendered its
-  consent screen for a signed-in free account. Consent was cancelled deliberately, so no playlist
-  was read. The HTTP reader, callback parsing and refresh logic are covered by unit tests against
+- Spotify Web API: the metadata-only sign-in was launched from a real playlist link in the 1.0.0
+  pass. The browser opened Spotify's authorize page with the expected client id, PKCE challenge,
+  `state`, both playlist-read scopes and the `http://127.0.0.1:8989/login` redirect, and Spotify
+  rendered its consent screen. Consent was cancelled deliberately, so no authorization code was
+  exchanged. The HTTP reader, callback parsing and refresh logic are covered by unit tests against
   a local HTTP server.
 - Jamendo: not exercised, because `SOUNDY_JAMENDO_CLIENT_ID` is not configured.
-- M3U and CSV imports: exercised with real files written for the test
-  (`Soundy Import Test.m3u`, `Soundy Import Test.csv`) and the pasted list
-  (`Rameses B - Hardwired`, a duplicate, an unknown song, a title-only row).
-- The import dialog, review screen and playlist page were also driven through the Windows UI
-  Automation tree this build exposes, with real keyboard and mouse input for text entry and the
-  file picker.
+- M3U and CSV imports: exercised in the 1.0.0 pass with real files written for the test
+  (`Soundy Import Test.m3u`, `Soundy Import Test.csv`) and a pasted list.
+- The 1.0.1 dialog, review screen, result actions and playlist page were driven with real mouse
+  and keyboard input at 936×648. GPUI exposes no UIA tree in this build, so screen coordinates
+  were used (see the harness note above).
 
-## Playlist importer re-test
+## Playlist importer re-test, 1.0.0 build (historical)
 
 Run on 19 November 2026 against the rebuilt release binary and the packaged installer and portable
 ZIP:
@@ -212,13 +269,17 @@ ZIP:
 
 ## Not tested
 
+- A private, collaborative, empty or region-restricted playlist: the anonymous public page cannot
+  read one without a signed-in Spotify session, so only the nonexistent/`NotFound` path was
+  exercised live. The failure mapping is unit-tested.
+- A playlist longer than 100 tracks: the public page caps its list at 100 and the `limited` notice
+  is unit-tested, but no live playlist over the cap was imported.
 - A granted Spotify consent and the resulting Web API playlist read: the consent screen was
   reached, then cancelled, so no authorization code was exchanged with Spotify itself.
-- A playlist owned by another account and its `Forbidden` answer.
+- A playlist owned by another account and its `Forbidden` answer through the Web API.
 - Jamendo matching with a real client id.
 - A large list of many *distinct* tracks: the 1,000-row test repeated one recording, so it
   exercised row count, duplicate preservation and UI performance but only one distinct provider
-  query. A list with hundreds of distinct queries was not timed. A 100-row distinct list reached
-  "Matching 0 of 100" but was cancelled before its timing was observed.
+  query. The 91-track Spotify import is the largest distinct live list timed here.
 - macOS and Linux builds: only Windows x64 is packaged here.
 - Long-duration soak tests beyond the idle measurement in `PERFORMANCE.md`.

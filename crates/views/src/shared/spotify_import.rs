@@ -13,9 +13,9 @@ use gpui::{
     Window, div, px, svg,
 };
 use i18n::t;
-use music::import::{ImportFailure, MAX_IMPORT_BYTES, parse_manual};
+use music::import::{ImportFailure, MAX_IMPORT_BYTES, parse_manual, parse_spotify_link};
 use router::{Destination, navigate};
-use state::{ImportReport, ImportStage, Review, ReviewRow, Sonora};
+use state::{ImportReport, ImportStage, Review, ReviewRow, Soundy};
 use ui::{
     ActiveTheme as _, Artwork, Button, Dismiss, Field, Form, Input, Modal, Notice, Spinner, Submit,
     TabBar, Text, clock,
@@ -83,7 +83,7 @@ impl SpotifyImport {
                 };
                 // The import entity notifies as it moves, and a result that lands while the
                 // dialog is closed is ready when it opens again.
-                let imports = Sonora::global(cx).imports.clone();
+                let imports = Soundy::global(cx).imports.clone();
                 cx.observe(&imports, |_, _, cx| cx.notify()).detach();
                 dialog
             });
@@ -98,7 +98,7 @@ impl SpotifyImport {
     }
 
     fn show(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let imports = Sonora::global(cx).imports.clone();
+        let imports = Soundy::global(cx).imports.clone();
         if !imports.read(cx).active() && imports.read(cx).stage() == ImportStage::Idle {
             self.clear(cx);
         }
@@ -116,7 +116,7 @@ impl SpotifyImport {
         self.open = false;
         self.show_unmatched = false;
         self.picking = None;
-        let imports = Sonora::global(cx).imports.clone();
+        let imports = Soundy::global(cx).imports.clone();
         if !imports.read(cx).active() {
             imports.update(cx, |import, cx| import.reset(cx));
         }
@@ -127,7 +127,7 @@ impl SpotifyImport {
     }
 
     fn clear(&mut self, cx: &mut Context<Self>) {
-        let imports = Sonora::global(cx).imports.clone();
+        let imports = Soundy::global(cx).imports.clone();
         imports.update(cx, |import, cx| import.reset(cx));
         self.input.update(cx, |input, cx| input.set_text("", cx));
         self.file = None;
@@ -153,7 +153,7 @@ impl SpotifyImport {
     }
 
     fn select(&mut self, source: Source, window: &mut Window, cx: &mut Context<Self>) {
-        let imports = Sonora::global(cx).imports.clone();
+        let imports = Soundy::global(cx).imports.clone();
         if imports.read(cx).active() {
             return;
         }
@@ -234,14 +234,51 @@ impl SpotifyImport {
 
     fn ready(&self, cx: &App) -> bool {
         match self.source {
-            Source::Link => !self.input.read(cx).text().trim().is_empty(),
+            Source::Link => {
+                let text = self.input.read(cx).text().trim().to_owned();
+                !text.is_empty() && parse_spotify_link(&text).is_ok()
+            }
             Source::File => self.file.is_some(),
             Source::Paste => self.manual.is_some(),
         }
     }
 
+    /// The link in the field, when it already looks like a Spotify address but is not a
+    /// playlist link this build accepts. A field someone is still typing stays quiet.
+    fn link_problem(&self, cx: &App) -> Option<SharedString> {
+        let text = self.input.read(cx).text().trim().to_owned();
+        let looks_spotify = text.contains("spotify.com")
+            || text.starts_with("spotify:")
+            || (text.len() == 22 && text.bytes().all(|byte| byte.is_ascii_alphanumeric()));
+        if !looks_spotify {
+            return None;
+        }
+        parse_spotify_link(&text)
+            .err()
+            .map(|_| t!("import-invalid-link"))
+    }
+
+    /// Puts the clipboard's link in the field without importing it, so it can be checked first.
+    fn paste_link(&mut self, cx: &mut Context<Self>) {
+        let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) else {
+            self.note = Some(t!("import-link-empty"));
+            cx.notify();
+            return;
+        };
+        let text = text.trim();
+        if text.is_empty() {
+            self.note = Some(t!("import-link-empty"));
+            cx.notify();
+            return;
+        }
+        self.input
+            .update(cx, |input, cx| input.set_text(text.to_owned(), cx));
+        self.note = None;
+        cx.notify();
+    }
+
     fn submit(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let imports = Sonora::global(cx).imports.clone();
+        let imports = Soundy::global(cx).imports.clone();
         if imports.read(cx).active() {
             return;
         }
@@ -314,7 +351,7 @@ impl SpotifyImport {
             Source::File => self.file_field(cx).into_any_element(),
             Source::Paste => self.paste_field(cx).into_any_element(),
         };
-        let spotify = Sonora::global(cx)
+        let spotify = Soundy::global(cx)
             .session
             .read(cx)
             .client()
@@ -347,6 +384,7 @@ impl SpotifyImport {
     fn link_field(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = *cx.theme();
         let form = Form::new("import-link-form").field(Field::new(&self.input, cx));
+        let problem = self.link_problem(cx);
         div()
             .flex()
             .flex_col()
@@ -357,7 +395,28 @@ impl SpotifyImport {
                     .text_color(theme.muted_foreground)
                     .child(t!("import-link-detail")),
             )
-            .child(form)
+            .child(
+                div()
+                    .flex()
+                    .items_start()
+                    .gap_2()
+                    .child(div().flex_1().min_w_0().child(form))
+                    .child(
+                        Button::new("import-link-paste")
+                            .outline()
+                            .icon("icons/clipboard-paste.svg")
+                            .label(t!("import-link-paste"))
+                            .on_click(cx.listener(|this, _, _, cx| this.paste_link(cx))),
+                    ),
+            )
+            .when_some(problem, |column, message| {
+                column.child(
+                    div()
+                        .text_size(theme.text(Text::Small))
+                        .text_color(theme.danger_foreground)
+                        .child(message),
+                )
+            })
     }
 
     fn file_field(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -472,6 +531,7 @@ impl SpotifyImport {
             ImportFailure::TracklistUnavailable | ImportFailure::SpotifyNotConnected => {
                 (t!("import-tracklist-unavailable"), true)
             }
+            ImportFailure::PublicPageChanged => (t!("import-public-page-changed"), true),
             ImportFailure::Unauthorized => (t!("import-unauthorized"), true),
             ImportFailure::Forbidden => (t!("import-forbidden"), true),
             ImportFailure::NotFound => (t!("import-not-found"), true),
@@ -789,6 +849,12 @@ impl SpotifyImport {
                             .child(label)
                     })),
             )
+            .when(report.limited, |column| {
+                column.child(
+                    Notice::new(t!("import-limited-title"), t!("import-limited"))
+                        .spoken("import-limited"),
+                )
+            })
             .child(
                 Button::new("import-unmatched")
                     .ghost()
@@ -996,7 +1062,7 @@ impl SpotifyImport {
                         .selected(chosen == index)
                         .label(label)
                         .on_click(cx.listener(move |_, _, _, cx| {
-                            Sonora::global(cx)
+                            Soundy::global(cx)
                                 .imports
                                 .clone()
                                 .update(cx, |import, cx| import.choose(position, index, cx));
@@ -1013,7 +1079,7 @@ impl Render for SpotifyImport {
         }
 
         let theme = *cx.theme();
-        let imports = Sonora::global(cx).imports.clone();
+        let imports = Soundy::global(cx).imports.clone();
         let (stage, active, report, failure, review, read, total) = {
             let import = imports.read(cx);
             (
@@ -1042,7 +1108,7 @@ impl Render for SpotifyImport {
                     .ghost()
                     .label(t!("spotify-import-cancel"))
                     .on_click(cx.listener(|_, _, _, cx| {
-                        let imports = Sonora::global(cx).imports.clone();
+                        let imports = Soundy::global(cx).imports.clone();
                         imports.update(cx, |import, cx| import.cancel(cx));
                     })),
             );
@@ -1061,7 +1127,7 @@ impl Render for SpotifyImport {
                     .ghost()
                     .label(t!("import-review-back"))
                     .on_click(cx.listener(|_, _, _, cx| {
-                        Sonora::global(cx)
+                        Soundy::global(cx)
                             .imports
                             .clone()
                             .update(cx, |import, cx| import.discard_review(cx));
@@ -1105,7 +1171,7 @@ impl Render for SpotifyImport {
                     .icon("icons/download.svg")
                     .label(t!("import-review-confirm"))
                     .on_click(cx.listener(|_, _, _, cx| {
-                        Sonora::global(cx)
+                        Soundy::global(cx)
                             .imports
                             .clone()
                             .update(cx, |import, cx| import.confirm(cx));
@@ -1149,7 +1215,7 @@ impl Render for SpotifyImport {
             }))
             .on_action(cx.listener(|this, _: &Submit, window, cx| {
                 cx.stop_propagation();
-                let imports = Sonora::global(cx).imports.clone();
+                let imports = Soundy::global(cx).imports.clone();
                 if imports.read(cx).stage() == ImportStage::Review {
                     imports.update(cx, |import, cx| import.confirm(cx));
                     return;

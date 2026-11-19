@@ -1,53 +1,52 @@
 # Playlist import
 
-Soundy imports a playlist from three sources. A file or a pasted list needs no account at all. A
-Spotify link asks Spotify for playlist metadata, using the playback session already signed in or
-its own browser sign-in; it needs no Spotify Premium, no developer secret and no external
-converter.
+Soundy imports a playlist from three sources. A public Spotify playlist, a file and a pasted
+list all import without an account, a developer key or an external converter.
 
 | Source | What it accepts | Account needed |
 | --- | --- | --- |
-| Spotify link | A playlist URL or `spotify:playlist:` URI | A free Spotify account, and only when no playback session is already signed in |
+| Spotify link | A public playlist URL, `spotify:playlist:` URI or 22-character playlist ID | No |
 | File | M3U, M3U8, CSV, TXT | No |
 | Pasted list | Text on the clipboard, one track per line | No |
 
-The dialog is opened from **+ → Import playlist…** on the Playlists screen, the playlist context
+The dialog is opened from **+ -> Import playlist** on the Playlists screen, the playlist context
 menu, or the import button in the playlist editor. Opening it makes no request. Reading starts
 when **Import** is pressed.
 
-## The honest limit of a Spotify link
+## How a Spotify link is read
 
-Spotify does not publish playlist tracklists to unauthenticated clients:
+A 22-character playlist ID is accepted on its own. `open.spotify.com/embed/playlist/<id>` is the
+widget Spotify serves to any browser with no
+account. Soundy requests that public page and reads the playlist data it carries:
 
-- The public `oEmbed` endpoint returns the playlist title and thumbnail only, not its tracks.
-- The Web API's playlist endpoint requires an authorized access token.
-- Since February 2026, the Web API returns playlist contents only for playlists the signed-in
-  account owns or collaborates on; client credentials alone cannot read items.
-- Spotify's terms prohibit scraping the web player or otherwise working around authentication.
+- The playlist's name, owner and cover.
+- Every row the page publishes: title, credited artists, duration, Spotify track id and URL,
+  whether Spotify considers the track playable, and whether only a preview is offered.
 
-Soundy therefore reads a link through one of two authorized paths:
+Soundy does not sign in for a public link, does not read cookies, does not call a private
+endpoint and does not copy audio. A playlist Spotify does not publish is reported as unavailable
+instead of being guessed at from its title or cover.
 
-1. **A signed-in Spotify playback session**, when one exists. The import uses the token that
-   session already refreshes, so it can stream rows through Spotify as well as read them.
-2. **A metadata-only browser sign-in**, when no playback session exists. Soundy opens Spotify's
-   own authorization page, receives a code on `127.0.0.1:8989`, and keeps a refresh token in the
-   private accounts folder. The sign-in asks only for the two playlist-read scopes and never
-   pretends a free account can stream. A free Spotify account can read its own or a
-   collaborative playlist this way.
+### The public page limit
 
-Spotify's current Web API returns a playlist's contents only to an account that owns it or
-collaborates on it. A playlist owned by someone else reports `Forbidden`; Soundy does not try to
-bypass that. The file and pasted-list paths remain for those playlists.
+The public widget publishes at most **100 rows** and names no reliable total. It also carries no
+album names, ISRCs, per-track artwork or description. When the page comes back with 100 rows,
+the import result says so under **Public page limit**: every row Spotify published is kept, but
+the playlist may have more. For a longer playlist, paste its complete track list as a pasted
+list. Nothing is invented or silently dropped.
 
-### How to export a Spotify playlist
+A playlist with 91 rows, such as the public playlist used for the 1.0.1 test, imports in full.
 
-The link path is preferred, but the file and pasted-list paths remain for offline use or an
-account that cannot sign in:
+### Private, collaborative and deleted playlists
 
-- Use Spotify's own export or a third-party exporter that produces **CSV** with `Title`, `Artist`,
-  `Album` and `Duration` columns.
-- Or export **M3U/M3U8** from a player that has the same tracks.
-- Or copy the track list and use **Pasted list**. `Artist - Title` per line is enough.
+The public page publishes only what Spotify makes public. A private or collaborative playlist
+may therefore report no track list; a deleted playlist reports not found. Soundy never bypasses
+that, never scrapes an authenticated session and never asks for a password.
+
+When a Spotify playback session is already signed in, Soundy first asks the official Web API,
+which can read private or collaborative playlists the account is allowed to see. If the API
+cannot read the link, the public page is tried as a fallback; if both fail, the dialog explains
+why and offers the file and pasted-list paths. No session is required for a public link.
 
 ## Accepted file formats
 
@@ -76,7 +75,7 @@ account that cannot sign in:
 
 ### Artwork, metadata and generated covers
 
-After matching, Soundy fills in what the export did not carry:
+After matching, Soundy fills in what the source did not carry:
 
 - **Deezer** is asked first, then **iTunes Search** as a fallback. A hit is accepted only when the
   title, the primary artist and the duration agree (or the album, when the list gave no length).
@@ -85,10 +84,10 @@ After matching, Soundy fills in what the export did not carry:
   500 identical requests.
 - A blocked, throttled or refused provider is disabled for the rest of that import instead of
   being retried row by row.
-- Album art is cached under `%LOCALAPPDATA%\soundy\artwork`. The playlist's own cover is a 2×2
+- Album art is cached under `%LOCALAPPDATA%\soundy\artwork`. The playlist's own cover is a 2x2
   collage of distinct track art (3, 2 or 1 tile when there are fewer); it is cached under
   `%LOCALAPPDATA%\soundy\playlist-covers` and marked as generated in the state database. A cover
-  the listener chose is never overwritten.
+  the listener chose is never overwritten, and a playlist cover the source provides is kept.
 - **Retry missing artwork** re-runs enrichment for the rows of the saved playlist. It is shown only
   while a row that can actually display art still lacks it; external and unavailable rows never
   trigger it.
@@ -137,10 +136,11 @@ list has been written successfully.
 4. **Nothing else.** A remix, live take, cover, sped-up version or different artist is never
    substituted. The row stays **Unavailable**.
 
-A metadata-only Spotify import has no playback fallback. Its rows are searched like any other
-list, and a Spotify track id it cannot match is never written as a playable row. When a playback
-session exists, an unmatched row can still play through Spotify, and it is labelled **Full
-playback** for that reason.
+An anonymous Spotify row that matches nothing still carries the track's Spotify URL, so it stays
+in the playlist as **External playback** and its badge opens the track in Spotify. A row Spotify
+marks as preview-only is labelled **Preview only**. If Spotify itself is the active provider and
+a playback session is signed in, a playable row can be matched and labelled **Full playback**;
+the public import never pretends a Spotify row can stream without that session.
 
 ### When several recordings match
 
@@ -164,7 +164,7 @@ The status labels are:
 | Full playback | The active provider can play the matched recording |
 | Full playback (local) | One of your own files is the matched recording |
 | Preview only | The provider offers a clip |
-| External playback | Only a permitted catalogue page is known; the badge opens it |
+| External playback | Only a permitted catalogue page or the Spotify track page is known; the badge opens it |
 | Unavailable | No verified recording was found |
 
 ## Work and limits
@@ -173,19 +173,18 @@ The status labels are:
 - Provider and catalogue lookups run four at a time. Cached search answers are bounded at 2048
   distinct queries per import.
 - The importer does not poll while idle. A progress timer runs only while an import is active.
-- A list file is capped at 8 MiB.
+- A list file is capped at 8 MiB. A public Spotify page publishes at most 100 rows.
 - Cancelling before the write leaves the library untouched.
-- Spotify metadata tokens are refreshed shortly before they expire. A revoked or expired refresh
-  token is removed and the next import asks for a browser sign-in again.
-- The metadata sign-in uses PKCE and ships no client secret. It never reads audio and cannot make
-  a free account stream.
+- A public Spotify page is requested once, with three attempts for a transient failure, a
+  `Retry-After` honoured and a 20-second request timeout. A longer wait is reported instead of
+  freezing the dialog.
+- No browser, WebView or embedded engine is started for import.
 
 ## Privacy
 
 The importer sends only what the selected source needs. A file or pasted list is not uploaded.
-A Spotify link is read through the Web API with an authorized token; no page is scraped. Matching
-sends a search query of title and artist to the active provider and to Audius (and Jamendo if
-configured). Artwork enrichment sends the row's title, artist and album to Deezer and, when Deezer
-has no confident hit, to iTunes. No audio is uploaded. No telemetry, analytics or install
-reporting is added by the importer. The metadata access and refresh tokens are stored in the
-private accounts folder and are never written to a log.
+A public Spotify link sends the playlist id to Spotify's public page; no account token, cookie or
+authenticated session is used for it. Matching sends a search query of title and artist to the
+active provider and to Audius (and Jamendo if configured). Artwork enrichment sends the row's
+title, artist and album to Deezer and, when Deezer has no confident hit, to iTunes. No audio is
+uploaded. No telemetry, analytics or install reporting is added by the importer.

@@ -8,7 +8,7 @@ use music::{Album, ArtistRef, Found, MusicApi, Playlist, SavedArtist, Track};
 use serde::{Deserialize, Serialize};
 use tokio::task::AbortHandle;
 
-use crate::{Io, Library, Network, Session, SessionEvent, Shelf, Sonora, join};
+use crate::{Io, Library, Network, Session, SessionEvent, Shelf, Soundy, join};
 
 const DEBOUNCE: Duration = Duration::from_millis(250);
 const LIMIT: usize = 20;
@@ -108,7 +108,7 @@ impl Hit {
     /// Files the hit at the top of the search history of the provider it belongs to. A hit
     /// without an id is not kept.
     pub fn remember(&self, cx: &mut App) {
-        let sonora = Sonora::global(cx);
+        let sonora = Soundy::global(cx);
         let Some(slug) = self
             .id()
             .and_then(|id| sonora.session.read(cx).slug_for(id))
@@ -125,7 +125,7 @@ impl Hit {
     /// Drops the hit from the search history.
     pub fn forget(&self, cx: &mut App) {
         let key = self.key();
-        Sonora::global(cx)
+        Soundy::global(cx)
             .settings
             .clone()
             .update(cx, |settings, cx| settings.forget_pick(&key, cx));
@@ -133,7 +133,7 @@ impl Hit {
 
     /// What the listener chose out of searches on the providers signed in now, newest first.
     pub fn recent(cx: &App) -> Vec<Hit> {
-        let sonora = Sonora::global(cx);
+        let sonora = Soundy::global(cx);
         let slugs = sonora.session.read(cx).active_slugs();
         sonora.settings.read(cx).picks(&slugs)
     }
@@ -593,7 +593,7 @@ pub(crate) fn rank(
 }
 
 /// The hits of `kind` for `asked` in the local library alone, best first and at most `take` of
-/// them. `sonora play -s --local` and its siblings ask this, so they find what the search page
+/// them. `soundy play -s --local` and its siblings ask this, so they find what the search page
 /// finds on the local library, with no provider searched.
 pub(crate) fn matching(
     tracks: &[Track],

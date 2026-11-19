@@ -4,7 +4,7 @@ use gpui::accesskit::Toggled;
 use gpui::prelude::*;
 use gpui::{App, Entity, Global, SharedString, div};
 use i18n::t;
-use state::{Elsewhere, Playback, Repeat, Sonora};
+use state::{Elsewhere, Playback, Repeat, Soundy};
 use ui::{ActiveTheme as _, Button, Side, clock};
 
 use crate::shared::ambient;
@@ -47,7 +47,7 @@ const CLOCK_SIGN: f32 = 0.6;
 
 /// The other device playback is on, which the player shows instead of this app's own.
 pub(crate) fn steered(cx: &App) -> Option<Elsewhere> {
-    Sonora::global(cx).devices.read(cx).steered()
+    Soundy::global(cx).devices.read(cx).steered()
 }
 
 /// How far through `total` `elapsed` is, from 0 to 1.
@@ -115,7 +115,7 @@ pub(crate) fn percent(fraction: f32) -> SharedString {
 /// which is the one shown, so callers only lend the track to read its state.
 pub(crate) fn like(track: Option<&music::Track>, playback: &Entity<Playback>, cx: &App) -> Button {
     let theme = *cx.theme();
-    let library = Sonora::global(cx).library.clone();
+    let library = Soundy::global(cx).library.clone();
     let playback = playback.clone();
     let id = track.and_then(|track| track.id.as_deref());
     let saved = id.is_some_and(|id| library.read(cx).saved(id));

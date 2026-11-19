@@ -652,7 +652,7 @@ settings-discord = Mostra su Discord
 settings-discord-detail = Mostra il brano che stai ascoltando sul tuo profilo Discord
 settings-discord-name = Nome dello stato
 settings-discord-name-detail = Come si chiama lo stato, dopo l'«Sta ascoltando» che vedono i tuoi amici
-settings-discord-name-sonora = Sonora
+settings-discord-name-sonora = Soundy
 settings-discord-name-provider = Servizio
 settings-discord-name-music = Musica
 settings-discord-name-title = Titolo
@@ -675,7 +675,7 @@ settings-discord-preview-elapsed = { $time } trascorsi
 settings-discord-preview-listen-on = Ascolta su { $provider }
 # the Discord status when the track is left out of it
 discord-listening = Sta ascoltando musica
-get-sonora = Scarica Sonora
+get-sonora = Scarica Soundy
 settings-fullscreen-controls-autohide-automatic = Automatico
 settings-fullscreen-controls-autohide-always-hidden = Sempre nascosti
 settings-fullscreen-controls-autohide-always-shown = Sempre visibili

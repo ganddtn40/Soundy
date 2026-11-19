@@ -651,7 +651,7 @@ settings-discord = Tampilkan di Discord
 settings-discord-detail = Tampilkan lagu yang sedang Anda putar pada status profil Discord Anda
 settings-discord-name = Nama status
 settings-discord-name-detail = Teks status yang muncul setelah tulisan "Listening to"
-settings-discord-name-sonora = Sonora
+settings-discord-name-sonora = Soundy
 settings-discord-name-provider = Layanan Musik
 settings-discord-name-music = Musik
 settings-discord-name-title = Judul Lagu
@@ -674,7 +674,7 @@ settings-discord-preview-elapsed = { $time } berlalu
 settings-discord-preview-listen-on = Dengarkan di { $provider }
 # the Discord status when the track is left out of it
 discord-listening = Mendengarkan musik
-get-sonora = Dapatkan Sonora
+get-sonora = Dapatkan Soundy
 settings-fullscreen-controls-autohide-automatic = Otomatis
 settings-fullscreen-controls-autohide-always-hidden = Selalu tersembunyi
 settings-fullscreen-controls-autohide-always-shown = Selalu tampil

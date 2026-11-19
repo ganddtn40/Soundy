@@ -7,7 +7,7 @@ use gpui::{
     canvas, div,
 };
 use i18n::t;
-use state::{AppSettings, Playback, Sonora};
+use state::{AppSettings, Playback, Soundy};
 use ui::{Scrubber, ScrubberState, clock, tabular};
 
 use crate::shared::transport::{clock_ems, end_clock, fraction, moved};
@@ -50,14 +50,14 @@ struct Drawn {
 
 impl Timeline {
     pub fn new(playback: Entity<Playback>, cx: &mut Context<Self>) -> Self {
-        let settings = Sonora::global(cx).settings.clone();
+        let settings = Soundy::global(cx).settings.clone();
         let ticks = playback.read(cx).ticks().clone();
         cx.observe(&ticks, |this, _, cx| this.follow(cx)).detach();
         cx.observe(&playback, |this, _, cx| this.follow(cx))
             .detach();
         cx.observe(&settings, |this, _, cx| this.follow(cx))
             .detach();
-        let sponsorblock = Sonora::global(cx).sponsorblock.clone();
+        let sponsorblock = Soundy::global(cx).sponsorblock.clone();
         cx.observe(&sponsorblock, |_, _, cx| cx.notify()).detach();
         Self {
             playback,
@@ -170,7 +170,7 @@ impl Render for Timeline {
                         .value(clock(elapsed))
                         .colors(theme.progress_bar, empty, theme.foreground)
                         .ranges(
-                            Sonora::global(cx).sponsorblock.read(cx).ranges(cx),
+                            Soundy::global(cx).sponsorblock.read(cx).ranges(cx),
                             theme.foreground.opacity(0.4),
                         )
                         .enabled(seekable)

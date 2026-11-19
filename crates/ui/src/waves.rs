@@ -21,7 +21,7 @@ const VIGNETTE: f32 = 0.6;
 /// The sRGB luma above which the field is pressed back, so text over a vivid cover stays readable.
 const CEILING: f32 = 0.18;
 
-static WAVES: Effect = Effect::new("sonora-waves", include_str!("../shaders/waves.wgsl"));
+static WAVES: Effect = Effect::new("soundy-waves", include_str!("../shaders/waves.wgsl"));
 
 /// Five soft pools of colour morphing over a stage, with no shape that holds and nothing sharper
 /// than a heavy blur, for a field that fills a whole surface. Each pool is laid over the ones

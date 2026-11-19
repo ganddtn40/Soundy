@@ -21,7 +21,7 @@ two mirrored pairs, on a soft emerald halo.
 | `assets/tray/template-18.png`, `template-36.png` | The waveform alone, black with alpha, for macOS template images |
 | `.github/readme-icon.svg` | Vector master, used by the README header |
 
-The Windows installer and the executable both embed `assets/windows/soundy.ico`; `crates/sonora/build.rs`
+The Windows installer and the executable both embed `assets/windows/soundy.ico`; `crates/soundy/build.rs`
 points the resource compiler at it, and `scripts/windows/soundy.iss` uses it for Setup.
 
 ## Palette

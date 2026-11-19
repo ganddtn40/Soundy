@@ -10,7 +10,7 @@ use music::{MediaKind, Track};
 use tokio::sync::mpsc;
 
 use super::{BUS_NAME, Command, DISPLAY_NAME};
-use crate::{PlaybackState, Repeat, Shelf, Sonora};
+use crate::{PlaybackState, Repeat, Shelf, Soundy};
 
 /// The desktop entry a native install ships, `soundy.desktop`.
 const DESKTOP_ENTRY: &str = "soundy";
@@ -218,7 +218,7 @@ fn metadata(track: &Track, cover: Option<&str>, cx: &App) -> Metadata {
         .build();
     metadata.set_art_url(cover);
     if let Some(id) = &track.id {
-        let url = Sonora::global(cx)
+        let url = Soundy::global(cx)
             .session
             .read(cx)
             .client_of(Shelf::of(id))

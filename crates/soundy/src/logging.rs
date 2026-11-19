@@ -102,8 +102,8 @@ impl Write for Capped {
 }
 
 /// Passes every record on with [`music::redact`] applied to its message, so neither the terminal
-/// nor the file Sonora asks people to attach to a bug report carries a token, an account name or
-/// the home folder. This covers the lines other crates write as well as Sonora's own.
+/// nor the file Soundy asks people to attach to a bug report carries a token, an account name or
+/// the home folder. This covers the lines other crates write as well as Soundy's own.
 struct Redacted(Box<dyn Log>);
 
 impl Log for Redacted {

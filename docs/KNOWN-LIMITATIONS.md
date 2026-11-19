@@ -5,27 +5,25 @@ changing what a service permits. Nothing here is hidden behind a success message
 
 ## Spotify
 
-### A Spotify link needs Spotify's authorization
+### A public link publishes at most 100 rows
 
-Spotify does not expose a playlist's tracks to an unauthenticated client. Its public `oEmbed`
-answer contains the title and a thumbnail only; the Web API requires OAuth; scraping the web
-player is prohibited by Spotify's terms.
+Spotify's public playlist page, the widget at `open.spotify.com/embed/playlist/<id>`, carries the
+playlist name, owner, cover and up to 100 rows. It names no reliable total and carries no album
+names, ISRCs, per-track artwork or description. A public link therefore imports anonymously, but
+a playlist longer than 100 tracks may be cut short; the result says so under **Public page
+limit**, and the complete track list or an exported file is the way to import the rest.
 
-When no playback session exists, Soundy opens Spotify's own authorization page and asks only for
-the two playlist-read scopes. A free account can finish that sign-in; the app keeps the refresh
-token in its private accounts folder. A metadata-only link never pretends it can stream: its rows
-are matched to your files or the active provider, and an unmatched Spotify id is not written as a
-playable row.
+A private, collaborative, deleted or restricted playlist may publish no track list at all.
+Soundy reports that and never bypasses it. When a Spotify playback session is already signed in,
+Soundy first asks the official Web API, which can read private or collaborative playlists the
+account is allowed to see; it does not scrape an authenticated session.
 
-Spotify returns a playlist's contents only to an account that owns or collaborates on it. A
-playlist owned by someone else reports **Forbidden**, and Soundy does not bypass that.
+### The live Spotify paths are not in automated tests
 
-### The live Spotify round trip is not in automated tests
-
-The browser consent and the Web API read are not exercised in this repository's automated tests
-because no Spotify account is available there. The redirect, scopes, CSRF/PKCE logic, refresh and
-failure mapping are unit-tested, and the HTTP reader is tested against a local server. The file
-and pasted-list paths remain fully usable without an account.
+The public-page reader is tested against stored payloads and was exercised against real public
+playlists. The Web API read, the browser consent and the token refresh still need a real Spotify
+account, so they are not exercised in this repository's automated tests. The file and pasted-list
+paths remain fully usable without an account.
 
 ### Statuses are a snapshot
 
@@ -100,7 +98,7 @@ not implement an arbitrary internet-radio player, so the URL opens externally.
 The full list is in [MONOCHROME-PARITY.md](./MONOCHROME-PARITY.md). The user-visible ones worth
 stating here:
 
-- No Info or Related tab in the right panel; it carries Lyrics, Queue and, in a Sonora Session,
+- No Info or Related tab in the right panel; it carries Lyrics, Queue and, in a Session,
   Members.
 - No command palette, no local crossfade setting, no playback speed, no sleep timer, no mono /
   crossfeed / stereo-width controls and no binaural or spatial DSP. Spotify's own crossfade

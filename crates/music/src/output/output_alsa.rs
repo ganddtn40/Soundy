@@ -1,4 +1,4 @@
-//! What Sonora needs of ALSA: tidying its device list when it is the host, finding the sound
+//! What Soundy needs of ALSA: tidying its device list when it is the host, finding the sound
 //! server it should reach through a plugin, and each sound card's own device, which plays past the
 //! server.
 
@@ -84,7 +84,7 @@ pub(super) fn device(host: &cpal::Host, pcm: &str) -> Option<cpal::Device> {
 }
 
 /// `pcm` with its card named by the card's id, as in `hw:CARD=M1,DEV=0`, where cpal numbers it.
-/// Numbers change as cards come and go while ids stay, so this is the form Sonora saves. Any other
+/// Numbers change as cards come and go while ids stay, so this is the form Soundy saves. Any other
 /// device comes back as it is.
 pub(super) fn named(pcm: &str) -> String {
     let Some((prefix, card, device)) =
@@ -98,10 +98,10 @@ pub(super) fn named(pcm: &str) -> String {
     format!("{prefix}:CARD={name},DEV={device}")
 }
 
-/// The sound server this session runs when ALSA has no plugin routing to it. Sonora then opens
+/// The sound server this session runs when ALSA has no plugin routing to it. Soundy then opens
 /// the card the server already holds and plays nothing, which `pipewire-alsa` or
 /// `pulseaudio-alsa` fixes. Only ALSA's configuration is read, no device is opened, and nothing
-/// is missing when Sonora plays through another host.
+/// is missing when Soundy plays through another host.
 pub fn missing_bridge() -> Option<Server> {
     if !is_alsa(&super::host()) {
         return None;

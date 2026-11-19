@@ -203,7 +203,7 @@ impl Render for Page {
                                             .text_size(theme.text(Text::Label))
                                             .text_color(theme.muted_foreground)
                                             .child(
-                                                "Every kind of toast Sonora can show. Point at \
+                                                "Every kind of toast Soundy can show. Point at \
                                                  the pile to spread it out and stop the clocks, \
                                                  or drag a toast to the right to dismiss it.",
                                             ),

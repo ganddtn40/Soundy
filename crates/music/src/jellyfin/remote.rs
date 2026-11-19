@@ -1,4 +1,4 @@
-//! Remote control through the server's sessions: Sonora listed among the devices Jellyfin's apps
+//! Remote control through the server's sessions: Soundy listed among the devices Jellyfin's apps
 //! and dashboard can control, the account's other controllable apps to play on, and changes
 //! another app makes to favorites and the library.
 //!

@@ -3,7 +3,7 @@ use gpui::{App, Context, Entity, SharedString, Window, div};
 use i18n::t;
 use input::ShowMembers;
 use music::connect::{DeviceKind, Elsewhere};
-use state::{Devices, Listening, Sonora};
+use state::{Devices, Listening, Soundy};
 use ui::{ActiveTheme as _, Menu, MenuItem, Picker, Popovers, SubmenuState};
 
 use crate::chrome::jam;
@@ -16,7 +16,7 @@ const MEMBER_FACES: usize = 3;
 const MEMBER_FACE: f32 = 0.7;
 
 /// The player bar's Sessions button, for listening elsewhere and together: the account's other
-/// devices and the Jam when the provider has a device network the listener keeps on, and Sonora
+/// devices and the Jam when the provider has a device network the listener keeps on, and Soundy
 /// Sessions on every streaming provider. It draws nothing while no streaming provider is signed
 /// in.
 pub(crate) struct SessionsButton {
@@ -29,8 +29,8 @@ pub(crate) struct SessionsButton {
 
 impl SessionsButton {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let devices = Sonora::global(cx).devices.clone();
-        let listening = Sonora::global(cx).listening.clone();
+        let devices = Soundy::global(cx).devices.clone();
+        let listening = Soundy::global(cx).listening.clone();
         cx.observe(&devices, |_, _, cx| cx.notify()).detach();
         cx.observe(&listening, |_, _, cx| cx.notify()).detach();
 
@@ -164,7 +164,7 @@ impl SessionsButton {
         )
     }
 
-    /// Starting or joining a Sonora Session, or what to do with the one the listener is in.
+    /// Starting or joining a Soundy Session, or what to do with the one the listener is in.
     fn session_items(&self, cx: &App) -> Vec<MenuItem> {
         let listening = self.listening.clone();
         let state = listening.read(cx);

@@ -28,7 +28,7 @@ const PAGE: &str = "https://www.youtube.com/embed/jNQXAC9IVRw";
 const LANDING: &str = "www.youtube.com";
 const DOMAIN: &str = "youtube.com";
 /// The cookie the page leaves its answers in.
-const COOKIE: &str = "SONORA_POT";
+const COOKIE: &str = "SOUNDY_POT";
 /// What the page prefixes a failure with. A token is base64url and never starts with one.
 const FAILED: char = '!';
 /// What ends the escaped binding at the start of an answer.
@@ -161,7 +161,7 @@ impl PoToken {
         };
         let quoted = serde_json::to_string(&binding).unwrap_or_default();
         open.page.run(&format!(
-            "window.sonoraPoToken && window.sonoraPoToken({quoted})"
+            "window.soundyPoToken && window.soundyPoToken({quoted})"
         ));
         open.asked = Some((binding, Instant::now()));
     }

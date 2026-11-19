@@ -1,7 +1,7 @@
 //! The Soloist program on disk: downloading it from Spotify, checking that it runs, and reading
 //! which build it is.
 //!
-//! Spotify forbids passing the program on, so Sonora ships none and fetches it from Spotify's own
+//! Spotify forbids passing the program on, so Soundy ships none and fetches it from Spotify's own
 //! servers for each listener, the way their documentation tells people to. Every build stops
 //! working 90 days after it was made, which is why a build is replaced well before that.
 
@@ -92,7 +92,7 @@ pub(crate) fn archive() -> Option<&'static str> {
     }
 }
 
-/// Sonora's own folder for the program, under its data folder so a cache cleaner leaves it.
+/// Soundy's own folder for the program, under its data folder so a cache cleaner leaves it.
 pub(crate) fn store() -> PathBuf {
     dirs::data_local_dir()
         .unwrap_or_else(std::env::temp_dir)

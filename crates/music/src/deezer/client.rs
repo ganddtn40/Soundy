@@ -104,7 +104,7 @@ const SIMILAR_RELEASES: usize = 2;
 /// The page `page.get` lists every channel on, sorted into categories, genres and podcasts.
 const EXPLORE: &str = "channels/explore";
 
-/// The card kinds Sonora draws, which `page.get` is told it may answer for each layout. A
+/// The card kinds Soundy draws, which `page.get` is told it may answer for each layout. A
 /// layout or kind left out here never comes back, and a page told nothing answers no sections.
 const CARDS: [&str; 7] = [
     "album",
@@ -468,7 +468,7 @@ impl DeezerClient {
 
     /// Uploads a JPEG as a playlist picture and answers the token `updatePlaylist` takes.
     async fn upload_picture(&self, jwt: &str, jpeg: Vec<u8>) -> Result<String> {
-        let boundary = format!("sonora{:016x}", fastrand::u64(..));
+        let boundary = format!("soundy{:016x}", fastrand::u64(..));
         let mut body = format!(
             "--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"cover.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n"
         )
@@ -810,7 +810,7 @@ impl DeezerClient {
     }
 
     /// One page of the web player's own layout, such as `home` or `channels/metal`, as
-    /// `page.get` answers it with the cards Sonora draws.
+    /// `page.get` answers it with the cards Soundy draws.
     async fn page(&self, page: &str) -> Result<Value> {
         let mut support = serde_json::Map::new();
         for layout in GRIDS {

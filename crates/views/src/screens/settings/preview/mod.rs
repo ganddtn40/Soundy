@@ -10,7 +10,7 @@ use std::time::Duration;
 use gpui::prelude::*;
 use gpui::{App, Context, Div, EdgesRefinement, Entity, Pixels, SharedString, Task, Window, div};
 use i18n::t;
-use state::Sonora;
+use state::Soundy;
 use ui::ActiveTheme as _;
 
 use super::SettingsView;
@@ -70,7 +70,7 @@ pub(super) struct Tick {
 impl Previews {
     pub(super) fn new(cx: &mut Context<SettingsView>) -> Self {
         // history may still be loading when settings first draw, and a pick waits for it
-        let history = Sonora::global(cx).history.clone();
+        let history = Soundy::global(cx).history.clone();
         cx.observe(&history, |this, _, cx| {
             if this.previews.picked.borrow().is_none() {
                 cx.notify();
@@ -116,7 +116,7 @@ impl Previews {
     /// The track playing, or while nothing is loaded the one picked from history this time
     /// settings opened, or a placeholder while history is empty.
     pub(super) fn playing_or_picked(&self, cx: &App) -> Sample {
-        match Sonora::global(cx).playback.read(cx).track() {
+        match Soundy::global(cx).playback.read(cx).track() {
             Some(track) => Sample::of(track),
             None => self.picked(cx),
         }
@@ -128,7 +128,7 @@ impl Previews {
         if let Some(picked) = self.picked.borrow().as_ref() {
             return picked.clone();
         }
-        let history = Sonora::global(cx).history.read(cx);
+        let history = Soundy::global(cx).history.read(cx);
         let tracks = history.tracks();
         let Some(track) =
             (!tracks.is_empty()).then(|| &tracks[(self.seed.get() % tracks.len() as u64) as usize])
@@ -180,7 +180,7 @@ impl Sample {
     pub(super) fn large_cover(&self, cx: &App) -> Option<String> {
         self.album_id
             .as_deref()
-            .and_then(|album| Sonora::global(cx).cover.read(cx).large_for(album))
+            .and_then(|album| Soundy::global(cx).cover.read(cx).large_for(album))
             .map(str::to_owned)
             .or_else(|| self.cover.clone())
     }
@@ -195,7 +195,7 @@ impl Tick {
         }
         let saved = match window.is_window_active() {
             true => None,
-            false => Sonora::global(cx).settings.read(cx).saver().interval(),
+            false => Soundy::global(cx).settings.read(cx).saver().interval(),
         };
         let wait = wait.max(saved.unwrap_or_default());
         self.pending.set(true);

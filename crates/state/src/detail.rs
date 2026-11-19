@@ -10,7 +10,7 @@ use tokio::task::AbortHandle;
 
 use crate::{
     Io, Library, LibraryEvent, Network, Outcome, Session, SessionEvent, SessionState, Shelf,
-    Sonora, Toasts, join, mosaic,
+    Soundy, Toasts, join, mosaic,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -30,7 +30,7 @@ pub enum Reorder {
     /// Not a playlist the listener edits, or one not fully loaded yet, so there is no order of
     /// theirs to change.
     Off,
-    /// The listener's own playlist, on a provider that keeps no order Sonora can change. A
+    /// The listener's own playlist, on a provider that keeps no order Soundy can change. A
     /// move is turned away with a message rather than kept on this device alone.
     Unsupported,
     /// The listener's playlist whose provider orders it by its own rules, as a Navidrome smart
@@ -867,7 +867,7 @@ fn playlist_header(playlist: &Playlist) -> Header {
 /// The downloaded copy of an album or playlist, which stands in for its page while the provider
 /// is out of reach.
 fn kept(kind: Collection, id: &str, cx: &App) -> Option<Loaded> {
-    let downloads = cx.try_global::<Sonora>()?.downloads.read(cx);
+    let downloads = cx.try_global::<Soundy>()?.downloads.read(cx);
     match kind {
         Collection::Album => downloads
             .album_detail(id)

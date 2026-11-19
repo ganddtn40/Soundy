@@ -13,7 +13,7 @@ const SOCKET: &str = match cfg!(debug_assertions) {
     true => "soundy-dev.sock",
     false => "soundy.sock",
 };
-/// How long the running Sonora waits for a connection to say what it wants, so a stalled peer
+/// How long the running Soundy waits for a connection to say what it wants, so a stalled peer
 /// never holds a thread for good.
 const PATIENCE: Duration = Duration::from_secs(5);
 /// How long a command line waits for its answer. A provider switch signs in and a playlist to
@@ -24,7 +24,7 @@ const ANSWER: Duration = Duration::from_secs(60);
 pub enum Asked {
     /// A command answered once.
     Once(Request, oneshot::Sender<Reply>),
-    /// `sonora watch`, answered again on every change until the command line hangs up and the
+    /// `soundy watch`, answered again on every change until the command line hangs up and the
     /// receiver goes with it.
     Watch(Watch, UnboundedSender<Reply>),
 }
@@ -170,7 +170,7 @@ fn serve(
     sender.send(items).ok();
 }
 
-/// Keeps a `sonora watch` connection open, writing each reply the app sends until the command
+/// Keeps a `soundy watch` connection open, writing each reply the app sends until the command
 /// line hangs up. A write that fails ends it, which drops the receiver, so the app stops
 /// sending to it.
 fn follow(connection: &Stream, watch: Watch, commands: &UnboundedSender<Asked>) {
@@ -264,7 +264,7 @@ fn private_dir() -> io::Result<std::path::PathBuf> {
     Ok(OsString::from_vec(buffer).into())
 }
 
-/// The listener for the instance socket, open to every Sonora this user launches.
+/// The listener for the instance socket, open to every Soundy this user launches.
 fn options(name: Name<'_>) -> ListenerOptions<'_> {
     let options = ListenerOptions::new().name(name);
     #[cfg(windows)]
@@ -280,7 +280,7 @@ fn options(name: Name<'_>) -> ListenerOptions<'_> {
 
 /// Access to the pipe for this user's account alone, elevated or not. Windows owns an elevated
 /// process's objects as Administrators, so neither the default descriptor nor one granting the
-/// owner lets the same user's taskbar launch reach a Sonora the updater relaunched elevated, and
+/// owner lets the same user's taskbar launch reach a Soundy the updater relaunched elevated, and
 /// that launch would exit without a window. `None` keeps the default, and is logged.
 #[cfg(windows)]
 fn reachable() -> Option<interprocess::os::windows::security_descriptor::SecurityDescriptor> {

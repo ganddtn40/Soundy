@@ -40,7 +40,7 @@ fn developer_avatar() -> String {
 impl SettingsView {
     pub(super) fn about_groups(&self) -> Vec<Group> {
         // This fork has no update feed of its own, so About names the build it is rather
-        // than offering to replace itself with an upstream Sonora release.
+        // than offering to replace itself with an upstream Soundy release.
         vec![Group::untitled().rows([Slot::Version, Slot::Log, Slot::License, Slot::Source])]
     }
 
@@ -132,7 +132,7 @@ impl SettingsView {
     }
 
     /// The developer behind this build, as one card that opens the GitHub profile. The card is
-    /// the only member: the upstream team list belongs to Sonora, not to this fork.
+    /// the only member: the upstream team list belongs to Soundy, not to this fork.
     pub(super) fn team(&self, cx: &Context<Self>) -> impl IntoElement {
         let theme = *cx.theme();
         let avatar = theme.metrics.cover * 0.72;

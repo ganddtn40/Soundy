@@ -651,7 +651,7 @@ settings-discord = Shfaq në Discord
 settings-discord-detail = Vendos këngën që po luan në profilin tënd Discord
 settings-discord-name = Emri i statusit
 settings-discord-name-detail = Si quhet statusi pas “Duke dëgjuar” që shohin miqtë
-settings-discord-name-sonora = Sonora
+settings-discord-name-sonora = Soundy
 settings-discord-name-provider = Ofruesi
 settings-discord-name-music = Muzikë
 settings-discord-name-title = Titulli
@@ -674,7 +674,7 @@ settings-discord-preview-elapsed = { $time } kaluar
 settings-discord-preview-listen-on = Dëgjo në { $provider }
 # the Discord status when the track is left out of it
 discord-listening = Duke dëgjuar muzikë
-get-sonora = Merr Sonora
+get-sonora = Merr Soundy
 settings-fullscreen-controls-autohide-automatic = Automatike
 settings-fullscreen-controls-autohide-always-hidden = Gjithmonë e fshehur
 settings-fullscreen-controls-autohide-always-shown = Gjithmonë e shfaqur

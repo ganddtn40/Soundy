@@ -1,7 +1,7 @@
 use gpui::prelude::*;
 use gpui::{AnyElement, App, Context};
 use i18n::t;
-use state::{DiscordName, Sonora};
+use state::{DiscordName, Soundy};
 use ui::{Button, MenuItem, Picker, Switch, TabBar};
 
 use super::{Group, SettingsView, Slot};
@@ -17,7 +17,7 @@ impl SettingsView {
         if settings.discord_presence() {
             // the choice only means something while Spotify is signed in and listed as a device
             let connect = settings.spotify_connect()
-                && Sonora::global(cx).devices.read(cx).supported()
+                && Soundy::global(cx).devices.read(cx).supported()
                 && !super::connect::jellyfin(cx);
             groups.push(
                 Group::new("settings-group-status", "icons/radio.svg")
@@ -179,7 +179,7 @@ impl SettingsView {
     /// The buttons under the status, each a segment that turns on and off by itself.
     pub(super) fn discord_buttons_row(&self, cx: &mut Context<Self>) -> AnyElement {
         let settings = self.settings.read(cx);
-        let sonora = settings.discord_sonora_button();
+        let soundy_button = settings.discord_soundy_button();
         let provider = settings.discord_provider_button();
 
         let buttons = TabBar::new("discord-buttons")
@@ -201,10 +201,10 @@ impl SettingsView {
                     .label(t!("settings-discord-name-sonora"))
                     .small()
                     .ghost()
-                    .selected(sonora)
+                    .selected(soundy_button)
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.settings.update(cx, |settings, cx| {
-                            settings.set_discord_sonora_button(!sonora, cx)
+                            settings.set_discord_soundy_button(!soundy_button, cx)
                         });
                         cx.notify();
                     })),

@@ -118,7 +118,7 @@ impl SettingsView {
         self.soloist.read(cx).plays(cx)
     }
 
-    /// The note under a setting of Sonora's own sound path, which Soloist goes around. While
+    /// The note under a setting of Soundy's own sound path, which Soloist goes around. While
     /// Soloist plays Spotify such a setting still reaches local files, so it stays in use and
     /// says so. `None` while Soloist does not play.
     pub(super) fn local_only(&self, cx: &App) -> Option<SharedString> {
@@ -220,7 +220,7 @@ pub(super) fn drill(
     whole(id, title, value, "icons/chevron-right.svg", cx)
 }
 
-/// A row that opens something outside Sonora, a page in the browser or a file, marked so.
+/// A row that opens something outside Soundy, a page in the browser or a file, marked so.
 pub(super) fn outward(
     id: impl Into<ElementId>,
     title: SharedString,

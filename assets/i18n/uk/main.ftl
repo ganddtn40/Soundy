@@ -677,7 +677,7 @@ settings-discord = Показувати в Discord
 settings-discord-detail = Показує трек, який ви слухаєте, у вашому профілі Discord
 settings-discord-name = Назва статусу
 settings-discord-name-detail = Як зветься статус після «Слухає», який бачать друзі
-settings-discord-name-sonora = Sonora
+settings-discord-name-sonora = Soundy
 settings-discord-name-provider = Сервіс
 settings-discord-name-music = Музика
 settings-discord-name-title = Назва
@@ -701,7 +701,7 @@ settings-discord-preview-elapsed = Минуло { $time }
 settings-discord-preview-listen-on = Слухати в { $provider }
 # the Discord status when the track is left out of it
 discord-listening = Слухає музику
-get-sonora = Завантажити Sonora
+get-sonora = Завантажити Soundy
 settings-fullscreen-controls-autohide-automatic = Автоматично
 settings-fullscreen-controls-autohide-always-hidden = Завжди приховано
 settings-fullscreen-controls-autohide-always-shown = Завжди показано

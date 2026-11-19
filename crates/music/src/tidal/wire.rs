@@ -363,7 +363,7 @@ pub fn with_explore(listed: Vec<Genre>, links: Vec<Genre>) -> Vec<Genre> {
         .collect()
 }
 
-/// The shelves of a Tidal page: each module that holds at least one card Sonora can draw, in the
+/// The shelves of a Tidal page: each module that holds at least one card Soundy can draw, in the
 /// order Tidal lays them out. A module without a title takes the page's own title. A card that
 /// links to another `pages/` path becomes a genre, which opens the same way.
 pub fn page_sections(page: &Value, user_id: &str) -> Vec<GenreSection> {
@@ -579,7 +579,7 @@ fn normalized(text: &str) -> String {
 }
 
 /// Whether a track is a Dolby Atmos copy with no stereo version behind it. Only a Widevine
-/// stream carries one, which Sonora does not play.
+/// stream carries one, which Soundy does not play.
 fn atmos_only(value: &Value) -> bool {
     value
         .get("audioModes")

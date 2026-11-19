@@ -50,7 +50,7 @@ pub fn redact(text: &str) -> Cow<'_, str> {
 }
 
 /// Hides the user info, query and fragment of every url in `text` and keeps its scheme, host and
-/// path. A token rides in one of those three in every provider Sonora talks to.
+/// path. A token rides in one of those three in every provider Soundy talks to.
 fn hide_queries(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;

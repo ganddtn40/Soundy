@@ -70,7 +70,7 @@ fn metadata() -> Vec<PathBuf> {
     if let Some(prefix) = directory.parent() {
         paths.push(prefix.join("Resources/soundy-build.json"));
         paths.push(prefix.join("lib/soundy/build.json"));
-        // A copy packaged by Sonora before the fork still reads its own metadata.
+        // A copy packaged by Soundy before the fork still reads its own metadata.
         paths.push(directory.join("sonora-build.json"));
         paths.push(prefix.join("Resources/sonora-build.json"));
         paths.push(prefix.join("lib/sonora/build.json"));

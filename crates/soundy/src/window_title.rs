@@ -7,7 +7,7 @@
 
 use gpui::{AnyWindowHandle, App, Global, Subscription};
 use music::Track;
-use state::Sonora;
+use state::Soundy;
 
 /// The name the window carries when nothing plays. It matches the title the window opens with,
 /// which is untranslated too.
@@ -24,7 +24,7 @@ impl Global for Installed {}
 /// Keeps the title of `window` in step with the track playback shows. Call it once per window
 /// open, after the window exists, so a window reopened from the tray picks up the current song.
 pub fn install(window: AnyWindowHandle, cx: &mut App) {
-    let playback = Sonora::global(cx).playback.clone();
+    let playback = Soundy::global(cx).playback.clone();
     let mut last = Last::default();
     // The window is still being built here, so the first write waits until the frame is up.
     cx.defer(move |cx| publish(window, &mut Last::default(), cx));
@@ -68,7 +68,7 @@ impl Last {
 /// Writes the title for the track playback shows now, if it differs from the last one written.
 /// A failed write forgets the recorded title so the next playback change tries again.
 fn publish(window: AnyWindowHandle, last: &mut Last, cx: &mut App) {
-    let track = Sonora::global(cx).playback.read(cx).shown_track(cx);
+    let track = Soundy::global(cx).playback.read(cx).shown_track(cx);
     let Some(title) = last.change(track.as_ref()) else {
         return;
     };

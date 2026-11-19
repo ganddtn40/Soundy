@@ -21,7 +21,7 @@ use ui::{
 };
 
 use music::is_local_id;
-use state::{SessionEvent, Sonora};
+use state::{SessionEvent, Soundy};
 
 use crate::chrome::Timeline;
 use crate::shared::hero::{COVER_FLIGHT, PageHero};
@@ -182,7 +182,7 @@ pub(crate) struct CoverViewer {
 
 impl CoverViewer {
     pub(crate) fn new(cx: &mut Context<Self>) -> Self {
-        let session = Sonora::global(cx).session.clone();
+        let session = Soundy::global(cx).session.clone();
         cx.subscribe(&session, |this, _, event, cx| {
             // These sign events clear and reload a provider page under a new account, possibly
             // within one frame, so the page's stale check can miss it. A local item's art does
@@ -219,7 +219,7 @@ impl CoverViewer {
         round: bool,
         cx: &mut Context<Self>,
     ) {
-        let session = Sonora::global(cx).session.read(cx);
+        let session = Soundy::global(cx).session.read(cx);
         let client = match owner.as_deref() {
             Some(id) if is_local_id(id) => session.local_client(),
             _ => session.client(),

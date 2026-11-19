@@ -29,7 +29,7 @@ const COVER_LIMITS: CoverLimits = CoverLimits {
     bytes: 2 * 1024 * 1024,
 };
 
-/// Where a new cover for `playlist_id` goes, in Sonora's data folder rather than the cache,
+/// Where a new cover for `playlist_id` goes, in Soundy's data folder rather than the cache,
 /// since the listener's picture cannot be fetched again.
 fn cover_path(playlist_id: &str) -> PathBuf {
     let stamp = std::time::SystemTime::now()
@@ -546,7 +546,7 @@ impl MusicApi for LocalClient {
         Err(anyhow!(NOT_SUPPORTED))
     }
 
-    /// Keeps the cover as a JPEG in Sonora's data folder, named afresh on every change so an
+    /// Keeps the cover as a JPEG in Soundy's data folder, named afresh on every change so an
     /// image cache keyed by the path never shows the old one.
     async fn set_playlist_cover(&self, playlist_id: &str, image: Option<&[u8]>) -> Result<()> {
         self.write_cover(playlist_id, image, false)
@@ -1074,7 +1074,7 @@ mod tests {
 
     #[tokio::test]
     async fn home_feed_quick_picks_mixes_starred_played_and_random() {
-        let dir = std::env::temp_dir().join(format!("sonora-test-{}", fastrand::u64(..)));
+        let dir = std::env::temp_dir().join(format!("soundy-test-{}", fastrand::u64(..)));
         std::fs::create_dir_all(&dir).unwrap();
         let db = Database::at(dir.join("state.sqlite"));
         let cache = storage::Cache::at(dir.join("cache.sqlite"));
@@ -1128,7 +1128,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_generated_cover_is_rebuilt_but_a_listeners_own_picture_is_kept() {
-        let dir = std::env::temp_dir().join(format!("sonora-test-{}", fastrand::u64(..)));
+        let dir = std::env::temp_dir().join(format!("soundy-test-{}", fastrand::u64(..)));
         std::fs::create_dir_all(&dir).unwrap();
         let db = Database::at(dir.join("state.sqlite"));
         let index = Index::new(storage::Cache::at(dir.join("cache.sqlite")));
@@ -1187,7 +1187,7 @@ mod tests {
 
     #[tokio::test]
     async fn moves_a_playlist_track_down_and_up_and_keeps_the_order() {
-        let dir = std::env::temp_dir().join(format!("sonora-test-{}", fastrand::u64(..)));
+        let dir = std::env::temp_dir().join(format!("soundy-test-{}", fastrand::u64(..)));
         std::fs::create_dir_all(&dir).unwrap();
         let db = Database::at(dir.join("state.sqlite"));
         let index = Index::new(storage::Cache::at(dir.join("cache.sqlite")));
@@ -1329,6 +1329,7 @@ mod tests {
             entries,
             duplicates: 0,
             skipped: 0,
+            limited: false,
         }
     }
 
@@ -1349,7 +1350,7 @@ mod tests {
 
     #[tokio::test]
     async fn imported_playlists_keep_every_row_its_status_and_its_order() {
-        let dir = std::env::temp_dir().join(format!("sonora-test-{}", fastrand::u64(..)));
+        let dir = std::env::temp_dir().join(format!("soundy-test-{}", fastrand::u64(..)));
         std::fs::create_dir_all(&dir).unwrap();
         let client = test_client(
             &dir,

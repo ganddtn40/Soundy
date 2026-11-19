@@ -3,6 +3,7 @@ name = "music"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [features]
 # The host for the Widevine CDM, which Apple Music playback needs. Off by default: it compiles a

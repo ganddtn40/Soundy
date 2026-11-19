@@ -5,7 +5,7 @@ use gpui::{
     WeakEntity, Window, div, px,
 };
 use i18n::t;
-use state::{AppSettings, GenreDetails, Playback, Sonora};
+use state::{AppSettings, GenreDetails, Playback, Soundy};
 use ui::{ActiveTheme as _, Mode, Popovers, Scrollbar, Scroller, Skeleton, Text, vacant};
 
 use crate::chrome::{Chrome, Toolbar, Tooled, tools};
@@ -36,7 +36,7 @@ impl GenreView {
         playback: Entity<Playback>,
         cx: &mut Context<Self>,
     ) -> Self {
-        let settings = Sonora::global(cx).settings.clone();
+        let settings = Soundy::global(cx).settings.clone();
         let mode = settings.read(cx).view_or(SECTION, Mode::Grid);
         let id = cx.entity_id();
         let shelves = cx.new(|_| Shelves::new("genre-shelf", id, playback.clone()));

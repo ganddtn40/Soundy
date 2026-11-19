@@ -26,7 +26,7 @@ pub(super) static RUNNING: Mutex<()> = Mutex::const_new(());
 
 /// Starts the program on the data folder `data` with `flags` after the ones every run takes. Its
 /// output is piped, since anything it inherits would print the command line, key included, to
-/// Sonora's own terminal. The key travels on the command line because the program takes it no
+/// Soundy's own terminal. The key travels on the command line because the program takes it no
 /// other way.
 pub(super) fn launch(key: &str, data: &Path, flags: &[&OsStr]) -> Result<Child> {
     let path = binary::path();
@@ -52,8 +52,8 @@ pub(super) fn launch(key: &str, data: &Path, flags: &[&OsStr]) -> Result<Child> 
 }
 
 /// Has the program told to stop when the thread that starts it ends, which is the engine's own
-/// thread or one that lives as long as Sonora. Stopping it by hand needs Sonora to get that far,
-/// and a Sonora that is killed, crashes or exits in a hurry would otherwise leave the program
+/// thread or one that lives as long as Soundy. Stopping it by hand needs Soundy to get that far,
+/// and a Soundy that is killed, crashes or exits in a hurry would otherwise leave the program
 /// playing on with nobody to steer it. Only Linux can ask for this.
 #[cfg(target_os = "linux")]
 fn tie(command: &mut Command) {

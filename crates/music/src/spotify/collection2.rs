@@ -94,7 +94,7 @@ async fn set_saved(session: &Session, set: &str, uri: &str, saved: bool) -> Resu
 
     let sequence = UPDATE.fetch_add(1, Ordering::Relaxed);
     let update_id = format!(
-        "sonora-{}-{}-{}-{sequence}",
+        "soundy-{}-{}-{}-{sequence}",
         now.as_secs(),
         now.subsec_nanos(),
         std::process::id()

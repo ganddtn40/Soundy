@@ -73,7 +73,7 @@ pub(super) struct Look {
 /// Only what changed is read. The index holds every file's time, size and tags, and every
 /// folder's time, so a folder that has not been touched is listed from memory and the files in
 /// it are never opened. A folder's time moves when an entry is added, removed or renamed, so an
-/// edit in place hides from it: Sonora's own tag editor drops the file it wrote from the index,
+/// edit in place hides from it: Soundy's own tag editor drops the file it wrote from the index,
 /// and the Rescan button drops every folder, which is what makes it thorough.
 pub fn scan(roots: &[PathBuf], cache_dir: &Path, index: &Index) -> Scanned {
     let started = std::time::Instant::now();
@@ -737,7 +737,7 @@ mod tests {
     #[test]
     fn scans_ignore_new_and_previously_indexed_appledouble_files() {
         let _scanning = alone();
-        let name = "sonora-scan-test-appledouble";
+        let name = "soundy-scan-test-appledouble";
         let (dir, index) = scratch(name);
         let track = dir.join("track.flac");
         let sidecar = dir.join("._track.flac");
@@ -782,7 +782,7 @@ mod tests {
     #[test]
     fn ignores_non_audio_files() {
         let _scanning = alone();
-        let (dir, index) = scratch("sonora-scan-test-ignore");
+        let (dir, index) = scratch("soundy-scan-test-ignore");
         touch(&dir.join("notes.txt"));
         let scanned = scan(std::slice::from_ref(&dir), &dir, &index);
         assert!(scanned.tracks.is_empty());
@@ -792,7 +792,7 @@ mod tests {
     #[test]
     fn empty_root_yields_nothing() {
         let _scanning = alone();
-        let (dir, index) = scratch("sonora-scan-test-missing");
+        let (dir, index) = scratch("soundy-scan-test-missing");
         let scanned = scan(std::slice::from_ref(&dir), &dir, &index);
         assert!(scanned.tracks.is_empty());
         assert!(scanned.albums.is_empty());
@@ -813,7 +813,7 @@ mod tests {
     #[test]
     fn walks_nested_folders_for_stray_audio_files() {
         let _scanning = alone();
-        let (dir, _) = scratch("sonora-scan-test-stragglers");
+        let (dir, _) = scratch("soundy-scan-test-stragglers");
         touch(&dir.join("top.mp3"));
         touch(&dir.join("a/b/c/deep.flac"));
         touch(&dir.join("a/b/c/notes.txt"));
@@ -908,7 +908,7 @@ mod tests {
     #[test]
     fn a_folder_cover_wins_over_the_first_tracks_embedded_art() {
         let _scanning = alone();
-        let (scanned, album, _) = scan_album("sonora-scan-test-folder-cover-wins", true);
+        let (scanned, album, _) = scan_album("soundy-scan-test-folder-cover-wins", true);
         let folder = format!("file://{}", album.join("cover.jpg").display());
 
         assert_eq!(scanned.albums.len(), 1);
@@ -922,7 +922,7 @@ mod tests {
     #[test]
     fn an_album_without_a_folder_cover_takes_the_first_tracks_embedded_art() {
         let _scanning = alone();
-        let (scanned, _, cache) = scan_album("sonora-scan-test-folder-cover-absent", false);
+        let (scanned, _, cache) = scan_album("soundy-scan-test-folder-cover-absent", false);
         let embedded = numbered(&scanned, 1).cover.clone().expect("embedded art");
 
         assert!(wire::is_embedded(&embedded, &cache));
@@ -932,7 +932,7 @@ mod tests {
     #[test]
     fn a_folder_cover_leaves_each_tracks_own_art_alone() {
         let _scanning = alone();
-        let (scanned, album, cache) = scan_album("sonora-scan-test-folder-cover-tracks", true);
+        let (scanned, album, cache) = scan_album("soundy-scan-test-folder-cover-tracks", true);
         let folder = format!("file://{}", album.join("cover.jpg").display());
 
         let first = numbered(&scanned, 1).cover.clone().expect("embedded art");
@@ -946,7 +946,7 @@ mod tests {
     #[test]
     fn an_album_keeps_its_release_type_across_an_index_from_before_it() {
         let _scanning = alone();
-        let name = "sonora-scan-test-release-type";
+        let name = "soundy-scan-test-release-type";
         let (dir, index) = scratch(name);
         let album = dir.join("Sylosis/The Path");
         fs::create_dir_all(&album).unwrap();

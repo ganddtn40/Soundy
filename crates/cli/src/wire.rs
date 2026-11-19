@@ -7,7 +7,7 @@ use serde_json::value::RawValue;
 
 use crate::commands::{Kind, Repeat, Request};
 
-/// The protocol both ends speak. Bump it on any change an older Sonora would misread.
+/// The protocol both ends speak. Bump it on any change an older Soundy would misread.
 pub const VERSION: u32 = 2;
 
 /// One line on the socket: the protocol version and the request or reply it carries. The body
@@ -19,7 +19,7 @@ struct Envelope<T> {
     body: T,
 }
 
-/// What the running Sonora answers to a request.
+/// What the running Soundy answers to a request.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Reply {
@@ -45,13 +45,13 @@ pub enum Value {
     Provider(Option<String>),
     /// What a search found, best first.
     Hits(Vec<Hit>),
-    /// The Sonora Session Sonora is in, `None` while it is in none.
+    /// The Soundy Session Soundy is in, `None` while it is in none.
     Session(Option<SessionInfo>),
-    /// A read-only snapshot of the queue, as `sonora queue` prints it.
+    /// A read-only snapshot of the queue, as `soundy queue` prints it.
     Queue(QueueSnapshot),
-    /// The lyrics of the current track as Sonora holds them, as `sonora lyrics` prints them.
+    /// The lyrics of the current track as Soundy holds them, as `soundy lyrics` prints them.
     Lyrics(LyricsSnapshot),
-    /// Whether the current track is a favorite, as `sonora like` prints it.
+    /// Whether the current track is a favorite, as `soundy like` prints it.
     Liked(bool),
 }
 
@@ -59,7 +59,7 @@ pub enum Value {
 /// makes an unbounded reply. `current` and `next` are picked before the cut.
 pub const LYRICS_LIMIT: usize = 500;
 
-/// The lyrics of the current track as `sonora lyrics` prints them. This is a public contract,
+/// The lyrics of the current track as `soundy lyrics` prints them. This is a public contract,
 /// so a field is only ever added, never renamed or removed, without bumping `VERSION`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LyricsSnapshot {
@@ -151,7 +151,7 @@ impl LyricsSnapshot {
 /// `upcoming` its next ones, both in play order; `truncated` says when either was cut.
 pub const QUEUE_LIMIT: usize = 100;
 
-/// The queue as `sonora queue` prints it: what played, what plays and what follows, in play
+/// The queue as `soundy queue` prints it: what played, what plays and what follows, in play
 /// order. This is a public contract, so a field is only ever added, never renamed or
 /// removed, without bumping `VERSION`.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -210,20 +210,20 @@ pub enum QueueEntryKind {
     Suggested,
 }
 
-/// A Sonora Session as `sonora session` prints it.
+/// A Soundy Session as `soundy session` prints it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SessionInfo {
     /// The six digits friends join with.
     pub code: String,
     /// The slug of the provider the session plays from.
     pub provider: String,
-    /// Whether this Sonora hosts the session.
+    /// Whether this Soundy hosts the session.
     pub hosting: bool,
     /// Everyone in the session by name, the host first.
     pub members: Vec<String>,
 }
 
-/// A search hit as `sonora search` lists it.
+/// A search hit as `soundy search` lists it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Hit {
     pub kind: Kind,
@@ -232,21 +232,21 @@ pub struct Hit {
     pub by: String,
     /// In whole seconds, for a song.
     pub duration: Option<u64>,
-    /// What `sonora add` and `sonora play-next` take.
+    /// What `soundy add` and `soundy play-next` take.
     pub link: String,
 }
 
-/// A provider as `sonora providers` lists it.
+/// A provider as `soundy providers` lists it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Provider {
-    /// What `sonora provider` takes to switch to it.
+    /// What `soundy provider` takes to switch to it.
     pub slug: String,
     /// Whether an account, or a guest session, is stored to switch to.
     pub stored: bool,
     pub current: bool,
 }
 
-/// What plays now, as `sonora current` prints it. This is a public contract, so a field is
+/// What plays now, as `soundy current` prints it. This is a public contract, so a field is
 /// only ever added, never renamed or removed, without bumping `VERSION`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Current {
@@ -257,7 +257,7 @@ pub struct Current {
     pub volume: u8,
     pub shuffle: bool,
     pub repeat: Repeat,
-    /// The provider the track comes from, as `sonora providers` lists it, `local` for a file.
+    /// The provider the track comes from, as `soundy providers` lists it, `local` for a file.
     /// `None` while no provider is chosen.
     #[serde(default)]
     pub provider: Option<String>,
@@ -269,7 +269,7 @@ pub struct Current {
     pub origin: Option<Origin>,
 }
 
-/// A collection a track plays from, as `sonora current` prints it.
+/// A collection a track plays from, as `soundy current` prints it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Origin {
     pub kind: OriginKind,
@@ -315,12 +315,12 @@ pub struct Track {
     pub duration: u64,
 }
 
-/// Why the running Sonora refused a request. Each is turned into a Fluent message on the
+/// Why the running Soundy refused a request. Each is turned into a Fluent message on the
 /// side that prints it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Failure {
-    /// The request spoke another protocol version; this is the one the running Sonora speaks.
+    /// The request spoke another protocol version; this is the one the running Soundy speaks.
     Version(u32),
     /// The request was not a request at all.
     Malformed,
@@ -358,7 +358,7 @@ pub enum Failure {
 #[derive(Debug)]
 pub enum Error {
     Io(io::Error),
-    /// The other end closed without a line. An older Sonora that never answers looks like this.
+    /// The other end closed without a line. An older Soundy that never answers looks like this.
     Closed,
     /// The line spoke this protocol version instead of ours.
     Version(u32),

@@ -2,7 +2,7 @@ use std::path::{self, PathBuf};
 
 /// Whether a launch argument is an address rather than a path, so one no provider reads is
 /// never tried as a file. Soundy's own scheme is case-insensitive and has no `//` when bare;
-/// Sonora's scheme stays recognized so old links are not mistaken for files.
+/// Soundy's scheme stays recognized so old links are not mistaken for files.
 pub fn is_address(item: &str) -> bool {
     !item.starts_with("file://")
         && (item.contains("://")
@@ -13,7 +13,7 @@ pub fn is_address(item: &str) -> bool {
             }))
 }
 
-/// An item as the running Sonora should read it. A path is made absolute against this
+/// An item as the running Soundy should read it. A path is made absolute against this
 /// process's folder, since the running one sits in another; an address is left alone.
 pub fn anchored(item: String) -> String {
     if is_address(&item) {

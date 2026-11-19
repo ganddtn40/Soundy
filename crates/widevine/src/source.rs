@@ -1,6 +1,6 @@
 //! Where the CDM comes from.
 //!
-//! A copy the user pointed at comes first, then the one Sonora fetched from Google into its own
+//! A copy the user pointed at comes first, then the one Soundy fetched from Google into its own
 //! store, then a copy a browser on the machine already has. The store only holds a module the
 //! user accepted Google's terms for, so it outranks a browser's copy, which can be one the
 //! host cannot open.
@@ -13,7 +13,7 @@
 //! browser installed where no fixed path predicts: on NixOS the bundled module sits in the Nix
 //! store rather than under `/opt`. A Firefox-family browser names its profiles in
 //! `profiles.ini` and the version it unpacked in that profile's `prefs.js`. The one folder
-//! Sonora reads is its own store, which it wrote itself.
+//! Soundy reads is its own store, which it wrote itself.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
@@ -53,7 +53,7 @@ pub enum Origin {
     Configured,
     /// A copy a browser on this machine already had.
     Installed,
-    /// Fetched from Google's update service into Sonora's own store.
+    /// Fetched from Google's update service into Soundy's own store.
     Fetched,
 }
 
@@ -122,7 +122,7 @@ pub(crate) fn prefer(found: Found) -> Found {
     }
 }
 
-/// Removes every module Sonora fetched from Google, store folder and all, and forgets the one
+/// Removes every module Soundy fetched from Google, store folder and all, and forgets the one
 /// the process settled on so the next search starts over. A CDM already open stays open until
 /// the process ends: the file is unlinked, not unloaded.
 pub fn uninstall() -> Result<()> {
@@ -225,7 +225,7 @@ fn gmp(profile: &Path) -> Option<PathBuf> {
     path.is_file().then_some(path)
 }
 
-/// Sonora's own folder for the module, `$XDG_CACHE_HOME/sonora/widevine`, holding one
+/// Soundy's own folder for the module, `$XDG_CACHE_HOME/soundy/widevine`, holding one
 /// subfolder per version fetched.
 pub fn store() -> PathBuf {
     dirs::cache_dir()
@@ -234,7 +234,7 @@ pub fn store() -> PathBuf {
         .join("widevine")
 }
 
-/// The module of the newest version in the store. Sonora wrote every folder read here.
+/// The module of the newest version in the store. Soundy wrote every folder read here.
 pub fn stored() -> Option<PathBuf> {
     std::fs::read_dir(store())
         .ok()?

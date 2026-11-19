@@ -40,7 +40,7 @@ use gpui::prelude::*;
 use gpui::{App, Div, Entity, Global, Pixels, SharedString, Window, div};
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 use state::AppSettings;
-use state::{PageWidth, Sonora};
+use state::{PageWidth, Soundy};
 use ui::{ActiveTheme as _, MIN_CONTENT, Room, eyebrow};
 
 /// The radius every element touching a corner of the window rounds that corner with, or `None`
@@ -164,7 +164,7 @@ impl Chrome {
     /// The width a page lays itself out in. The centred layout stops it at `metrics.page`, and
     /// the wide layout lets it fill the content area. This is the one place the choice is read.
     pub fn page(window: &Window, cx: &App) -> Pixels {
-        let width = Sonora::global(cx).settings.read(cx).page_width();
+        let width = Soundy::global(cx).settings.read(cx).page_width();
         page_fit(Self::content(window, cx), cx.theme().metrics.page, width)
     }
 

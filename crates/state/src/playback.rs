@@ -62,7 +62,7 @@ use serde::{Deserialize, Serialize};
 use crate::devices::collection_of;
 use crate::{
     AppSettings, Devices, Elsewhere, Equalizer, Io, Network, Outcome, Session, SessionEvent,
-    SessionState, Sonora, Target, Toast, Toasts,
+    SessionState, Soundy, Target, Toast, Toasts,
 };
 
 const POSITION_INTERVAL: Duration = Duration::from_millis(500);
@@ -130,7 +130,7 @@ const SIGNALS: usize = 4;
 const WARM_DWELL: Duration = Duration::from_millis(40);
 /// How long a fetched collection may start a press without being asked for again.
 const WARM_TTL: Duration = Duration::from_secs(120);
-const KEYS_FAQ: &str = "https://sonorahq.org/faq#spotify-playback-keys";
+const KEYS_FAQ: &str = "https://github.com/ganddtn40/soundy/blob/main/docs/KNOWN-LIMITATIONS.md";
 
 /// A collection fetched for a play button, so a press on it need not wait for its tracks.
 struct Warm {
@@ -264,7 +264,7 @@ pub enum Unreachable {
     /// The track is downloaded, but the named provider opens its downloads only online, as
     /// Apple Music does.
     Download(SharedString),
-    /// Offline mode keeps Sonora from streaming.
+    /// Offline mode keeps Soundy from streaming.
     OfflineMode,
     /// The network is gone.
     Offline,
@@ -511,7 +511,7 @@ impl DropAt {
 struct Unread {
     name: String,
     /// What the system said when the file was looked up, or `None` when the file is there but
-    /// is not audio Sonora can read.
+    /// is not audio Soundy can read.
     error: Option<String>,
 }
 
@@ -656,10 +656,10 @@ pub struct Playback {
     devices: Option<WeakEntity<Devices>>,
     /// Whether the call being carried out is this app's own doing, which never steers.
     local: bool,
-    /// How many seeks the listener asked for, which a Sonora Session watches to share them. Seeks
+    /// How many seeks the listener asked for, which a Soundy Session watches to share them. Seeks
     /// made for the session itself, through `locally`, are not counted.
     seeks: u64,
-    /// How many tracks played out to their end, which a Sonora Session tells apart from the
+    /// How many tracks played out to their end, which a Soundy Session tells apart from the
     /// listener moving on.
     ends: u64,
 }
@@ -3380,7 +3380,7 @@ impl Playback {
     fn module_suspect(&self, cx: &App) -> bool {
         self.session.read(cx).wants_drm()
             && cx
-                .try_global::<Sonora>()
+                .try_global::<Soundy>()
                 .is_some_and(|sonora| sonora.drm.read(cx).borrowed())
     }
 
@@ -3554,14 +3554,14 @@ impl Playback {
         let toast = Toast::new(Outcome::Failed, "toast-keys-error").note(note);
         let toast = match music::soloist::supported() {
             true => toast.lead("toast-soloist-setup", Target::PlaybackSettings, |cx| {
-                let soloist = Sonora::global(cx).soloist.clone();
+                let soloist = Soundy::global(cx).soloist.clone();
                 soloist.update(cx, |soloist, cx| soloist.begin(cx));
             }),
             false => toast.visit("toast-why", KEYS_FAQ),
         };
         Toasts::post(toast, cx);
         if let Some(soloist) = cx
-            .try_global::<Sonora>()
+            .try_global::<Soundy>()
             .map(|sonora| sonora.soloist.clone())
         {
             soloist.update(cx, |soloist, cx| soloist.refused(cx));

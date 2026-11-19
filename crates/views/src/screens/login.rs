@@ -10,7 +10,7 @@ use gpui::{
 };
 use i18n::t;
 use music::{AccountChoices, SignIn, SignInPrompt};
-use state::{ProviderInfo, Session, SessionState, Sonora, Usage};
+use state::{ProviderInfo, Session, SessionState, Soundy, Usage};
 use ui::ActiveTheme as _;
 use ui::{
     Button, Checkbox, Input, LEADING, Lattice, Modal, Scrollbar, Scroller, Separator, Text, mix,
@@ -77,7 +77,7 @@ pub struct LoginView {
 impl LoginView {
     pub fn new(session: Entity<Session>, cx: &mut Context<Self>) -> Self {
         cx.observe(&session, |_, _, cx| cx.notify()).detach();
-        let usage = Sonora::global(cx).usage.clone();
+        let usage = Soundy::global(cx).usage.clone();
         cx.observe(&usage, |_, _, cx| cx.notify()).detach();
         Self {
             session,
@@ -279,7 +279,7 @@ impl LoginView {
         }));
     }
 
-    /// The Sonora icon, the welcome and the line under it saying what the screen is waiting on.
+    /// The Soundy icon, the welcome and the line under it saying what the screen is waiting on.
     fn welcome(&self, status: SharedString, cx: &App) -> impl IntoElement {
         let theme = cx.theme();
         let title = t!("login-welcome-title");
@@ -665,7 +665,7 @@ impl Render for LoginView {
         };
 
         #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-        let radius = crate::chrome::window_radius(Sonora::global(cx).settings.read(cx), cx, window);
+        let radius = crate::chrome::window_radius(Soundy::global(cx).settings.read(cx), cx, window);
         #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
         let radius: Option<Pixels> = None;
 

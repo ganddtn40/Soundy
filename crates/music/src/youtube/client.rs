@@ -510,7 +510,7 @@ fn collect_thumbnails(node: &serde_json::Value) -> Vec<ytmusic::Thumbnail> {
         .unwrap_or_default()
 }
 
-/// A playlist of the library as Sonora lists it: one the user made is theirs by name, and the
+/// A playlist of the library as Soundy lists it: one the user made is theirs by name, and the
 /// saved-episodes list YouTube keeps for podcasts is left out. A playlist made before the
 /// account had a channel comes back with no author and no delete action, while a playlist
 /// saved from someone else always names its author, so a missing author marks it as owned.

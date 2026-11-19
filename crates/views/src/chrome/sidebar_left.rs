@@ -17,7 +17,7 @@ use music::Shape;
 use router::{
     Destination, LibraryTab, NavEntry, Navigation, NavigationEvent, navigate, open_settings,
 };
-use state::{AppSettings, Leaving, Library, Origin, PinSort, Pins, Playback, Shelf, Sonora};
+use state::{AppSettings, Leaving, Library, Origin, PinSort, Pins, Playback, Shelf, Soundy};
 
 use crate::shared::menus::{ItemMenu, item_menu};
 use crate::shared::nav::{entry_shown, nav_icon, nav_row};
@@ -122,10 +122,10 @@ pub(crate) struct SidebarLeft {
 
 impl SidebarLeft {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let settings = Sonora::global(cx).settings.clone();
-        let playback = Sonora::global(cx).playback.clone();
-        let pins = Sonora::global(cx).pins.clone();
-        let library = Sonora::global(cx).library.clone();
+        let settings = Soundy::global(cx).settings.clone();
+        let playback = Soundy::global(cx).playback.clone();
+        let pins = Soundy::global(cx).pins.clone();
+        let library = Soundy::global(cx).library.clone();
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
         cx.observe(&pins, |_, _, cx| cx.notify()).detach();
         cx.observe(&playback, |_, _, cx| cx.notify()).detach();

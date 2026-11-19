@@ -14,7 +14,7 @@ use crate::shared::blend::Joined;
 use crate::shared::cells;
 use i18n::t;
 use music::{SavedArtist, Track};
-use state::{AppSettings, ArtistDetail, Origin, Playback, Sonora};
+use state::{AppSettings, ArtistDetail, Origin, Playback, Soundy};
 use ui::ActiveTheme as _;
 use ui::Listing as _;
 use ui::{
@@ -165,12 +165,12 @@ impl ArtistView {
         let id = cx.entity_id();
         let scrollbar = cx.new(|_| Scrollbar::new(ScrollHandle::new()).watching(id));
         let playlist_scrollbar = cx.new(|_| Scrollbar::inset().watching(id));
-        let settings = Sonora::global(cx).settings.clone();
+        let settings = Soundy::global(cx).settings.clone();
         let saved = settings.read(cx).table(SECTION);
         let sorting = settings.read(cx).sorting(SECTION);
         let mode = settings.read(cx).view_or(SECTION, Mode::List);
         let columns = crate::shared::tracks::artist_columns(
-            Sonora::global(cx)
+            Soundy::global(cx)
                 .session
                 .read(cx)
                 .capabilities()
@@ -199,7 +199,7 @@ impl ArtistView {
                     Some(Origin::artist(detail.id()?).named(name))
                 }
             })
-            .with_liked(Sonora::global(cx).library.clone());
+            .with_liked(Soundy::global(cx).library.clone());
             let source = source.table(cx.weak_entity());
             let mut delegate = TableDelegate::new(source, width, cx);
             delegate.set_layout(saved, cx);
@@ -248,7 +248,7 @@ impl ArtistView {
         let chrome = Chrome::entity(cx);
         cx.observe(&chrome, |_, _, cx| cx.notify()).detach();
 
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         cx.observe(&library, |this, _, cx| {
             this.table.update(cx, |table, cx| table.refresh(cx));
             cx.notify();
@@ -552,7 +552,7 @@ impl ArtistView {
     fn favorite_button(&self, cx: &App) -> Option<Button> {
         let theme = *cx.theme();
         // A provider with no followed artists has nothing for this to toggle.
-        if !Sonora::global(cx)
+        if !Soundy::global(cx)
             .session
             .read(cx)
             .capabilities()
@@ -560,7 +560,7 @@ impl ArtistView {
         {
             return None;
         }
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         let target = self.saved_artist(cx)?;
         let saved = library.read(cx).saved_artist(&target.id);
 
@@ -1063,7 +1063,7 @@ impl ArtistView {
     /// Opens the listener's favorites for this artist without adding songs to the page.
     fn favorites_link(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let id = self.detail.read(cx).id()?;
-        let count = Sonora::global(cx)
+        let count = Soundy::global(cx)
             .library
             .read(cx)
             .favorites_by_artist(id)
@@ -1097,7 +1097,7 @@ impl ArtistView {
         }
         let detail = self.detail.read(cx);
         let tracks = Rc::new(
-            Sonora::global(cx)
+            Soundy::global(cx)
                 .library
                 .read(cx)
                 .favorites_by_artist(detail.id()?)
@@ -1113,7 +1113,7 @@ impl ArtistView {
                 playback.start(queued.as_ref().clone(), place, from.clone(), cx)
             });
         });
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         let listed = tracks.clone();
         let remove: crate::shared::track_card::RemoveHandler = Rc::new(move |place, cx| {
             let Some(track) = listed.get(place).cloned() else {

@@ -1,6 +1,6 @@
 //! The config an output device is opened in, and whether it still runs at the rate a stream was
-//! opened at. Sonora opens the device at the rate it really runs at and resamples every track to it
-//! with ardftsrc, so nothing between Sonora and the hardware converts it again. On Linux a rate
+//! opened at. Soundy opens the device at the rate it really runs at and resamples every track to it
+//! with ardftsrc, so nothing between Soundy and the hardware converts it again. On Linux a rate
 //! picked in settings is asked for instead, where the stream's rate reaches the hardware.
 //!
 //! On Windows the default config is the shared-mode engine's mix format, and the engine

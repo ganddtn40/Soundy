@@ -253,7 +253,7 @@ struct Facts {
     duration_ms: Option<u64>,
     lufs: Option<f32>,
     peak: Option<f32>,
-    /// How the kept stream is encoded. Missing from what an older Sonora kept.
+    /// How the kept stream is encoded. Missing from what an older Soundy kept.
     encoding: Option<Encoding>,
     /// When each media segment starts in the music, in nanoseconds. Empty for one file.
     starts_ns: Vec<u64>,

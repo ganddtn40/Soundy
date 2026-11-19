@@ -26,7 +26,7 @@ use music::import::{
 };
 use music::{ImportStatus, ImportedEntry, ImportedPlaylistData, Track};
 
-use crate::{Io, Library, Session, Shelf, Sonora, join};
+use crate::{Io, Library, Session, Shelf, Soundy, join};
 
 /// How often the dialog is told the counts moved while the import runs. Nothing polls an idle
 /// import, and the count is only reported when it has changed.
@@ -77,6 +77,9 @@ pub struct ImportReport {
     pub enriched: usize,
     /// Whether a collage or a drawn card became the playlist's own cover.
     pub collage: bool,
+    /// Whether the source published only its first page, so the playlist may hold fewer rows
+    /// than the source does. Never presented as a complete import.
+    pub limited: bool,
     /// When the import ran, in seconds since the epoch.
     pub imported_at: i64,
 }
@@ -115,6 +118,7 @@ impl ImportReport {
                 .count(),
             enriched: 0,
             collage: false,
+            limited: data.limited,
             imported_at: data.imported_at,
         };
         for entry in &data.entries {
@@ -485,8 +489,10 @@ impl Import {
     }
 
     /// Starts importing a Spotify playlist link or URI. A signed-in Spotify playback session is
-    /// used when there is one; otherwise the importer signs in to Spotify for metadata only, in
-    /// the browser, so a free account can read a playlist without pretending it can stream.
+    /// asked through the official Web API when one exists, because it also resolves private or
+    /// collaborative playlists the account can read. With no session, which is the ordinary
+    /// case, the public playlist page is read anonymously: no account, sign-in or Premium is
+    /// required, and nothing on the page is bypassed.
     pub fn start_link(&mut self, input: &str, cx: &mut Context<Self>) {
         if self.active() {
             return;
@@ -507,35 +513,25 @@ impl Import {
             label,
             spotify_playback,
             move |cancel, read, total| async move {
-                // A playback session's token is refreshed by librespot. Without one the
-                // importer obtains its own metadata token; the config is kept so a token the
-                // Web API refuses can be dropped and a fresh sign-in asked for once, rather
-                // than replaying it until it expires.
-                let (web, metadata) = match web {
-                    Some(web) => (web, None),
-                    None => {
-                        let config = music::spotify::auth::AuthConfig::from_env();
-                        let token = metadata_token(&config, &cancel).await?;
-                        (music::spotify::SpotifyWeb::with_bearer(token), Some(config))
+                if let Some(web) = web {
+                    let progress = |seen: usize, all: usize| {
+                        read.store(seen, Ordering::Relaxed);
+                        total.store(all, Ordering::Relaxed);
+                    };
+                    match web.playlist(&id, &cancel, &progress).await {
+                        Ok(playlist) => return Ok(playlist),
+                        Err(ImportFailure::Cancelled) => return Err(ImportFailure::Cancelled),
+                        // A session that cannot read this playlist still leaves the public
+                        // page as an honest fallback; if that fails too, its failure is the
+                        // one that explains why.
+                        Err(failure) => {
+                            log::debug!(
+                                "import: the Spotify Web API could not read {id}: {failure}"
+                            );
+                        }
                     }
-                };
-                let progress = move |seen: usize, all: usize| {
-                    read.store(seen, Ordering::Relaxed);
-                    total.store(all, Ordering::Relaxed);
-                };
-                let first = web.playlist(&id, &cancel, &progress).await;
-                match (first, metadata) {
-                    (Err(ImportFailure::Unauthorized), Some(config))
-                        if !cancel.load(Ordering::Relaxed) =>
-                    {
-                        music::spotify::auth::forget_metadata(&config);
-                        let token = metadata_token(&config, &cancel).await?;
-                        music::spotify::SpotifyWeb::with_bearer(token)
-                            .playlist(&id, &cancel, &progress)
-                            .await
-                    }
-                    (first, _) => first,
                 }
+                music::spotify::embed::playlist(&id, &cancel).await
             },
             cx,
         );
@@ -945,11 +941,13 @@ impl Import {
             }
 
             // An export usually carries names and lengths but no picture; a pasted list may
-            // carry neither the picture nor the length. Rows are grouped by album, so this is
-            // a few dozen lookups for a large list rather than one per song. A Spotify link
-            // already brought its own artwork and is left alone.
+            // carry neither the picture nor the length, and the anonymous Spotify page carries
+            // no album art or album names. Rows are grouped by album, with a per-recording
+            // fallback, so this stays bounded rather than one request per song.
             let mut enrichment = music::enrich::Report::default();
-            if matches!(playlist.source.as_str(), "csv" | "manual") {
+            if matches!(playlist.source.as_str(), "csv" | "manual" | "spotify")
+                && playlist.entries.iter().any(|entry| entry.cover.is_none())
+            {
                 this.update(cx, |this, cx| {
                     this.stage = Stage::Enriching;
                     this.read.store(0, Ordering::Relaxed);
@@ -1256,44 +1254,6 @@ fn review_rows(playlist: &SourcePlaylist, matches: &[Option<Vec<Track>>]) -> Opt
     (total > 0).then_some(Review { rows, total })
 }
 
-/// Answers the importer's metadata-only token off the window thread. The first run opens
-/// Spotify's authorization page and waits for the browser, so it must not block the UI.
-async fn metadata_token(
-    config: &music::spotify::auth::AuthConfig,
-    cancel: &Arc<AtomicBool>,
-) -> Result<String, ImportFailure> {
-    let config = config.clone();
-    let stopping = cancel.clone();
-    tokio::task::spawn_blocking(move || music::spotify::auth::metadata_access(&config, &stopping))
-        .await
-        .map_err(|error| {
-            ImportFailure::Other(format!("cannot start the Spotify sign-in: {error}"))
-        })?
-        .map_err(sign_in_failure)
-}
-
-/// Turns the importer's metadata sign-in into the dialog's own failure vocabulary. A browser
-/// that was closed or a consent that was denied is not a network error, and saying so keeps the
-/// file and pasted-list fallbacks in view.
-fn sign_in_failure(error: anyhow::Error) -> ImportFailure {
-    if let Some(failure) = error.downcast_ref::<music::SignInFailure>() {
-        return match failure.0 {
-            music::SignInProblem::Cancelled => ImportFailure::Cancelled,
-            music::SignInProblem::Network => {
-                ImportFailure::Network("the Spotify sign-in could not reach Spotify".to_owned())
-            }
-            _ => ImportFailure::Unauthorized,
-        };
-    }
-    let message = format!("{error:#}");
-    match message.to_ascii_lowercase() {
-        message if message.contains("timed out") || message.contains("connection") => {
-            ImportFailure::Network(message)
-        }
-        _ => ImportFailure::Other(message),
-    }
-}
-
 /// Reads and parses one list file. The extension picks the parser; a `.txt` is a pasted list.
 fn load_file(path: &Path) -> Result<SourcePlaylist, ImportFailure> {
     let name = path
@@ -1344,7 +1304,7 @@ fn now() -> i64 {
         .unwrap_or_default()
 }
 
-impl Sonora {
+impl Soundy {
     pub fn import(&self) -> &gpui::Entity<Import> {
         &self.imports
     }

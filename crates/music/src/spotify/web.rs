@@ -308,6 +308,7 @@ impl Body {
             total,
             skipped: 0,
             entries: items.into_iter().map(entry).collect(),
+            limited: false,
         }
     }
 }

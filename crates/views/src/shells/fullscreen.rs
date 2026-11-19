@@ -17,7 +17,7 @@ use input::{
 };
 use router::{Destination, navigate};
 use state::{
-    AppSettings, Cover, FullscreenControlsAutohide, Playback, PlaybackState, Queue, SideTab, Sonora,
+    AppSettings, Cover, FullscreenControlsAutohide, Playback, PlaybackState, Queue, SideTab, Soundy,
 };
 use ui::{
     ActiveTheme as _, Artwork, Badge, Button, Flight, InlineLink, InlineLinks, Motion,
@@ -190,18 +190,18 @@ impl FullscreenView {
 
     pub fn new(playback: Entity<Playback>, queue: Entity<Queue>, cx: &mut Context<Self>) -> Self {
         cx.observe(&playback, |_, _, cx| cx.notify()).detach();
-        let sponsorblock = Sonora::global(cx).sponsorblock.clone();
+        let sponsorblock = Soundy::global(cx).sponsorblock.clone();
         cx.observe(&sponsorblock, |_, _, cx| cx.notify()).detach();
         // the seek bar and the lyrics follow the position as it moves
         let ticks = playback.read(cx).ticks().clone();
         cx.observe(&ticks, |_, _, cx| cx.notify()).detach();
-        let cover = Sonora::global(cx).cover.clone();
+        let cover = Soundy::global(cx).cover.clone();
         cx.observe(&cover, |_, _, cx| cx.notify()).detach();
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
         // The meta drops its text shadows while the player opens or closes.
         cx.observe_global::<ShellSwap>(|_, cx| cx.notify()).detach();
-        let settings = Sonora::global(cx).settings.clone();
+        let settings = Soundy::global(cx).settings.clone();
         cx.observe(&settings, |this, settings, cx| {
             if this.panel == Some(SideTab::Lyrics) && !settings.read(cx).lyrics_enabled() {
                 this.panel = None;
@@ -396,7 +396,7 @@ impl FullscreenView {
             || self.volume.held
             || self.pending.is_some()
             || self.context_menu.is_some()
-            || Sonora::global(cx).devices.read(cx).invite().is_some()
+            || Soundy::global(cx).devices.read(cx).invite().is_some()
     }
 
     /// Clears hover state when the fullscreen view opens or closes. Its elements report their
@@ -994,7 +994,7 @@ impl FullscreenView {
                         .value(clock(elapsed))
                         .colors(theme.progress_bar, empty, theme.foreground)
                         .ranges(
-                            Sonora::global(cx).sponsorblock.read(cx).ranges(cx),
+                            Soundy::global(cx).sponsorblock.read(cx).ranges(cx),
                             theme.foreground.opacity(0.4),
                         )
                         .enabled(seekable)

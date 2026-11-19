@@ -21,7 +21,7 @@
 //! so peeling off the vault's layer leaves all it takes to play the file.
 //!
 //! The owner of the machine can always read the master key out of their keychain or key file,
-//! or the audio out of the process. The vault keeps kept tracks from playing outside Sonora for
+//! or the audio out of the process. The vault keeps kept tracks from playing outside Soundy for
 //! anyone without the master key, and nothing more.
 //!
 //! A provider whose bytes carry no protection of their own, such as the listener's own Subsonic
@@ -110,7 +110,7 @@ enum Block {
 ///
 /// Tracks live in one of two places. The cache holds what has played, within one size limit,
 /// and gives up the least recently played tracks to stay under it. Downloads are tracks the
-/// listener asked to keep, in Sonora's data folder rather than its cache, and stay until they
+/// listener asked to keep, in Soundy's data folder rather than its cache, and stay until they
 /// are discarded.
 ///
 /// The vault exists before its key does. Until [`unlock`](Self::unlock) or
@@ -160,8 +160,8 @@ impl Vault {
         }
     }
 
-    /// A vault in Sonora's folders: the cache in `$XDG_CACHE_HOME/sonora/vault` and downloads in
-    /// `$XDG_DATA_HOME/sonora/downloads`.
+    /// A vault in Soundy's folders: the cache in `$XDG_CACHE_HOME/soundy/vault` and downloads in
+    /// `$XDG_DATA_HOME/soundy/downloads`.
     pub fn standard(limit: u64) -> Self {
         Self::new(standard_root(), pinned_root(), limit)
     }
@@ -196,7 +196,7 @@ impl Vault {
     /// it may keep there. The folder is made private before the player can create it.
     ///
     /// The listener's limit covers the whole cache, the player's folder included. The player
-    /// gets what Sonora's own entries leave of it, and at least half, so the oldest of those
+    /// gets what Soundy's own entries leave of it, and at least half, so the oldest of those
     /// entries are evicted here when they take more. The share is fixed for the session, so a
     /// new limit reaches the player at its next sign-in.
     pub(crate) fn foreign(player: &str) -> Option<(PathBuf, u64)> {
@@ -1501,7 +1501,7 @@ fn private_file(path: &Path) -> Result<File> {
         .with_context(|| format!("cannot create {}", path.display()))
 }
 
-/// Sonora's vault folder, `$XDG_CACHE_HOME/sonora/vault`.
+/// Soundy's vault folder, `$XDG_CACHE_HOME/soundy/vault`.
 fn standard_root() -> PathBuf {
     crate::credentials::root().join("vault")
 }
@@ -1521,7 +1521,7 @@ fn footprint(path: &Path) -> u64 {
         .sum()
 }
 
-/// Sonora's downloads folder, `$XDG_DATA_HOME/sonora/downloads`.
+/// Soundy's downloads folder, `$XDG_DATA_HOME/soundy/downloads`.
 fn pinned_root() -> PathBuf {
     dirs::data_local_dir()
         .unwrap_or_else(std::env::temp_dir)

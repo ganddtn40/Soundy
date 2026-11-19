@@ -33,6 +33,9 @@ pub enum ImportFailure {
     /// The link is a Spotify playlist, but Spotify does not publish its tracks without an
     /// authorized session. The dialog offers a file or a pasted list instead.
     TracklistUnavailable,
+    /// Spotify answered, but the public playlist page no longer carries a payload this build
+    /// can read. Nothing is invented from the page's title or cover.
+    PublicPageChanged,
     /// Spotify is not the provider the app is playing through, so there is no session to ask.
     /// Only the optional Spotify Web API path uses this.
     SpotifyNotConnected,
@@ -60,7 +63,10 @@ impl fmt::Display for ImportFailure {
         match self {
             Self::InvalidLink => formatter.write_str("that is not a Spotify playlist link"),
             Self::TracklistUnavailable => formatter.write_str(
-                "Spotify does not publish this playlist's tracks without an authorized Spotify session; import a CSV, M3U or pasted list instead",
+                "Spotify does not publish this playlist's tracks on its public page; import a CSV, M3U or pasted list instead",
+            ),
+            Self::PublicPageChanged => formatter.write_str(
+                "the public Spotify playlist page could not be read; try again later or import a CSV, M3U or pasted list instead",
             ),
             Self::SpotifyNotConnected => {
                 formatter.write_str("importing from a Spotify link needs an authorized Spotify session, but Soundy has none")
@@ -101,9 +107,10 @@ impl SpotifyLink {
 }
 
 /// Reads `https://open.spotify.com/playlist/<id>`, its `/intl-xx/` and `/embed/` forms, the
-/// `spotify:playlist:<id>` URI and the older `spotify:user:<name>:playlist:<id>` one. A query
-/// string, fragment and trailing slash are ignored. Any other Spotify link is refused rather
-/// than adapted, so a track or album link never imports the wrong thing.
+/// `spotify:playlist:<id>` URI, the older `spotify:user:<name>:playlist:<id>` one, and a bare
+/// 22-character playlist id. A query string, fragment and trailing slash are ignored. Any other
+/// Spotify link is refused rather than adapted, so a track or album link never imports the wrong
+/// thing.
 pub fn parse_spotify_link(input: &str) -> Result<SpotifyLink, ImportFailure> {
     let text = input.trim();
     if text.is_empty() {
@@ -116,6 +123,8 @@ pub fn parse_spotify_link(input: &str) -> Result<SpotifyLink, ImportFailure> {
         Some(playlist)
     }) {
         clean_id(rest)
+    } else if is_public_id(text) {
+        Some(text.to_owned())
     } else {
         let without_scheme = text
             .strip_prefix("https://")
@@ -154,6 +163,12 @@ pub fn parse_spotify_link(input: &str) -> Result<SpotifyLink, ImportFailure> {
 
     id.map(|id| SpotifyLink { id })
         .ok_or(ImportFailure::InvalidLink)
+}
+
+/// A Spotify playlist id is 22 base-62 characters. The embed page accepts one on its own, so a
+/// pasted id is treated exactly like the same id inside a playlist URL.
+fn is_public_id(text: &str) -> bool {
+    text.len() == 22 && text.bytes().all(|byte| byte.is_ascii_alphanumeric())
 }
 
 fn clean_id(raw: &str) -> Option<String> {
@@ -205,6 +220,10 @@ pub struct SourcePlaylist {
     /// Rows that were present but could not be read as a track, as opposed to blank lines.
     pub skipped: usize,
     pub entries: Vec<SourceEntry>,
+    /// Whether the source published only its first page of rows. A public Spotify page stops
+    /// at [`crate::spotify::embed::EMBED_LIMIT`] without naming a total, so a full page may be
+    /// incomplete and is never presented as the whole playlist.
+    pub limited: bool,
 }
 
 impl SourcePlaylist {
@@ -290,6 +309,7 @@ impl SourcePlaylist {
             entries,
             duplicates,
             skipped: self.skipped,
+            limited: self.limited,
         }
     }
 }
@@ -396,6 +416,7 @@ pub fn parse_m3u(bytes: &[u8], folder: &Path, name: &str) -> Result<SourcePlayli
         total: entries.len() + skipped,
         skipped,
         entries,
+        limited: false,
     })
 }
 
@@ -496,6 +517,7 @@ pub fn parse_csv(bytes: &[u8], name: &str) -> Result<SourcePlaylist, ImportFailu
         total: entries.len() + skipped,
         skipped,
         entries,
+        limited: false,
     })
 }
 
@@ -548,6 +570,7 @@ pub fn parse_manual(text: &str, name: &str) -> Result<SourcePlaylist, ImportFail
         total: entries.len() + skipped,
         skipped,
         entries,
+        limited: false,
     })
 }
 
@@ -1188,6 +1211,7 @@ mod tests {
             "open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
             "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
             "spotify:user:spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "37i9dQZF1DXcBWIGoYBM5M",
         ] {
             assert_eq!(
                 parse_spotify_link(link).unwrap().id,

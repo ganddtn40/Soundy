@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 
 /// Type of possible CLI commands: whether is can be executed right there or needs to be sent as request
 pub enum CommandType {
-    /// Plain `sonora` or `sonora <paths|links>`: claims the instance or hands the items over.
+    /// Plain `soundy` or `soundy <paths|links>`: claims the instance or hands the items over.
     Launch(Vec<String>),
-    /// Answered by this process alone, whether or not Sonora runs.
+    /// Answered by this process alone, whether or not Soundy runs.
     Local(Local),
     /// Sent to the running instance, which is started first if the request allows it. The
     /// answer is printed in `Format`.
@@ -23,13 +23,13 @@ pub enum Format {
     Json,
 }
 
-/// Local CLI commands that can be executed without `Sonora` running or requesting is's socket
+/// Local CLI commands that can be executed without `Soundy` running or requesting is's socket
 pub enum Local {
-    /// Prints the completion script for a shell. Stands for `sonora completions <shell>`
+    /// Prints the completion script for a shell. Stands for `soundy completions <shell>`
     Completions(Shell),
 }
 
-/// CLI commands that need to sent request to the running `Sonora` application
+/// CLI commands that need to sent request to the running `Soundy` application
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Request {
@@ -39,17 +39,17 @@ pub enum Request {
     Queue(QueueCommand),
     /// Commands serving provider manipulation
     Provider(ProviderCommand),
-    /// A search on the current provider. Stands for `sonora search <query>`
+    /// A search on the current provider. Stands for `soundy search <query>`
     Search(SearchQuery),
     /// What plays, sent again every time it changes, until the command line hangs up. Stands
-    /// for `sonora watch`
+    /// for `soundy watch`
     Watch(Watch),
-    /// Commands serving Sonora Session, listening together with other Sonora apps
+    /// Commands serving Soundy Session, listening together with other Soundy apps
     Session(SessionCommand),
     /// The lyrics of the current track, as already held, without looking any up. Stands for
-    /// `sonora lyrics`
+    /// `soundy lyrics`
     Lyrics,
-    /// Reads or changes whether the current track is a favorite. Stands for `sonora like`
+    /// Reads or changes whether the current track is a favorite. Stands for `soundy like`
     Like(Option<Switch>),
 }
 
@@ -61,7 +61,7 @@ impl Request {
     }
 }
 
-/// How `sonora watch` follows what plays.
+/// How `soundy watch` follows what plays.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Watch {
     /// Also a line every second while a track plays, for a clock. Stands for `--position`
@@ -91,30 +91,30 @@ pub enum Kind {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum PlaybackCommand {
-    /// Triggers current playback's Play. Stands for `sonora play`
+    /// Triggers current playback's Play. Stands for `soundy play`
     Play,
-    /// Pauses current playback. Stands for `sonora pause`
+    /// Pauses current playback. Stands for `soundy pause`
     Pause,
-    /// Pauses what plays, or resumes what is paused. Stands for `sonora toggle`
+    /// Pauses what plays, or resumes what is paused. Stands for `soundy toggle`
     Toggle,
-    /// Plays next song in the queue. Stands for `sonora next`
+    /// Plays next song in the queue. Stands for `soundy next`
     Next,
-    /// Plays previous song in the queue. Stands for `sonora prev`
+    /// Plays previous song in the queue. Stands for `soundy prev`
     Previous,
-    /// Puts current playback's slider on provided procentage (0% is start, 100% is end of the track). Stands for `sonora seek N`, where N is in [0, 100]
+    /// Puts current playback's slider on provided procentage (0% is start, 100% is end of the track). Stands for `soundy seek N`, where N is in [0, 100]
     Seek(u8),
     /// Moves the current track to a time or by a step from where it is, in whole seconds and
-    /// held inside the track. Stands for `sonora seek 1:30`, `sonora seek +10` or `sonora seek -10`
+    /// held inside the track. Stands for `soundy seek 1:30`, `soundy seek +10` or `soundy seek -10`
     SeekTime(Time),
-    /// Returns current track's information. Stands for `sonora current`
+    /// Returns current track's information. Stands for `soundy current`
     CurrentTrack,
-    /// Returns or sets volume in order to `Switch`. Stands for `sonora volume < +/-N|N >`
+    /// Returns or sets volume in order to `Switch`. Stands for `soundy volume < +/-N|N >`
     Volume(Option<Level>),
-    /// Returns or sets playback mute. Stands for `sonora mute [on|off|toggle]`
+    /// Returns or sets playback mute. Stands for `soundy mute [on|off|toggle]`
     Mute(Option<Switch>),
-    /// Returns or sets playback shuffle in order to `Switch`. Stands for `sonora shuffle <on|off|toggle>`
+    /// Returns or sets playback shuffle in order to `Switch`. Stands for `soundy shuffle <on|off|toggle>`
     Shuffle(Option<Switch>),
-    /// Returns or sets playback repeat in order to `Repeat`. Stands for `sonora repeat <off|all|one>`
+    /// Returns or sets playback repeat in order to `Repeat`. Stands for `soundy repeat <off|all|one>`
     Repeat(Option<Repeat>),
 }
 
@@ -123,25 +123,25 @@ pub enum PlaybackCommand {
 #[serde(rename_all = "kebab-case")]
 pub enum ProviderCommand {
     /// Lists every provider, whether it has an account and which one is current. Stands for
-    /// `sonora providers`
+    /// `soundy providers`
     List,
     /// Returns the current provider's slug, or switches to the one named, which has to have an
-    /// account. Stands for `sonora provider [slug]`
+    /// account. Stands for `soundy provider [slug]`
     Current(Option<String>),
 }
 
-/// Commands serving Sonora Session
+/// Commands serving Soundy Session
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SessionCommand {
-    /// Returns the session Sonora is in, if any. Stands for `sonora session`
+    /// Returns the session Soundy is in, if any. Stands for `soundy session`
     Status,
-    /// Starts a session on the current provider. Stands for `sonora session start`
+    /// Starts a session on the current provider. Stands for `soundy session start`
     Start,
     /// Joins the session a six-digit code names, or opens the dialog that takes one when none is
-    /// given. Stands for `sonora session join [code]`
+    /// given. Stands for `soundy session join [code]`
     Join(Option<String>),
-    /// Leaves the session, ending it when Sonora hosts it. Stands for `sonora session leave`
+    /// Leaves the session, ending it when Soundy hosts it. Stands for `soundy session leave`
     Leave,
 }
 
@@ -150,32 +150,32 @@ pub enum SessionCommand {
 #[serde(rename_all = "kebab-case")]
 pub enum QueueCommand {
     /// Returns a read-only snapshot of the queue, without changing playback. Stands for
-    /// `sonora queue`
+    /// `soundy queue`
     Snapshot,
-    /// Queues items after the ones queued by hand. Stands for `sonora add <items>`
+    /// Queues items after the ones queued by hand. Stands for `soundy add <items>`
     Add(Vec<Item>),
-    /// Queues items right after the current track. Stands for `sonora play-next <items>`
+    /// Queues items right after the current track. Stands for `soundy play-next <items>`
     PlayNext(Vec<Item>),
     /// Plays items at once, right after the current track so the rest of the queue follows
-    /// them. Stands for `sonora play <items>`
+    /// them. Stands for `soundy play <items>`
     Play(Vec<Item>),
 }
 
-/// Something to queue: a link of the current provider, or a file the running Sonora reads.
+/// Something to queue: a link of the current provider, or a file the running Soundy reads.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Item {
     Link(String),
-    /// Always absolute, since the running Sonora sits in another folder.
+    /// Always absolute, since the running Soundy sits in another folder.
     Path(PathBuf),
-    /// The best hit of this kind for a search on the current provider, the one `sonora search`
-    /// lists first. It is queued alone. Stands for `sonora add -s <query>`
+    /// The best hit of this kind for a search on the current provider, the one `soundy search`
+    /// lists first. It is queued alone. Stands for `soundy add -s <query>`
     Search {
         text: String,
         kind: Kind,
     },
     /// The best match of this kind in the local library, ranked as the search page ranks it,
-    /// with no provider asked. It is queued alone. Stands for `sonora add -s <query> --local`
+    /// with no provider asked. It is queued alone. Stands for `soundy add -s <query> --local`
     Local {
         text: String,
         kind: Kind,

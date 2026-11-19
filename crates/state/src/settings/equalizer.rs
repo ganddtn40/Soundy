@@ -21,17 +21,17 @@ use crate::equalizer::{DeviceRule, RuleDevice, Sound};
 const OTHER_OUTPUTS: &str = "other";
 
 /// One stored equalizer curve, in plain numbers and strings, so a hand-edited mistake drops one
-/// filter instead of making the file unreadable. The name is empty for the profile Sonora made.
+/// filter instead of making the file unreadable. The name is empty for the profile Soundy made.
 #[derive(Clone, Debug, Default, Serialize)]
 pub(super) struct Profile {
     name: String,
     preamp: StoredPreamp,
     filters: Vec<StoredFilter>,
-    /// The outputs an older Sonora bound this profile to. Read once to make device rules from,
+    /// The outputs an older Soundy bound this profile to. Read once to make device rules from,
     /// and never written back.
     #[serde(skip_serializing)]
     outputs: Vec<OutputId>,
-    /// Whether an older Sonora played this profile on every output no profile named. Read once
+    /// Whether an older Soundy played this profile on every output no profile named. Read once
     /// like `outputs`.
     #[serde(skip_serializing)]
     other_outputs: bool,
@@ -78,7 +78,7 @@ pub(super) struct StoredFilter {
 
 impl Values {
     /// Settles the equalizer values for use: one profile when the file had none, built from the
-    /// band gains an older Sonora saved when it had those, the outputs an older Sonora bound to
+    /// band gains an older Soundy saved when it had those, the outputs an older Soundy bound to
     /// profiles made into rules, every rule under its output's current key, one rule per device,
     /// and the chosen profile in range.
     pub(super) fn settle_equalizer(&mut self) {
@@ -100,7 +100,7 @@ impl Values {
             .min(self.equalizer_profiles.len() - 1);
     }
 
-    /// Makes the outputs an older Sonora bound to each profile into rules after the stored ones,
+    /// Makes the outputs an older Soundy bound to each profile into rules after the stored ones,
     /// which win for a device both name. A binding to the unnamed profile becomes a rule for the
     /// preset its curve matches, or nothing.
     fn migrate_bindings(&mut self) {
@@ -139,7 +139,7 @@ impl Values {
         }
     }
 
-    /// Moves rules an older Sonora keyed by a sound server's bare sink name to the key the sink
+    /// Moves rules an older Soundy keyed by a sound server's bare sink name to the key the sink
     /// goes by now, so they keep matching it.
     fn upgrade_rule_keys(&mut self) {
         let mut upgraded = 0;
@@ -381,7 +381,7 @@ impl AppSettings {
         self.schedule_save(cx);
     }
 
-    /// The names of the equalizer profiles in order, empty for the one Sonora made.
+    /// The names of the equalizer profiles in order, empty for the one Soundy made.
     pub fn equalizer_profiles(&self) -> impl Iterator<Item = &str> {
         self.values
             .equalizer_profiles
@@ -409,7 +409,7 @@ impl AppSettings {
         self.schedule_save(cx);
     }
 
-    /// The name of the profile that plays, empty for the one Sonora made.
+    /// The name of the profile that plays, empty for the one Soundy made.
     pub fn equalizer_profile_name(&self) -> &str {
         self.values
             .equalizer_profiles
@@ -612,7 +612,7 @@ impl AppSettings {
 }
 
 /// The name a profile shows: its stored name, or the interface's label for the empty one
-/// Sonora made.
+/// Soundy made.
 pub fn equalizer_profile_label(stored: &str) -> SharedString {
     match stored.is_empty() {
         true => i18n::t!("equalizer-profile-default"),
@@ -668,7 +668,7 @@ pub(super) fn write_rules<S: Serializer>(
     }))
 }
 
-/// The band gains an older Sonora saved: a band that is not a number reads as 0 dB, so the
+/// The band gains an older Soundy saved: a band that is not a number reads as 0 dB, so the
 /// bands after it keep their places, and anything but a list reads as none.
 pub(super) fn read_gains<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<f32>, D::Error> {
     let value = serde_json::Value::deserialize(deserializer)?;

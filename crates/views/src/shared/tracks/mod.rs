@@ -20,7 +20,7 @@ use music::{Arrival, Track};
 use router::Destination;
 use state::{
     Detail, History, Library, LibraryPart, Network, Origin, Playback, Progress, Reorder, Shelf,
-    Sonora,
+    Soundy,
 };
 use ui::{
     ArrowRing, Button, Cell, ColumnSpec, Menu, Pending, Pin, ROW_GROUP, RowMoves, Scrollbar,
@@ -186,7 +186,7 @@ fn forget(
         });
         return;
     }
-    let library = Sonora::global(cx).library.clone();
+    let library = Soundy::global(cx).library.clone();
     library.update(cx, |library, cx| {
         library.save_tracks(tracks.to_vec(), false, cx)
     });
@@ -381,7 +381,7 @@ impl TrackSource {
         let Some(id) = self.album.as_ref().and_then(|album| album.read(cx).id()) else {
             return Numbering::Listing;
         };
-        if !Sonora::global(cx)
+        if !Soundy::global(cx)
             .library
             .read(cx)
             .shape(Shelf::of(id))
@@ -722,7 +722,7 @@ impl TableSource for TrackSource {
             }));
         }
         // Offline mode already keeps a shelf to its downloads, so the filter would do nothing.
-        let offered = self.sieve.downloaded || !Sonora::global(cx).downloads.read(cx).is_empty();
+        let offered = self.sieve.downloaded || !Soundy::global(cx).downloads.read(cx).is_empty();
         if offered && !self.all_downloads_only(cx) {
             axes.push(Filter::Flag(FlagAxis {
                 key: "filter-downloaded",
@@ -875,7 +875,7 @@ impl TableSource for TrackSource {
         if tracks.is_empty() {
             return None;
         }
-        let columns = match Sonora::global(cx).settings.read(cx).adaptive_menu() {
+        let columns = match Soundy::global(cx).settings.read(cx).adaptive_menu() {
             true => TrackColumns {
                 album: visible.contains(&TrackField::Album),
                 artists: visible.contains(&TrackField::Artists),
@@ -940,7 +940,7 @@ impl TableSource for TrackSource {
 /// track still waiting its turn or only cached because it played shows nothing.
 fn download_mark(cell: &Cell<TrackField>, track: &Track, cx: &App) -> Option<AnyElement> {
     let id = track.id.as_deref()?;
-    let downloads = Sonora::global(cx).downloads.read(cx);
+    let downloads = Soundy::global(cx).downloads.read(cx);
     let theme = cx.theme();
     let mark = ("download-mark", cell.row);
     let ring = |done| {
@@ -973,7 +973,7 @@ fn download_mark(cell: &Cell<TrackField>, track: &Track, cx: &App) -> Option<Any
 
 /// Redraws a track table whenever downloads move, so the marks on its rows keep up.
 pub(crate) fn follow_downloads<T: 'static>(cx: &mut Context<T>) {
-    let downloads = Sonora::global(cx).downloads.clone();
+    let downloads = Soundy::global(cx).downloads.clone();
     cx.observe(&downloads, |_, _, cx| cx.notify()).detach();
 }
 

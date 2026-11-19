@@ -58,7 +58,7 @@ const SURFACE_WEIGHT: f32 = 0.68;
 const HEADER_WEIGHT: f32 = 0.5;
 
 /// Whether the platform blurs the desktop behind a see-through window. A Linux or FreeBSD
-/// compositor may or may not, and may change its mind while Sonora runs, so the root keeps this
+/// compositor may or may not, and may change its mind while Soundy runs, so the root keeps this
 /// current from the window and the blur setting is offered only while it holds.
 #[derive(Clone, Copy)]
 pub struct WindowBlur(bool);

@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn a_ttml_file_beside_the_track_is_decoded() {
-        let path = track("sonora-local-ttml-sidecar", &[]);
+        let path = track("soundy-local-ttml-sidecar", &[]);
         fs::write(path.with_extension("ttml"), TIMED).unwrap();
 
         assert_timed(read(&path).unwrap());
@@ -138,14 +138,14 @@ mod tests {
     #[test]
     fn ttml_in_the_lyrics_tag_is_decoded() {
         let comment = format!("LYRICS={TIMED}");
-        let path = track("sonora-local-ttml-tag", &[&comment]);
+        let path = track("soundy-local-ttml-tag", &[&comment]);
 
         assert_timed(read(&path).unwrap());
     }
 
     #[test]
     fn a_broken_ttml_file_falls_back_to_the_tags() {
-        let path = track("sonora-local-ttml-broken", &["LYRICS=From the tags"]);
+        let path = track("soundy-local-ttml-broken", &["LYRICS=From the tags"]);
         fs::write(path.with_extension("ttml"), "<tt><body><p begin=\"1.0\">").unwrap();
 
         let Some(Lyrics::Plain { text, .. }) = read(&path).unwrap() else {
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn a_ttml_file_without_lines_gives_nothing() {
-        let path = track("sonora-local-ttml-empty", &[]);
+        let path = track("soundy-local-ttml-empty", &[]);
         fs::write(path.with_extension("ttml"), "<tt><body></body></tt>").unwrap();
 
         assert!(read(&path).unwrap().is_none());
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn a_synced_lrc_beside_the_track_is_unchanged() {
-        let path = track("sonora-local-lrc-synced", &[]);
+        let path = track("soundy-local-lrc-synced", &[]);
         fs::write(
             path.with_extension("lrc"),
             "[00:01.00]So here I am\n[00:03.50]Doing it again\n",
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn an_unsynced_lrc_alone_shows_its_lyrics() {
-        let path = track("sonora-local-lrc-alone", &[]);
+        let path = track("soundy-local-lrc-alone", &[]);
         fs::write(path.with_extension("lrc"), "First line\nSecond line\n").unwrap();
 
         assert_plain(read(&path).unwrap(), "First line\nSecond line");
@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn an_unsynced_lrc_beside_the_track_wins_over_the_tags() {
-        let path = track("sonora-local-lrc-priority", &["LYRICS=From the tags"]);
+        let path = track("soundy-local-lrc-priority", &["LYRICS=From the tags"]);
         fs::write(path.with_extension("lrc"), "From the file\n").unwrap();
 
         assert_plain(read(&path).unwrap(), "From the file");
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn a_missing_lrc_gives_nothing() {
-        let path = track("sonora-local-lrc-missing", &[]);
+        let path = track("soundy-local-lrc-missing", &[]);
 
         assert!(read(&path).unwrap().is_none());
     }

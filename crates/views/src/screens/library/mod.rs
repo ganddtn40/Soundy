@@ -35,7 +35,7 @@ use playlists::{PlaylistField, PlaylistSource};
 use router::{Destination, LibraryTab, navigate};
 use state::{
     Addition, AppSettings, DownloadsChanged, Library, LibraryPart, LibraryState, Network, Origin,
-    Playback, Scan, Shelf, Sonora,
+    Playback, Scan, Shelf, Soundy,
 };
 use ui::{
     ActiveTheme as _, Button, Card, Deck, FilterChange, LEADING, Listing as _, Mode, Pin, Pinnable,
@@ -187,7 +187,7 @@ impl Tracks for ShelfTracks {
         if !library.state(Shelf::Local).tracks().is_empty() {
             return None;
         }
-        Sonora::global(cx)
+        Soundy::global(cx)
             .session
             .read(cx)
             .capabilities_of(Shelf::Streaming)
@@ -250,7 +250,7 @@ impl LibraryView {
         cx: &mut Context<Self>,
     ) -> Self {
         let width = page::bleed_width(window, cx);
-        let settings = Sonora::global(cx).settings.clone();
+        let settings = Soundy::global(cx).settings.clone();
         let stored = |section: Section, cx: &App| {
             let settings = settings.read(cx);
             (
@@ -342,7 +342,7 @@ impl LibraryView {
         .detach();
         // The Downloaded filter follows downloads as they land, and not each redraw of their
         // progress, which would drop the open menu and the selection every time.
-        let downloads = Sonora::global(cx).downloads.clone();
+        let downloads = Soundy::global(cx).downloads.clone();
         cx.subscribe(&downloads, |this, _, _: &DownloadsChanged, cx| {
             let kept = Network::offline(cx);
             for table in this.tables() {
@@ -510,7 +510,7 @@ impl LibraryView {
     /// The shelf a new playlist goes to and whose words an empty page uses: the streaming
     /// account once there is one, and the local files before that.
     fn lead(&self, cx: &App) -> Shelf {
-        match Sonora::global(cx).session.read(cx).authenticated()
+        match Soundy::global(cx).session.read(cx).authenticated()
             || self.library.read(cx).stocked(Shelf::Streaming)
         {
             true => Shelf::Streaming,
@@ -557,7 +557,7 @@ impl LibraryView {
         self.opened_as.is_none()
             && self.table(self.section).row_count(cx) == 0
             && self.lead(cx).local()
-            && Sonora::global(cx).session.read(cx).local_paths().is_empty()
+            && Soundy::global(cx).session.read(cx).local_paths().is_empty()
             && Scan::global(cx).read(cx).progress().is_none()
     }
 
@@ -597,7 +597,7 @@ impl LibraryView {
         }
         // The sidebar rows name their own emptiness, which "No matches" would not explain.
         if let Some(narrowed) = self.opened_as {
-            let downloads_empty = Sonora::global(cx).downloads.read(cx).is_empty();
+            let downloads_empty = Soundy::global(cx).downloads.read(cx).is_empty();
             let (id, caption) = match narrowed {
                 Narrowed::Favorites => ("library-no-favorites", t!("library-no-favorites")),
                 Narrowed::Downloads if downloads_empty => {
@@ -914,7 +914,7 @@ impl LibraryView {
 
     fn drop_artists(&mut self, cx: &mut Context<Self>) {
         let rows = self.artists.read(cx).delegate().picked();
-        let session = Sonora::global(cx).session.read(cx);
+        let session = Soundy::global(cx).session.read(cx);
         // Nothing to unfollow where following is not a thing the provider has.
         let artists: Vec<_> = {
             let state = self.artists.read(cx);

@@ -1,5 +1,5 @@
 //! The Theme section of Appearance: one card per theme on a rail that scrolls sideways, each
-//! card a soft, flat miniature of the Sonora window painted in that theme.
+//! card a soft, flat miniature of the Soundy window painted in that theme.
 
 use gpui::accesskit::Role;
 use gpui::prelude::*;

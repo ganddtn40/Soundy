@@ -4,7 +4,7 @@ use crate::MusicApi;
 use crate::smart::{RuleGroup, SmartPlaylistUpdate, SmartRules};
 use crate::subsonic::{SubsonicClient, auth};
 
-const NAME: &str = "Sonora live smart playlist test - safe to delete";
+const NAME: &str = "Soundy live smart playlist test - safe to delete";
 
 /// Runs against the Navidrome in `SONORA_SUBSONIC_SERVER`, signed in with
 /// `SONORA_SUBSONIC_USERNAME` and `SONORA_SUBSONIC_PASSWORD`. When

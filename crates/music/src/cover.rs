@@ -9,7 +9,7 @@ use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
 use image::{DynamicImage, ImageReader};
 
-/// The largest picture Sonora reads before cropping, so a huge photo fails quickly instead of
+/// The largest picture Soundy reads before cropping, so a huge photo fails quickly instead of
 /// holding hundreds of megabytes while it decodes.
 const MAX_SOURCE: u64 = 40 * 1024 * 1024;
 /// How many bytes of a file are enough to tell what kind of picture it is.
@@ -23,7 +23,7 @@ const QUALITIES: [u8; 6] = [90, 82, 74, 66, 58, 50];
 pub enum Unusable {
     /// The file could not be opened or read.
     Unopenable,
-    /// The file is larger than Sonora reads.
+    /// The file is larger than Soundy reads.
     TooLarge,
     /// The file is not a JPEG, PNG or WebP picture, or one too damaged to decode.
     NotAPicture,
@@ -86,7 +86,7 @@ pub struct CoverLimits {
 
 /// Crops `source` to its centre square, scales it down to `limits.side` and encodes it as a
 /// baseline JPEG small enough for `limits.bytes`. A picture smaller than the side keeps its
-/// own size. Fails with [`Unusable`] when the bytes are not a picture Sonora can decode, and
+/// own size. Fails with [`Unusable`] when the bytes are not a picture Soundy can decode, and
 /// otherwise when no quality fits.
 pub fn square_jpeg(source: &[u8], limits: CoverLimits) -> Result<Vec<u8>> {
     if source.len() as u64 > MAX_SOURCE {

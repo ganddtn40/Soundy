@@ -1,13 +1,13 @@
 //! The Soloist engine: the program run as a daemon and steered over its WebSocket.
 //!
 //! The daemon is a whole Spotify player with a queue, autoplay and a volume of its own, and
-//! Sonora wants none of that. It is handed one track at a time and everything it does beyond
-//! that track is undone: shuffle and repeat are switched off, its volume is held where Sonora's
+//! Soundy wants none of that. It is handed one track at a time and everything it does beyond
+//! that track is undone: shuffle and repeat are switched off, its volume is held where Soundy's
 //! is, and a track it moves on to by itself is stopped and reported as the end of the one that
-//! was asked for. Sonora's queue then says what plays next.
+//! was asked for. Soundy's queue then says what plays next.
 //!
 //! The one thing borrowed from the daemon's queue is the join between two tracks. With gapless
-//! playback on, the track Sonora says comes next is put on the daemon's queue in the last
+//! playback on, the track Soundy says comes next is put on the daemon's queue in the last
 //! seconds of the current one, so the daemon goes from one to the other by itself. When it does,
 //! the current track is reported as ended and the load that follows finds the next one already
 //! playing. Queued any earlier, the daemon would crossfade into it whenever the account's own
@@ -73,8 +73,8 @@ const TAIL: Duration = Duration::from_secs(10);
 const OVERRUN: Duration = Duration::from_secs(3);
 /// How long before the end of a track the next one goes on the daemon's queue.
 const FEED_LEAD: Duration = Duration::from_secs(8);
-/// How long a track the daemon went on to by itself may play before Sonora has to have asked
-/// for it. Past that it is stopped, as at the end of Sonora's queue.
+/// How long a track the daemon went on to by itself may play before Soundy has to have asked
+/// for it. Past that it is stopped, as at the end of Soundy's queue.
 const ADOPT_PATIENCE: Duration = Duration::from_secs(2);
 /// How long the daemon gets to acknowledge the command that starts a track before its reports
 /// are trusted without one.
@@ -195,7 +195,7 @@ struct Setup {
     interval: Duration,
 }
 
-/// The track Sonora asked for and how far the daemon has got with it.
+/// The track Soundy asked for and how far the daemon has got with it.
 struct Track {
     id: String,
     uri: String,
@@ -290,21 +290,21 @@ struct Brain {
     link: Option<Link>,
     /// Whether the daemon is signed in, before which it takes no command.
     signed_in: bool,
-    /// Sonora's volume, from 0 to 100.
+    /// Soundy's volume, from 0 to 100.
     volume: u8,
     /// Whether the daemon's volume is held at zero while an opening seek lands, so the start of
     /// the track is not heard before the place it was asked to start from.
     muted: bool,
     track: Option<Track>,
     heard: Heard,
-    /// The track Sonora says comes next, held until the current one is near its end.
+    /// The track Soundy says comes next, held until the current one is near its end.
     next: Option<String>,
     /// The track put on the daemon's queue to follow the current one.
     fed: Option<String>,
     /// The tracks on the daemon's queue as it last listed them. The account's own queued
-    /// tracks are among them, and those are not Sonora's to move or skip.
+    /// tracks are among them, and those are not Soundy's to move or skip.
     queue: Vec<String>,
-    /// The queued track the daemon went on to, and when, until Sonora asks for it.
+    /// The queued track the daemon went on to, and when, until Soundy asks for it.
     adopted: Option<(String, Instant)>,
     /// When progress was last reported.
     reported: Instant,
@@ -463,7 +463,7 @@ impl Brain {
         // what the daemon said of the track before this one says nothing of the new one
         self.heard.status = Status::Unknown;
         self.heard.position = Duration::ZERO;
-        // A track Sonora queued and no longer wants next is still on the daemon's queue, where
+        // A track Soundy queued and no longer wants next is still on the daemon's queue, where
         // it would play after this one. Moving on to it is the only way to take it off.
         let stale = self.fed.take().filter(|fed| self.queue.contains(fed));
         let wanted = stale.as_ref() == Some(&uri);
@@ -570,7 +570,7 @@ impl Brain {
         if let Some((_, since)) = &self.adopted
             && now.duration_since(*since) > ADOPT_PATIENCE
         {
-            // Sonora had nothing to play after the track before it
+            // Soundy had nothing to play after the track before it
             log::debug!("soloist: nothing asked for the queued track, stopping it");
             self.adopted = None;
             self.send("pause", json!({}));
@@ -746,9 +746,9 @@ impl Brain {
     /// just named the track it moved to, which counts as playing it even before a status says so.
     fn observe(&mut self, announced: bool) {
         let Some(track) = self.track.as_mut() else {
-            // Something was started on the daemon from one of Spotify's apps. Sonora shows
+            // Something was started on the daemon from one of Spotify's apps. Soundy shows
             // none of it, so it does not get to play. A track the daemon went on to from its
-            // queue is Sonora's own, and waits for the load that asks for it.
+            // queue is Soundy's own, and waits for the load that asks for it.
             if self.adopted.is_none() && self.heard.status == Status::Playing {
                 self.send("pause", json!({}));
             }
@@ -815,7 +815,7 @@ impl Brain {
             Status::Idle => self.finish(),
             Status::Paused if !track.held && track.in_tail() => self.finish(),
             Status::Paused => {
-                // paused from one of Spotify's apps, which Sonora follows
+                // paused from one of Spotify's apps, which Soundy follows
                 track.held = true;
                 if std::mem::replace(&mut track.playing, false) {
                     let at = self.heard.position;
@@ -885,7 +885,7 @@ impl Brain {
     }
 
     /// Ends the wanted track as the daemon goes on to the one queued behind it. That one keeps
-    /// playing, since the load Sonora answers the end with is for it.
+    /// playing, since the load Soundy answers the end with is for it.
     fn hand_over(&mut self) {
         let (Some(track), Some(next)) = (self.track.take(), self.fed.take()) else {
             return;
@@ -1004,7 +1004,7 @@ impl Brain {
         }
     }
 
-    /// Puts a daemon that just signed in the way Sonora needs it.
+    /// Puts a daemon that just signed in the way Soundy needs it.
     fn settle(&mut self) {
         self.settle_options();
         let volume = self.volume;
@@ -1020,7 +1020,7 @@ impl Brain {
         self.send("set_repeat_context", json!({ "enabled": false }));
     }
 
-    /// Puts the daemon's volume back when one of Spotify's apps moved it. Sonora's own volume
+    /// Puts the daemon's volume back when one of Spotify's apps moved it. Soundy's own volume
     /// is the one the listener sees.
     fn hold_volume(&mut self, volume: u8) {
         let wanted = match self.muted {
@@ -1312,7 +1312,7 @@ async fn dropped(asked: &mut UnboundedReceiver<String>) {
 }
 
 /// The daemon's volume for a linear gain. It attenuates on Spotify's cubic curve, so the cube
-/// root gives back the gain Sonora asked for.
+/// root gives back the gain Soundy asked for.
 fn percent(gain: f32) -> u8 {
     (gain.clamp(0., 1.).cbrt() * 100.).round() as u8
 }

@@ -1,4 +1,4 @@
-//! Which of cpal's Linux hosts Sonora plays through, and what each one's device list holds. cpal
+//! Which of cpal's Linux hosts Soundy plays through, and what each one's device list holds. cpal
 //! picks PulseAudio when its socket answers, which PipeWire serves through `pipewire-pulse`, and
 //! ALSA otherwise. A sound server lists its outputs by the names the desktop shows, while ALSA
 //! lists every PCM its configuration defines.
@@ -29,7 +29,7 @@ struct ServerHost {
     listing_error: Option<cpal::Error>,
 }
 
-/// The host Sonora plays through. A PulseAudio host is made once and shared, and made again once
+/// The host Soundy plays through. A PulseAudio host is made once and shared, and made again once
 /// its connection to the server is lost, while an ALSA host is made afresh, so a server that
 /// starts later is still found.
 pub(super) fn host() -> Arc<cpal::Host> {
@@ -159,7 +159,7 @@ fn sink_id(name: &CStr) -> String {
     cpal::DeviceId::new(cpal::HostId::PulseAudio, name.to_string_lossy()).to_string()
 }
 
-/// What the server says of `sink`, in Sonora's terms.
+/// What the server says of `sink`, in Soundy's terms.
 fn of(sink: &SinkInfo) -> Sink {
     let ports: Vec<Port> = sink
         .ports

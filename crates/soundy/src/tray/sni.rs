@@ -53,7 +53,7 @@ impl Icon {
         Some(Self { item, handle: None })
     }
 
-    /// Whether a status notifier watcher is on the session bus, so there is a tray to bring Sonora
+    /// Whether a status notifier watcher is on the session bus, so there is a tray to bring Soundy
     /// back from. It asks the bus, not the watcher, so it works while the icon is out.
     pub fn hosted() -> bool {
         match watched() {
@@ -222,7 +222,7 @@ fn sandboxed() -> bool {
 }
 
 /// The themed icon to ask the host for, or none when the host's theme cannot be counted on to
-/// have it. A Flatpak, AppImage or Snap install puts no `sonora` icon where the host looks, and hosts
+/// have it. A Flatpak, AppImage or Snap install puts no `soundy` icon where the host looks, and hosts
 /// such as Quickshell draw a placeholder for a name they cannot find rather than the pixmap.
 fn icon_name(sandboxed: bool) -> String {
     let packaged =

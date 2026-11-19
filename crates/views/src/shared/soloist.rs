@@ -7,7 +7,7 @@ use gpui::prelude::*;
 use gpui::{AnyElement, App, Context, Entity, FocusHandle, Render, SharedString, Window, div};
 use i18n::t;
 use music::soloist::{DASHBOARD, DEVICE, TERMS};
-use state::{Soloist, SoloistProblem, SoloistState, SoloistStep, Sonora};
+use state::{Soloist, SoloistProblem, SoloistState, SoloistStep, Soundy};
 use ui::{
     ActiveTheme as _, Button, Dismiss, FORM_CONTEXT, Field, Form, Input, Modal, Notice, Spinner,
     Submit, Text,
@@ -31,7 +31,7 @@ pub(crate) struct SoloistSetup {
 
 impl SoloistSetup {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let soloist = Sonora::global(cx).soloist.clone();
+        let soloist = Soundy::global(cx).soloist.clone();
         cx.observe(&soloist, |_, _, cx| cx.notify()).detach();
         let key = cx.new(|cx| {
             Input::new("soloist-key-hint", cx)

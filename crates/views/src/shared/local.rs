@@ -1,7 +1,7 @@
 use gpui::{App, ElementId, PathPromptOptions};
 use i18n::t;
 use music::Playlist;
-use state::{Outcome, Sonora, Toasts};
+use state::{Outcome, Soundy, Toasts};
 use ui::{Button, Vacancy};
 
 /// The extension an exported playlist is saved with, read as UTF-8 by every player.
@@ -28,7 +28,7 @@ pub(crate) fn choose_folder(cx: &mut App) {
         multiple: true,
         prompt: None,
     });
-    let library = Sonora::global(cx).library.clone();
+    let library = Soundy::global(cx).library.clone();
     cx.spawn(async move |cx| {
         let Ok(Ok(Some(paths))) = receiver.await else {
             return;
@@ -49,7 +49,7 @@ pub(crate) fn import_playlist(cx: &mut App) {
         multiple: false,
         prompt: None,
     });
-    let library = Sonora::global(cx).library.clone();
+    let library = Soundy::global(cx).library.clone();
     cx.spawn(async move |cx| {
         let path = match receiver.await {
             Ok(Ok(Some(paths))) => paths.into_iter().next(),
@@ -79,7 +79,7 @@ pub(crate) fn export_playlist(playlist: Playlist, cx: &mut App) {
         .unwrap_or_default();
     let receiver =
         cx.prompt_for_new_path(&directory, Some(&format!("{name}.{PLAYLIST_EXTENSION}")));
-    let library = Sonora::global(cx).library.clone();
+    let library = Soundy::global(cx).library.clone();
     cx.spawn(async move |cx| {
         let path = match receiver.await {
             Ok(Ok(path)) => path,

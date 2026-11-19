@@ -7,7 +7,7 @@ use music::{Album, GenreItem, MediaKind, Playlist, SavedArtist, Track};
 use router::{Destination, navigate};
 use state::{
     Addition, Collection, Detail, History, Library, Origin, Outcome, Playback, Progress,
-    QueuePlacement, Shelf, Sonora, Toasts,
+    QueuePlacement, Shelf, Soundy, Toasts,
 };
 use ui::{
     ActiveTheme as _, ArrowRing, Button, Menu, MenuItem, MenuSearch, Pin, PinKind, Scrollbar,
@@ -204,7 +204,7 @@ impl ItemMenu {
         lead: Vec<MenuItem>,
         cx: &App,
     ) -> Menu {
-        let library = Sonora::global(cx).library.clone();
+        let library = Soundy::global(cx).library.clone();
         let playlists: Vec<Playlist> = library
             .read(cx)
             .state(shelf)
@@ -381,7 +381,7 @@ impl ItemMenu {
         );
         // A provider that lists no station tracks gets no station item at all, rather than one
         // that plays the seed and stops.
-        let stations = Sonora::global(cx).session.read(cx).capabilities().radio;
+        let stations = Soundy::global(cx).session.read(cx).capabilities().radio;
         let radio = match (many || !stations, track.id.is_some() && track.playable) {
             (true, _) => None,
             (false, true) => {
@@ -390,7 +390,7 @@ impl ItemMenu {
                     MenuItem::new("song-radio", t!("menu-song-radio"))
                         .icon("icons/radio.svg")
                         .on_click(move |_, _, cx| {
-                            let playback = Sonora::global(cx).playback.clone();
+                            let playback = Soundy::global(cx).playback.clone();
                             playback.update(cx, |playback, cx| playback.play_radio(&track, cx));
                         }),
                 )
@@ -541,7 +541,7 @@ fn queue_item(
     }
     let queued = queued.to_vec();
     item.on_click(move |_, _, cx| {
-        let playback = Sonora::global(cx).playback.clone();
+        let playback = Soundy::global(cx).playback.clone();
         playback.update(cx, |playback, cx| {
             playback.enqueue_tracks(queued.clone(), None, placement, cx);
         });
@@ -721,8 +721,8 @@ impl RenderOnce for Tiles {
 /// The pin tile, lit while the item is pinned. It is disabled for an item whose provider the
 /// app cannot name again after a restart.
 fn pin_tile(pin: Pin, cx: &App) -> Tile {
-    let pins = Sonora::global(cx).pins.clone();
-    let known = Sonora::global(cx)
+    let pins = Soundy::global(cx).pins.clone();
+    let known = Soundy::global(cx)
         .session
         .read(cx)
         .slug_for(&pin.id)
@@ -768,7 +768,7 @@ fn track_tiles(
     pin: Option<Pin>,
     cx: &App,
 ) -> Vec<Tile> {
-    let sonora = Sonora::global(cx);
+    let sonora = Soundy::global(cx);
     let library = sonora.library.clone();
     let editable = sonora.session.read(cx).shape_of(shelf).editable();
     let state = library.read(cx);
@@ -891,7 +891,7 @@ fn download_tile(
 /// left running. Nothing shows for a provider that cannot download, unless something is there
 /// to remove.
 fn track_download_tile(tracks: &[Track], ids: &[String], cx: &App) -> Option<Tile> {
-    let sonora = Sonora::global(cx);
+    let sonora = Soundy::global(cx);
     let downloads = sonora.downloads.clone();
     let state = downloads.read(cx);
     let states: Vec<Option<Progress>> = ids.iter().map(|id| state.track(id)).collect();
@@ -942,7 +942,7 @@ fn set_download_tile(saved: Saved, cx: &App) -> Option<Tile> {
     if music::is_local_id(&id) {
         return None;
     }
-    let sonora = Sonora::global(cx);
+    let sonora = Soundy::global(cx);
     let downloads = sonora.downloads.clone();
     let progress = downloads.read(cx).set(kind, &id);
     if progress.is_none() && !sonora.session.read(cx).capabilities().downloads {
@@ -966,7 +966,7 @@ fn set_download_tile(saved: Saved, cx: &App) -> Option<Tile> {
 /// The tiles of an album menu: the favorite, the library where it is apart from the favorites,
 /// the download and the pin.
 fn album_tiles(album: &Album, cx: &App) -> Vec<Tile> {
-    let sonora = Sonora::global(cx);
+    let sonora = Soundy::global(cx);
     let library = sonora.library.clone();
     let state = library.read(cx);
     let saved = state.saved_album(&album.id);
@@ -977,7 +977,7 @@ fn album_tiles(album: &Album, cx: &App) -> Vec<Tile> {
             tile.on_click(move |_, cx| match saved {
                 true => Confirm::albums(vec![album.clone()], cx),
                 false => {
-                    let library = Sonora::global(cx).library.clone();
+                    let library = Soundy::global(cx).library.clone();
                     library.update(cx, |library, cx| library.toggle_album(album.clone(), cx));
                 }
             })
@@ -1057,7 +1057,7 @@ pub(crate) fn album_menu(
 /// The tiles of an artist menu: the follow heart where the provider can follow artists, and the
 /// pin.
 fn artist_tiles(artist: &SavedArtist, cx: &App) -> Vec<Tile> {
-    let sonora = Sonora::global(cx);
+    let sonora = Soundy::global(cx);
     let follow = sonora
         .session
         .read(cx)
@@ -1073,7 +1073,7 @@ fn artist_tiles(artist: &SavedArtist, cx: &App) -> Vec<Tile> {
                     tile.on_click(move |_, cx| match saved {
                         true => Confirm::artists(vec![artist.clone()], cx),
                         false => {
-                            let library = Sonora::global(cx).library.clone();
+                            let library = Soundy::global(cx).library.clone();
                             library.update(cx, |library, cx| {
                                 library.toggle_artist(artist.clone(), cx)
                             });
@@ -1138,7 +1138,7 @@ pub(crate) fn artist_menu(
 /// the download and the pin.
 fn playlist_tiles(playlist: &Playlist, cx: &App) -> Vec<Tile> {
     let kept = (!playlist.owned).then(|| {
-        let saved = Sonora::global(cx)
+        let saved = Soundy::global(cx)
             .library
             .read(cx)
             .playlist(&playlist.id)
@@ -1160,7 +1160,7 @@ fn playlist_tiles(playlist: &Playlist, cx: &App) -> Vec<Tile> {
         .on_click(move |_, cx| match saved {
             true => Confirm::playlists(vec![playlist.id.clone()], cx),
             false => {
-                let library = Sonora::global(cx).library.clone();
+                let library = Soundy::global(cx).library.clone();
                 library.update(cx, |library, cx| {
                     library.add_playlist_to_library(playlist.clone(), cx)
                 });
@@ -1194,7 +1194,7 @@ pub(crate) fn playlist_menu(playlist: Playlist, playback: Entity<Playback>, cx: 
         .on_click({
             let id = id.clone();
             move |_, _, cx| {
-                let library = Sonora::global(cx).library.clone();
+                let library = Soundy::global(cx).library.clone();
                 library.update(cx, |library, cx| {
                     library.set_playlist_public(id.clone(), !public, cx)
                 });
@@ -1204,7 +1204,7 @@ pub(crate) fn playlist_menu(playlist: Playlist, playback: Entity<Playback>, cx: 
     // Rules edit where the provider takes smart playlists and the account owns this one.
     let smart_rules = (playlist.owned
         && !imported
-        && Sonora::global(cx)
+        && Soundy::global(cx)
             .session
             .read(cx)
             .capabilities_of(Shelf::of(&playlist.id))
@@ -1301,7 +1301,7 @@ pub(crate) fn item_menu(
     playback: Entity<Playback>,
     cx: &App,
 ) -> Menu {
-    let library = Sonora::global(cx).library.clone();
+    let library = Soundy::global(cx).library.clone();
     let built = match pin.kind {
         PinKind::Album => library
             .read(cx)
@@ -1436,8 +1436,8 @@ fn transport_items(pin: &Pin, playback: Entity<Playback>) -> Vec<MenuItem> {
 /// Pins or unpins anything the app can open. Every context menu carries it, and the provider
 /// that keeps pins of its own is told alongside the local list.
 pub(crate) fn pin_action(pin: &Pin, cx: &App) -> MenuItem {
-    let pins = Sonora::global(cx).pins.clone();
-    let session = Sonora::global(cx).session.clone();
+    let pins = Soundy::global(cx).pins.clone();
+    let session = Soundy::global(cx).session.clone();
     let known = session.read(cx).slug_for(&pin.id).is_some();
     let pinned = pins.read(cx).holds(pin, cx);
     let held = pin.clone();
@@ -1466,7 +1466,7 @@ fn media_kind(kind: PinKind) -> MediaKind {
 }
 
 fn saved_track(id: &str, cx: &App) -> Option<Track> {
-    Sonora::global(cx)
+    Soundy::global(cx)
         .library
         .read(cx)
         .state(Shelf::of(id))
@@ -1495,7 +1495,7 @@ fn share_link(kind: MediaKind, id: Option<&str>, cx: &App) -> Result<String, &'s
         return Err("menu-copy-link-none");
     };
     let local = music::is_local_id(id);
-    let session = Sonora::global(cx).session.read(cx);
+    let session = Soundy::global(cx).session.read(cx);
     let client = match local {
         true => session.local_client(),
         false => session.client(),
@@ -1517,7 +1517,7 @@ pub(crate) fn new_playlist_menu(
 ) -> Menu {
     // A provider with smart playlists offers a rules-first playlist next to the plain one.
     let smart = !shelf.local()
-        && Sonora::global(cx)
+        && Soundy::global(cx)
             .session
             .read(cx)
             .capabilities_of(shelf)

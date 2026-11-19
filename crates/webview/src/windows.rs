@@ -224,7 +224,7 @@ fn begin_environment(
     .context("cannot start the WebView2 environment")
 }
 
-/// Sonora's own cache folder for WebView2's browser state, as a wide string. WebView2 otherwise
+/// Soundy's own cache folder for WebView2's browser state, as a wide string. WebView2 otherwise
 /// writes beside the executable, which an installed copy under Program Files cannot do.
 fn user_data_folder() -> Result<Vec<u16>> {
     let folder = dirs::cache_dir()

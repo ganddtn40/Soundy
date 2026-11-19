@@ -7,6 +7,29 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-19
+
+### Added
+
+- A public Spotify playlist link now imports without signing in, an account, Premium, a
+  developer key or an external converter. Soundy reads the playlist from its public page and
+  keeps the name, owner, cover, track order, duplicates and a status for every row.
+- The import dialog validates a Spotify link as it is typed, offers a Paste button, and shows a
+  clear notice when the public page's 100-track limit may have been reached.
+
+### Changed
+
+- The public page carries no album names or per-track artwork, so the import fills them, and any
+  missing lengths, from public catalogues and builds the 2x2 cover when no cover is available.
+- A signed-in Spotify playback session is still used through the official Web API when one
+  exists, so private or collaborative playlists the account may read keep working. Public links
+  no longer need that session.
+
+### Fixed
+
+- Public Spotify playlists that previously stopped at a sign-in requirement now import
+  anonymously.
+
 ## [1.0.0] - 2026-11-18
 
 The first Soundy release: a native Windows music player built on the Sonora codebase.
@@ -68,5 +91,6 @@ The first Soundy release: a native Windows music player built on the Sonora code
   and 120 MB with a signed-in provider and imported playlists (100.9 MB private). The measured
   figures and method are in [PERFORMANCE.md](./PERFORMANCE.md).
 
-[Unreleased]: https://github.com/ganddtn40/soundy/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ganddtn40/soundy/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/ganddtn40/soundy/releases/tag/v1.0.1
 [1.0.0]: https://github.com/ganddtn40/soundy/releases/tag/v1.0.0

@@ -13,7 +13,7 @@ use sha2::{Digest as _, Sha256};
 use crate::{AppSettings, Io, join};
 use install::Install;
 
-const RELEASES: &str = "https://api.github.com/repos/sonorahq/sonora/releases";
+const RELEASES: &str = "https://api.github.com/repos/ganddtn40/soundy/releases";
 const SUMS: &str = "SHA256SUMS";
 /// What the nightly workflow puts before the version label in the nightly release's title.
 const NIGHTLY_TITLE: &str = "Nightly ";
@@ -22,10 +22,10 @@ const SHORT_COMMIT: usize = 7;
 const AGENT: &str = concat!(
     "soundy/",
     env!("CARGO_PKG_VERSION"),
-    " (Sonora fork; https://github.com/sonorahq/sonora)"
+    " (+https://github.com/ganddtn40/soundy)"
 );
 
-/// The builds Sonora updates to. Stable follows tagged releases, and Nightly follows the build
+/// The builds Soundy updates to. Stable follows tagged releases, and Nightly follows the build
 /// of main the nightly workflow publishes every night.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -89,7 +89,7 @@ pub fn commit() -> Option<&'static str> {
     Some(commit.get(..SHORT_COMMIT).unwrap_or(commit))
 }
 
-/// Whether this copy of Sonora installs its own updates, which is when a channel can be chosen.
+/// Whether this copy of Soundy installs its own updates, which is when a channel can be chosen.
 /// A copy a package manager installed, or a portable one, does not.
 pub fn updates_itself() -> bool {
     Install::current().updates_itself()
@@ -118,7 +118,7 @@ pub struct Updates {
     http: reqwest::Client,
     io: Io,
     task: Option<Task<()>>,
-    /// The channel chosen in settings when Sonora last looked, so a different choice looks again.
+    /// The channel chosen in settings when Soundy last looked, so a different choice looks again.
     channel: Channel,
     _settings: Subscription,
 }
@@ -219,7 +219,7 @@ impl Updates {
     /// started by switching channels, which runs even with update checks turned off. A copy a
     /// package manager installed follows its own build's channel, and a nightly one never looks.
     fn look(&mut self, asked: bool, cx: &mut Context<Self>) {
-        // Soundy has no release feed of its own, and the upstream feed would offer a Sonora
+        // Soundy has no release feed of its own, and the upstream feed would offer a Soundy
         // build. Never ask GitHub, even if an old settings file has update checks enabled.
         if !updates_itself() {
             return;

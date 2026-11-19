@@ -30,19 +30,18 @@ Windows 11 x64 is the primary target. Install:
 Then, from a Developer PowerShell in the repository root:
 
 ```powershell
-cargo build --release -p sonora
+cargo build --release -p soundy
 .\scripts\windows\build-soundy-installer.ps1
 ```
 
 The executable is `target\release\soundy.exe`; the installer and its output land in `dist\`.
-The crate is still named `sonora` because the project keeps the upstream package layout; the
-binary target is `soundy`.
+The binary crate is named `soundy` and its target is `soundy.exe`.
 
 Use Nix where available on Linux and macOS:
 
 ```sh
 nix develop          # or: direnv allow
-cargo run --locked --package sonora
+cargo run --locked --package soundy
 ```
 
 Without Nix you need rustup, a C++ compiler, `cmake`, `pkg-config`, `mold`, and the development
@@ -53,7 +52,7 @@ packaged by Soundy yet.
 For hot reload, the upstream workflow still works:
 
 ```sh
-dx serve --hot-patch --package sonora --features hot-reload
+dx serve --hot-patch --package soundy --features hot-reload
 ```
 
 ## Before you open a pull request

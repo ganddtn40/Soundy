@@ -50,7 +50,15 @@
   </provides>
 
   <releases>
-    <release version="@VERSION@" date="@DATE@" />
+    <release version="1.0.1" date="2026-11-19">
+      <description>
+        <p>
+          Public Spotify playlists now import from their link without an account, a sign-in or
+          Premium. Soundy reads the public playlist page, keeps the published rows in order and
+          fills in artwork and album names from public catalogues.
+        </p>
+      </description>
+    </release>
   </releases>
 
   <launchable type="desktop-id">app.soundy.player.desktop</launchable>

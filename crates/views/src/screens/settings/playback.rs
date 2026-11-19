@@ -399,7 +399,7 @@ impl SettingsView {
     }
 
     /// The Widevine module row, which only appears while the current provider is one whose
-    /// tracks need the module and this build has a host for one. Sonora uses a browser's copy
+    /// tracks need the module and this build has a host for one. Soundy uses a browser's copy
     /// when one is here and otherwise offers Google's download, so the row says where that
     /// stands. The download is offered by hand whenever Google's copy is not the one in use,
     /// because a browser's copy can be one this host cannot open. While the download is on

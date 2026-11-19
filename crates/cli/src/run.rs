@@ -5,15 +5,15 @@ use crate::args;
 use crate::commands::{Format, Kind, Local, Repeat, Request};
 use crate::wire::{self, Failure, LyricsStatus, QueueEntryKind, Reply, Value};
 
-/// The running Sonora refused the command, or the exchange broke.
+/// The running Soundy refused the command, or the exchange broke.
 const FAILED: u8 = 1;
-/// No Sonora runs to send the command to. clap already takes 2 for usage errors.
+/// No Soundy runs to send the command to. clap already takes 2 for usage errors.
 const NOT_RUNNING: u8 = 3;
-/// The headers of `sonora providers` and `sonora search`.
+/// The headers of `soundy providers` and `soundy search`.
 const PROVIDERS: [&str; 2] = ["provider", "status"];
 const HITS: [&str; 5] = ["type", "title", "by", "length", "link"];
 
-/// Carries out a command that needs no running Sonora.
+/// Carries out a command that needs no running Soundy.
 pub fn local(local: Local) -> ExitCode {
     match local {
         Local::Completions(shell) => args::completions(shell),
@@ -54,9 +54,9 @@ pub fn run<S: Read + Write>(stream: &mut S, request: &Request, format: Format) -
     }
 }
 
-/// Sends a request answered by a stream, `sonora watch`, and prints each reply as one line of
+/// Sends a request answered by a stream, `soundy watch`, and prints each reply as one line of
 /// JSON as it arrives, whatever the format, since a line per change is what a script reads.
-/// It ends when Sonora closes the stream, by quitting, or at the first line written after
+/// It ends when Soundy closes the stream, by quitting, or at the first line written after
 /// nothing reads them any more, as when they go into `head`.
 fn follow<S: Read + Write>(stream: &mut S, request: &Request) -> ExitCode {
     if let Err(error) = wire::send(stream, request) {
@@ -87,7 +87,7 @@ fn follow<S: Read + Write>(stream: &mut S, request: &Request) -> ExitCode {
     }
 }
 
-/// Says that no Sonora runs, for a command that has nowhere to go.
+/// Says that no Soundy runs, for a command that has nowhere to go.
 pub fn not_running() -> ExitCode {
     eprintln!("soundy: Soundy is not running");
     ExitCode::from(NOT_RUNNING)

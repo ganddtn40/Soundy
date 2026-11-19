@@ -150,7 +150,7 @@
             version = cargoVersion;
             strictDeps = true;
             doCheck = false;
-            cargoExtraArgs = "--locked --package sonora";
+            cargoExtraArgs = "--locked --package soundy";
 
             nativeBuildInputs =
               with pkgs;

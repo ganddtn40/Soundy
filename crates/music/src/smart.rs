@@ -4,7 +4,7 @@
 //! The wire shape follows Navidrome's smart-playlist criteria, the one provider that
 //! answers the smart-playlist calls: a top-level `all` or `any` group holding conditions
 //! such as `{"contains": {"title": "love"}}`, with a sort, an order, a limit and an offset
-//! next to it. The model keeps every rule the server can send, including the ones Sonora
+//! next to it. The model keeps every rule the server can send, including the ones Soundy
 //! has no editor row for: an unknown expression parses into [`Rule::Unknown`] and writes
 //! back verbatim, so editing the rest of a tree never discards part of it.
 
@@ -268,14 +268,14 @@ impl RuleGroup {
     }
 }
 
-/// One rule in a tree: a nested group, a condition on a field, or an expression Sonora has
+/// One rule in a tree: a nested group, a condition on a field, or an expression Soundy has
 /// no row for.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Rule {
     All(Vec<Rule>),
     Any(Vec<Rule>),
     Condition(Condition),
-    /// An expression whose operator or value shape Sonora does not know, kept as it came
+    /// An expression whose operator or value shape Soundy does not know, kept as it came
     /// and written back unchanged. An editor renders it read-only rather than dropping it.
     Unknown(Value),
 }
@@ -301,7 +301,7 @@ impl Rule {
             )]))));
         };
         // The server reads every entry of the value map as one condition on that field, so
-        // a value naming two fields means two conditions. Sonora's model holds one field per
+        // a value naming two fields means two conditions. Soundy's model holds one field per
         // condition; a map with more than one entry stays whole and read-only instead of
         // being split or dropped.
         if fields.len() != 1 {

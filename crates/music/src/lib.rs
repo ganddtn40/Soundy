@@ -628,7 +628,7 @@ pub enum Encoding {
     Opus {
         kbps: u32,
     },
-    /// A codec Sonora has no name for.
+    /// A codec Soundy has no name for.
     Other,
 }
 
@@ -638,12 +638,12 @@ pub enum Encoding {
 pub struct TrackSignal {
     /// How the provider encodes it, when it says.
     pub encoding: Option<Encoding>,
-    /// The rate and channel count it decodes to, before Sonora resamples it to the device's.
+    /// The rate and channel count it decodes to, before Soundy resamples it to the device's.
     pub rate: u32,
     pub channels: u16,
     pub normalisation: Normalisation,
     /// Whether the engine plays it to the system's output by itself, as Soloist does. Nothing
-    /// of Sonora's own sound path then touches it: no equalizer, no resampler, no chosen device.
+    /// of Soundy's own sound path then touches it: no equalizer, no resampler, no chosen device.
     pub direct: bool,
 }
 
@@ -942,7 +942,7 @@ pub struct Capabilities {
     /// Tracks carry a play count worth a column of its own.
     pub playcounts: bool,
     /// The provider keeps sidebar pins of its own, listed by `pin_targets` and changed
-    /// through `set_pinned`. Off, a pin lives in Sonora's settings alone.
+    /// through `set_pinned`. Off, a pin lives in Soundy's settings alone.
     pub pins: bool,
     /// The server converts tracks on request, as [`Transcode`] asks.
     pub transcode: bool,

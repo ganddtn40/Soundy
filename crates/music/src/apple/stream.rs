@@ -29,7 +29,7 @@ const LICENSE: &str =
 /// `ibhp` flavours are delivered under Apple's own `skd://` key system, which it cannot speak.
 const FLAVORS: [&str; 2] = ["28:ctrp256", "32:ctrp64"];
 
-/// The levels Apple Music serves Sonora, best first, one for each of `FLAVORS`.
+/// The levels Apple Music serves Soundy, best first, one for each of `FLAVORS`.
 pub(crate) const QUALITIES: &[Offer] = &[
     Offer {
         quality: Quality::High,

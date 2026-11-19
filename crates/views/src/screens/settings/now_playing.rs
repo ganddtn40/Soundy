@@ -97,7 +97,7 @@ impl SettingsView {
     /// How the spectrum is drawn behind the fullscreen artwork, off included.
     /// One card per visualizer style, each drawing a still spectrum the way that style does.
     /// The visualizer styles as cards. While Soloist plays Spotify a line under them says the
-    /// visualizer follows local files only, since Soloist's sound never passes through Sonora.
+    /// visualizer follows local files only, since Soloist's sound never passes through Soundy.
     pub(super) fn visualizer_cards(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let theme = *cx.theme();
         let note = self.local_only(cx);

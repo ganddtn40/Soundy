@@ -1,13 +1,13 @@
-//! Where the Sonora Sessions server is: the official one, or one the listener runs, whose address
-//! is read leniently and checked before it is trusted.
+//! Where the Sessions server is: the public community one, or one the listener runs, whose
+//! address is read leniently and checked before it is trusted.
 
 use std::time::Duration;
 
 use anyhow::{Context as _, Result, bail};
 use reqwest::Url;
 
-/// The official server.
-pub(crate) const OFFICIAL: &str = "wss://sessions.sonorahq.org/ws";
+/// The public community server run by the upstream Sonora project. It is not a Soundy service.
+pub(crate) const COMMUNITY: &str = "wss://sessions.sonorahq.org/ws";
 /// Points the app at another server whatever the settings say, as one run locally while working
 /// on it.
 pub(crate) const VARIABLE: &str = "SOUNDY_SESSION_SERVER";
@@ -62,7 +62,7 @@ pub(crate) async fn check(http: reqwest::Client, socket: Url) -> Result<()> {
     }
     let body = answer.text().await.context("cannot read the answer")?;
     if body.trim() != "ok" {
-        bail!("the server does not answer as a Sonora Sessions server");
+        bail!("the server does not answer as a Sessions server");
     }
     Ok(())
 }

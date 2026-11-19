@@ -12,7 +12,7 @@ use gpui::{
 use gpui::{Window, deferred, div, px};
 use i18n::t;
 use input::{ShowMembers, ToggleFullscreen, ToggleLyrics, ToggleQueue};
-use state::{AppSettings, Playback, PlayerBarLayout, Queue, SideTab, Sonora};
+use state::{AppSettings, Playback, PlayerBarLayout, Queue, SideTab, Soundy};
 use ui::{
     Artwork, Badge, Button, Flight, InlineLink, InlineLinks, Perch, Pinnable, Popup, Room,
     Scrollbar, Scrubber, ScrubberState,
@@ -91,9 +91,9 @@ impl VolumeHost for PlayerBar {
 
 impl PlayerBar {
     pub fn new(playback: Entity<Playback>, queue: Entity<Queue>, cx: &mut Context<Self>) -> Self {
-        let library = Sonora::global(cx).library.clone();
-        let settings = Sonora::global(cx).settings.clone();
-        let devices = Sonora::global(cx).devices.clone();
+        let library = Soundy::global(cx).library.clone();
+        let settings = Soundy::global(cx).settings.clone();
+        let devices = Soundy::global(cx).devices.clone();
         cx.observe(&playback, |_, _, cx| cx.notify()).detach();
         cx.observe(&devices, |_, _, cx| cx.notify()).detach();
         cx.observe(&queue, |_, _, cx| cx.notify()).detach();
@@ -548,7 +548,7 @@ impl PlayerBar {
     /// much, so the button stays under the pointer when the player opens and closes.
     pub(crate) fn fullscreen_drop(window: &Window, cx: &gpui::App) -> Pixels {
         let theme = *cx.theme();
-        let layout = Sonora::global(cx).settings.read(cx).player_bar_layout();
+        let layout = Soundy::global(cx).settings.read(cx).player_bar_layout();
         let spare = theme.metrics.player_bar - Self::height(window, cx);
         let drop = match Self::stacked(window, layout) {
             // The button's row is centred under the cover's row and the gap between the two.
@@ -561,7 +561,7 @@ impl PlayerBar {
     /// The height the workspace reserves, shared by the overlay's bottom scroll clearance.
     pub(crate) fn height(window: &Window, cx: &gpui::App) -> Pixels {
         let theme = *cx.theme();
-        let layout = Sonora::global(cx).settings.read(cx).player_bar_layout();
+        let layout = Soundy::global(cx).settings.read(cx).player_bar_layout();
         let height = match (Self::stacked(window, layout), layout) {
             (true, _) => theme.metrics.player_bar + theme.metrics.pad * 3.,
             (false, PlayerBarLayout::Compact) => theme.metrics.row + theme.metrics.pad * 2.,
@@ -589,8 +589,8 @@ impl Render for PlayerBar {
         // the Sessions button stands with the panel buttons, one gap apart like them, and takes no
         // gap of its own while it draws nothing or the listener hid it
         let picker = self.settings.read(cx).sessions_button()
-            && (Sonora::global(cx).devices.read(cx).available()
-                || Sonora::global(cx).listening.read(cx).available(cx));
+            && (Soundy::global(cx).devices.read(cx).available()
+                || Soundy::global(cx).listening.read(cx).available(cx));
         let tools = usize::from(picker)
             + match sides.is_some() {
                 true => 1 + usize::from(self.settings.read(cx).lyrics_enabled()),

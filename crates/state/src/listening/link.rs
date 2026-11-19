@@ -1,4 +1,4 @@
-//! The WebSocket to the Sonora Session server, run on tokio. Requests go in through a channel and
+//! The WebSocket to the Soundy Session server, run on tokio. Requests go in through a channel and
 //! replies come out of another, so the entity never touches the socket itself.
 
 use std::sync::OnceLock;

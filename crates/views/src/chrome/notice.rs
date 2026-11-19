@@ -9,7 +9,7 @@ use gpui::{
 };
 use i18n::t;
 use music::SoundServer;
-use state::{AppSettings, Requirement, Requirements, Sonora, UpdateState, Updates};
+use state::{AppSettings, Requirement, Requirements, Soundy, UpdateState, Updates};
 use ui::{ActiveTheme as _, Button, Text, corners};
 
 const ICON: Pixels = px(16.);
@@ -17,7 +17,7 @@ const ICON: Pixels = px(16.);
 const LEADING: f32 = 1.4;
 const REACH: Pixels = px(400.);
 /// Where the README says what to install alongside Soundy.
-const INSTALL: &str = "https://github.com/sonorahq/sonora#linux";
+const INSTALL: &str = "https://github.com/ganddtn40/soundy#linux-and-macos";
 
 type Handler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
@@ -44,7 +44,7 @@ struct Card {
 
 impl AppNotice {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let sonora = Sonora::global(cx);
+        let sonora = Soundy::global(cx);
         let updates = sonora.updates.clone();
         let requirements = sonora.requirements.clone();
         let settings = sonora.settings.clone();

@@ -8,7 +8,7 @@ use gpui::{App, AppContext as _, Context, Entity, Global, Task};
 use music::Track;
 use tokio::sync::mpsc;
 
-use crate::{Cover, Io, Playback, PlaybackState, Queue, Repeat, Sonora, join};
+use crate::{Cover, Io, Playback, PlaybackState, Queue, Repeat, Soundy, join};
 
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 mod mpris;
@@ -69,7 +69,7 @@ pub fn attach(hwnd: Option<*mut c_void>, cx: &mut App) {
         }
     };
 
-    let sonora = Sonora::global(cx);
+    let sonora = Soundy::global(cx);
     let playback = sonora.playback.clone();
     let queue = sonora.queue.clone();
     let cover = sonora.cover.clone();

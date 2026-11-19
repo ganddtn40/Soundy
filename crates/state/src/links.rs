@@ -54,13 +54,13 @@ impl Links {
         }
     }
 
-    /// Recognizes provider links and Sonora links without opening them or fetching short links.
+    /// Recognizes provider links and Soundy links without opening them or fetching short links.
     pub fn recognizes(&self, text: &str, cx: &App) -> bool {
         is_own_link(text) || self.session.read(cx).read_link(text).is_some()
     }
 
     /// Opens provider links, browser handoffs and theme offers, returning whether the link was handled.
-    /// A bare Sonora link opens nothing and leaves a pending link alone, since the caller raises the
+    /// A bare Soundy link opens nothing and leaves a pending link alone, since the caller raises the
     /// window. Any other recognized link cancels the previous resolution and waiting destination.
     pub fn open(&mut self, text: &str, cx: &mut Context<Self>) -> bool {
         if !self.recognizes(text, cx) {

@@ -10,7 +10,7 @@ use gpui::{
 use i18n::t;
 use music::{AccountChoices, SignIn, SignInPrompt};
 use router::{Destination, SettingsPage, navigate};
-use state::{Failure, Outcome, Scan, SessionState, Sonora, Toast, Toasts};
+use state::{Failure, Outcome, Scan, SessionState, Soundy, Toast, Toasts};
 use ui::{
     ActiveTheme as _, Avatar, Button, HoverFade, Initials, LEADING, Modal, Radio, Skeleton, Text,
     Theme, mix,
@@ -570,14 +570,14 @@ impl SettingsView {
 
     pub(super) fn rescan_local_folder(&mut self, cx: &mut Context<Self>) {
         Scan::global(cx).update(cx, |scan, _| scan.asked());
-        Sonora::global(cx)
+        Soundy::global(cx)
             .library
             .clone()
             .update(cx, |library, cx| library.rescan_local(true, cx));
     }
 
     pub(super) fn remove_local_folder(&mut self, path: String, cx: &mut Context<Self>) {
-        Sonora::global(cx)
+        Soundy::global(cx)
             .library
             .clone()
             .update(cx, |library, cx| {

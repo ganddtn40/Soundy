@@ -12,7 +12,7 @@ const INSTALLER: &str = match cfg!(target_arch = "aarch64") {
     false => "Soundy-Setup.exe",
 };
 /// Where Homebrew keeps the stable and the nightly cask, on Apple silicon and on Intel. Any of
-/// them existing means Homebrew owns /Applications/Sonora.app, though not a copy installed
+/// them existing means Homebrew owns /Applications/Soundy.app, though not a copy installed
 /// anywhere else.
 #[cfg(target_os = "macos")]
 const CASKROOMS: [&str; 4] = [
@@ -22,24 +22,24 @@ const CASKROOMS: [&str; 4] = [
     "/usr/local/Caskroom/soundy-nightly",
 ];
 
-/// How this copy of Sonora was installed, which decides whether it may replace itself.
+/// How this copy of Soundy was installed, which decides whether it may replace itself.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum Install {
     /// The Windows installer, which upgrades the install in place.
     #[cfg(target_os = "windows")]
     Setup,
-    /// An app bundle Sonora can write beside, outside Homebrew and the Nix store.
+    /// An app bundle Soundy can write beside, outside Homebrew and the Nix store.
     #[cfg(target_os = "macos")]
     Bundle(std::path::PathBuf),
     /// An AppImage, replaced file for file.
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     AppImage(std::path::PathBuf),
-    /// A package manager or a portable copy, either of which Sonora leaves alone.
+    /// A package manager or a portable copy, either of which Soundy leaves alone.
     Managed,
 }
 
 impl Install {
-    /// Works out how Sonora was installed, once per run.
+    /// Works out how Soundy was installed, once per run.
     pub(super) fn current() -> &'static Self {
         static CURRENT: OnceLock<Install> = OnceLock::new();
         CURRENT.get_or_init(detect)
@@ -47,7 +47,7 @@ impl Install {
 
     pub(super) fn updates_itself(&self) -> bool {
         // Soundy is a fork with no release feed of its own. Pointing the updater at the
-        // upstream Sonora releases would replace this build with a different application,
+        // upstream Soundy releases would replace this build with a different application,
         // so updates stay off until Soundy publishes signed builds.
         false
     }
@@ -93,7 +93,7 @@ fn detect() -> Install {
     }
 }
 
-/// A bundle counts when Sonora runs from its own `.app` in a folder it can write to. Homebrew's,
+/// A bundle counts when Soundy runs from its own `.app` in a folder it can write to. Homebrew's,
 /// one in the Nix store, one still on the disk image and one macOS translocated are left alone.
 #[cfg(target_os = "macos")]
 fn detect() -> Install {
@@ -146,7 +146,7 @@ fn writable(folder: &Path) -> bool {
     unsafe { libc::access(path.as_ptr(), libc::W_OK) == 0 }
 }
 
-/// Runs the Inno Setup installer silently. It waits for Sonora to quit, upgrades it and starts
+/// Runs the Inno Setup installer silently. It waits for Soundy to quit, upgrades it and starts
 /// it again.
 #[cfg(target_os = "windows")]
 fn setup(installer: &Path) -> Result<()> {
@@ -157,7 +157,7 @@ fn setup(installer: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Copies Sonora.app off the disk image beside the running bundle, deletes the image, then
+/// Copies Soundy.app off the disk image beside the running bundle, deletes the image, then
 /// trades the two bundles by renaming, so a failure part way leaves the old one where it was.
 #[cfg(target_os = "macos")]
 fn swap_bundle(image: &Path, bundle: &Path) -> Result<()> {

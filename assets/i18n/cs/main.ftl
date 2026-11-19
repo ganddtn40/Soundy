@@ -675,7 +675,7 @@ settings-discord = Zobrazit na Discordu
 settings-discord-detail = Zobrazit právě hrající skladbu na tvém profilu Discord
 settings-discord-name = Název stavu
 settings-discord-name-detail = Jak se stav jmenuje za „Poslouchá“, který vidí tvoji přátelé
-settings-discord-name-sonora = Sonora
+settings-discord-name-sonora = Soundy
 settings-discord-name-provider = Poskytovatel
 settings-discord-name-music = Hudba
 settings-discord-name-title = Název
@@ -698,7 +698,7 @@ settings-discord-preview-elapsed = Uplynulo { $time }
 settings-discord-preview-listen-on = Poslouchat na { $provider }
 # the Discord status when the track is left out of it
 discord-listening = Poslouchá hudbu
-get-sonora = Získat Sonoru
+get-sonora = Získat Soundy
 settings-fullscreen-controls-autohide-automatic = Automaticky
 settings-fullscreen-controls-autohide-always-hidden = Vždy skryté
 settings-fullscreen-controls-autohide-always-shown = Vždy zobrazené

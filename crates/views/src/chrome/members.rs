@@ -1,4 +1,4 @@
-//! The Members panel of the right sidebar: who is in the Sonora Session or Spotify Jam the
+//! The Members panel of the right sidebar: who is in the Soundy Session or Spotify Jam the
 //! listener is in, with the session's code and the way out of it. `state::Listening` and
 //! `state::Devices` answer everything, and this only draws it.
 
@@ -7,7 +7,7 @@ use gpui::prelude::*;
 use gpui::{Context, Entity, Render, SharedString, Window, div};
 use i18n::t;
 use music::connect::JamMember;
-use state::{Devices, Listening, Sonora};
+use state::{Devices, Listening, Soundy};
 use ui::{ActiveTheme as _, Button, Glowing as _, Text, eyebrow, snapped, vacant};
 
 use crate::chrome::{jam, session};
@@ -15,7 +15,7 @@ use crate::chrome::{jam, session};
 /// How many faces the summary shows before it counts the rest.
 const FACES: usize = 6;
 
-/// What the panel lists: a Sonora Session first, since the two never play together, or else a
+/// What the panel lists: a Soundy Session first, since the two never play together, or else a
 /// Jam on a provider with a device network the listener keeps on.
 enum Gathering {
     Session {
@@ -36,8 +36,8 @@ pub(crate) struct Members {
 
 impl Members {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let listening = Sonora::global(cx).listening.clone();
-        let devices = Sonora::global(cx).devices.clone();
+        let listening = Soundy::global(cx).listening.clone();
+        let devices = Soundy::global(cx).devices.clone();
         cx.observe(&listening, |_, _, cx| cx.notify()).detach();
         cx.observe(&devices, |_, _, cx| cx.notify()).detach();
         Self { listening, devices }
@@ -284,9 +284,9 @@ impl Render for Members {
     }
 }
 
-/// The people in the Sonora Session or Jam the listener is in, the host first, or none.
+/// The people in the Soundy Session or Jam the listener is in, the host first, or none.
 pub(crate) fn gathered(cx: &gpui::App) -> Vec<JamMember> {
-    let sonora = Sonora::global(cx);
+    let sonora = Soundy::global(cx);
     if let Some(room) = sonora.listening.read(cx).room() {
         return session::people(room);
     }

@@ -1,4 +1,4 @@
-//! Sonora Session: listening together across Sonora apps through the session server. One listener
+//! Soundy Session: listening together across Soundy apps through the session server. One listener
 //! starts a session and shares its six-digit code, others join with it, and whatever anyone in
 //! the session plays, pauses or seeks to plays the same way for everyone. Every member has to be
 //! signed in to the provider the session was started on, and local files are never shared.
@@ -80,7 +80,7 @@ struct Mark {
     upcoming: Vec<String>,
 }
 
-/// The listener's Sonora Session: the link to the server, the room it reports, and the work of
+/// The listener's Soundy Session: the link to the server, the room it reports, and the work of
 /// keeping playback here and in the session the same.
 pub struct Listening {
     playback: Entity<Playback>,
@@ -337,8 +337,8 @@ impl Listening {
     }
 
     /// The server sessions go through: the one `SOUNDY_SESSION_SERVER` names, else the
-    /// listener's own when they turned the official one off and gave an address that reads,
-    /// else the official one.
+    /// listener's own when they turned the community server off and gave an address that reads,
+    /// else the community server.
     fn server(&self, cx: &App) -> String {
         if let Ok(forced) =
             std::env::var(server::VARIABLE).or_else(|_| std::env::var(server::LEGACY_VARIABLE))
@@ -347,10 +347,10 @@ impl Listening {
         }
         let settings = self.settings.read(cx);
         if settings.sessions_official() {
-            return server::OFFICIAL.to_owned();
+            return server::COMMUNITY.to_owned();
         }
         server::socket(settings.sessions_server())
-            .map_or_else(|| server::OFFICIAL.to_owned(), |url| url.to_string())
+            .map_or_else(|| server::COMMUNITY.to_owned(), |url| url.to_string())
     }
 
     fn reject(&mut self, cx: &mut Context<Self>) {
@@ -359,7 +359,7 @@ impl Listening {
     }
 
     /// Checks the server at `typed` and keeps it as the listener's own once it answers its health
-    /// check. A toast says how it went, so an address that does not lead to a Sonora Sessions
+    /// check. A toast says how it went, so an address that does not lead to a Sessions
     /// server is never saved.
     pub fn save_server(&mut self, typed: &str, cx: &mut Context<Self>) {
         let typed = typed.trim().to_owned();

@@ -1,6 +1,6 @@
 # Feature comparison
 
-This matrix compares the shipped Soundy 1.0.0 build with the upstream Sonora project it is
+This matrix compares the shipped Soundy 1.0.1 build with the upstream Sonora project it is
 built from, and checks each capability the unified-desktop brief asked for. The last column is
 the requirement, not a claim about another product. The feature-by-feature audit of Monochrome
 Desktop, including every item deliberately not integrated, is in `MONOCHROME-PARITY.md`.
@@ -8,7 +8,7 @@ Desktop, including every item deliberately not integrated, is in `MONOCHROME-PAR
 Legend: **Yes** — present and exercised in this build. **Same** — inherited unchanged from
 Sonora. **Partial** — present with a stated limit. **No** — not present.
 
-| Capability | Soundy 1.0.0 | Upstream Sonora | Unified target | Evidence |
+| Capability | Soundy 1.0.1 | Upstream Sonora | Unified target | Evidence |
 | --- | --- | --- | --- | --- |
 | Native Windows application | Yes | Yes | Yes | Rust + GPUI, `soundy.exe`, no Electron/Tauri shell |
 | One process and one UI | Yes | Yes | Yes | One GPUI window; the WebView2 helper is used only for provider cookie sign-in, never as the app shell |
@@ -21,7 +21,7 @@ Sonora. **Partial** — present with a stated limit. **No** — not present.
 | Streaming providers | Yes | Yes | Yes | Spotify, YouTube Music, Tidal, Deezer, Apple Music, Subsonic/Navidrome, Jellyfin |
 | Playlists | Yes | Yes | Yes | Create, rename, delete, reorder, import, export |
 | Smart playlists | Yes | Yes | Yes | Rule editor with boolean and order rules |
-| Import from Spotify link | Partial | No | Yes | Through an existing playback session or a metadata-only browser sign-in that a free account can finish; Spotify returns items only for playlists the account owns or collaborates on, and rows with several matches pause for review |
+| Import from Spotify link | Partial | No | Yes | Public links are read anonymously from Spotify's public playlist page, which publishes at most 100 rows and no album art; a signed-in playback session still uses the official Web API for private or collaborative playlists, and rows with several matches pause for review |
 | Choose between several matches | Yes | No | Yes | Review screen with up to six playable candidates per ambiguous row; the first is preselected and nothing is written before confirmation |
 | Import M3U/M3U8 | Yes | Partial | Yes | Local paths, `file://`, relative paths, HTTP entries as external links |
 | Import CSV | Yes | No | Yes | Spotify/Exportify/Soundiiz/TuneMyMusic exports, comma/semicolon/tab, BOM, artwork URLs, ISRC, URIs, dates, ms durations and headerless files |
@@ -51,8 +51,8 @@ Sonora. **Partial** — present with a stated limit. **No** — not present.
 | Listening sessions | Yes | Yes | Yes | Upstream session server, opt-in |
 | Self-update | No | Yes | No | Disabled in Soundy |
 | Install reporting | No | Optional | No | Disabled; no telemetry endpoint |
-| Windows installer | Yes | Yes | Yes | Inno Setup, `dist\Soundy-1.0.0-Setup.exe` |
-| Portable build | Yes | No | If practical | `dist\Soundy-1.0.0-Portable.zip` |
+| Windows installer | Yes | Yes | Yes | Inno Setup, `dist\Soundy-1.0.1-Setup.exe` |
+| Portable build | Yes | No | If practical | `dist\Soundy-1.0.1-Portable.zip` |
 | Code signing | No | Upstream policy | No certificate | Unsigned local build; SmartScreen may warn |
 | Idle memory below 100 MB | No | Not measured here | Yes | 104.0 MB working / 87.8 MB private on a fresh profile; 119.9 / 100.9 MB populated. Resident target missed; private commit under 100 MB fresh only. See `PERFORMANCE.md` |
 | Idle CPU near zero | Yes | Not measured here | Yes | 0.37–0.41 s of CPU per 60 s idle (≈0.6–0.7% of one core) |

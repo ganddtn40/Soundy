@@ -19,7 +19,7 @@ const VIGNETTE: f32 = 0.55;
 /// The strength of the soft light from the top middle.
 const BEAM: f32 = 0.9;
 
-static LATTICE: Effect = Effect::new("sonora-lattice", include_str!("../shaders/lattice.wgsl"));
+static LATTICE: Effect = Effect::new("soundy-lattice", include_str!("../shaders/lattice.wgsl"));
 
 /// A field of fine dots lit from beneath by three slow pools of colour and by one glow an owner
 /// can place, for a backdrop that fills a whole surface behind frosted content. It

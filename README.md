@@ -23,7 +23,7 @@ Soundy is a desktop music player written in Rust and rendered with
 the providers it supports through one consistent library, without Electron, a WebView shell or a
 client-side JavaScript framework.
 
-The player is built to feel immediate: a cold start measured at 197 ms, about 0.4 seconds of
+The player is built to feel immediate: a cold start measured at 201 ms, 0.3–0.6 seconds of
 CPU per idle minute, native window management and no background polling beyond what playback
 needs. Those are measured numbers from the release build, not targets.
 
@@ -43,8 +43,8 @@ Get the latest build from the [releases page](https://github.com/ganddtn40/sound
 
 | Build | File | Notes |
 | --- | --- | --- |
-| Installer | `Soundy-1.0.0-Setup.exe` | Per-user install, Start menu shortcut, uninstaller |
-| Portable | `Soundy-1.0.0-Portable.zip` | Unpack anywhere and run `soundy.exe` |
+| Installer | `Soundy-1.0.1-Setup.exe` | Per-user install, Start menu shortcut, uninstaller |
+| Portable | `Soundy-1.0.1-Portable.zip` | Unpack anywhere and run `soundy.exe` |
 
 Both are built from the same release binary. The executable is unsigned, so Windows SmartScreen
 may show a warning on first launch. Choose **More info**, then **Run anyway**.
@@ -79,11 +79,10 @@ them yet.
 **Playlist import without Premium**
 
 - A Spotify playlist link, an M3U/M3U8 or CSV file, or a pasted track list.
-- No Spotify Premium, developer key or external converter is required. A Spotify link uses an
-  existing playback session when there is one, and otherwise asks for a metadata-only browser
-  sign-in that a free account can complete. Spotify returns a playlist's contents only to an
-  account that owns or collaborates on it; another owner's playlist reports Forbidden. Files and
-  pasted lists need no account at all.
+- No Spotify Premium, account, developer key or external converter is required for a public
+  playlist. Soundy reads the playlist from Spotify's public page, keeps the published rows in
+  order and fills in artwork and album names from public catalogues. The public page lists at
+  most 100 tracks; a longer playlist can be imported from its complete track list or a file.
 - When a provider search finds more than one playable recording for a song, a review screen lets
   you pick the right one before anything is saved; ignoring it keeps the first match.
 - Imported rows keep their order and duplicate counts, get provider-matched metadata and
@@ -124,7 +123,7 @@ Prerequisites:
 From a Developer PowerShell in the repository root:
 
 ```powershell
-cargo build --release -p sonora
+cargo build --release -p soundy
 ```
 
 The executable is `target\release\soundy.exe`. To build the installer and portable ZIP:
@@ -133,8 +132,7 @@ The executable is `target\release\soundy.exe`. To build the installer and portab
 .\scripts\windows\build-soundy-installer.ps1
 ```
 
-Both land in `dist\`. The crate is still named `sonora` because the project keeps the upstream
-package layout; the binary target is `soundy`.
+Both land in `dist\`. The binary crate is named `soundy` and its target is `soundy.exe`.
 
 ### Linux and macOS
 
@@ -142,7 +140,7 @@ The workspace keeps the Linux and macOS build paths. Use Nix where available:
 
 ```sh
 nix develop          # or: direnv allow
-cargo run --locked --package sonora
+cargo run --locked --package soundy
 ```
 
 Without Nix you need rustup, a C++ compiler, `cmake`, `pkg-config`, `mold`, and the development
@@ -155,9 +153,16 @@ needs a Vulkan driver.
 
 | Source | Accepts | Account needed |
 | --- | --- | --- |
-| Spotify link | playlist URL or `spotify:playlist:` URI | A free Spotify account that owns or collaborates on the playlist, unless a playback session is already signed in |
+| Spotify link | public playlist URL, `spotify:playlist:` URI or 22-character playlist ID | None |
 | M3U or CSV file | `.m3u`, `.m3u8`, `.csv`, `.txt` | None |
 | Pasted list | One track per line, `Artist - Title` or `Title \| Artist \| Album \| Duration` | None |
+
+A public Spotify link is read from Spotify's public playlist page, anonymously. No sign-in,
+account or Premium is needed. The public page publishes at most 100 tracks and no album names or
+per-track art, so Soundy fills those from public catalogues and says when a full page may have
+been cut short. A private or collaborative playlist needs its owner's Spotify session, which
+Soundy uses through the official Web API when one is already signed in; it never bypasses
+Spotify's access rules. Files and pasted lists remain the fallback.
 
 Every imported row keeps its position and duplicate count and ends with one honest status:
 **Full playback**, **Full playback (local)**, **Preview only**, **External playback** or
@@ -169,16 +174,17 @@ formats and privacy notes are in [docs/IMPORTER.md](./docs/IMPORTER.md).
 
 ## Performance
 
-The release build settles at **104.0 MB** working set with an **87.8 MB** private commit on a
-fresh profile at 936×648. With a signed-in provider, imported playlists and populated shelves it
-settles at **119.9 MB / 100.9 MB**. Idle CPU is **0.37–0.41 s per minute** (about 0.6–0.7% of
-one core), the window appears **197 ms** after launch (median of five cold launches), and
-streaming measures **124.5 MB / 107.6 MB**.
+The 1.0.1 release build settles at **104.0 MB** working set with an **87.9 MB** private commit on
+a fresh profile at 936×648. With a signed-in provider, imported playlists and populated shelves it
+settles at **119.4 MB / 100.0 MB**. Idle CPU is **0.30–0.56 s per minute** (about 0.5–0.9% of
+one core), and the window appears **201 ms** after launch (median of five cold launches). Against
+the published 1.0.0 build on the same profiles, the differences are within run-to-run noise; the
+comparison is in [PERFORMANCE.md](./PERFORMANCE.md).
 
 The memory target is below 100 MB. The private commit meets it on a fresh profile, where resident
 memory is about 4 MB over; a populated profile runs above it because the provider session and
 library data stay in memory. Closing the gap would need a smaller renderer than GPUI's `wgpu`
-baseline. The method, both profiles and the raw figures are in
+baseline. The method, both builds and the raw figures are in
 [PERFORMANCE.md](./PERFORMANCE.md). No figure in this repository is claimed without a real
 measurement.
 

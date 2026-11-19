@@ -61,7 +61,7 @@ async fn album_is_an_ep(provider: &dyn MusicProvider) -> Result<()> {
     let session = provider
         .restore()
         .await?
-        .with_context(|| format!("{} has no stored Sonora session", provider.name()))?;
+        .with_context(|| format!("{} has no stored Soundy session", provider.name()))?;
     ep_is_labelled(provider.name(), session.api.as_ref()).await
 }
 

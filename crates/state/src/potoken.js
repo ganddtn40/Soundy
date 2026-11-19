@@ -7,13 +7,13 @@
 // attestation, which is the whole reason this runs here rather than in the app's own javascript
 // interpreter.
 //
-// The first binding arrives in the query string and every later one through `sonoraPoToken`, which
+// The first binding arrives in the query string and every later one through `soundyPoToken`, which
 // the host calls in the page. Each answer goes back in one cookie behind the binding it answers,
 // because reading cookies is all the host can do with the page.
 (function () {
   "use strict";
 
-  var COOKIE = "SONORA_POT";
+  var COOKIE = "SOUNDY_POT";
   // What the host reads as a failure rather than a token. A token is base64url and never starts
   // with one of these.
   var FAILED = "!";
@@ -145,7 +145,7 @@
   // How the host asks for every binding after the first. It is not enumerable, so the page's own
   // scripts walking `window` never come across it.
   try {
-    Object.defineProperty(window, "sonoraPoToken", { value: mint });
+    Object.defineProperty(window, "soundyPoToken", { value: mint });
   } catch (error) {
     // The first binding still gets its answer. Later ones time out on the host's side.
   }
