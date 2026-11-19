@@ -1421,13 +1421,15 @@ mod tests {
     #[test]
     fn reads_m3u_extinf_and_relative_paths_in_order() {
         let bytes = b"#EXTM3U\n#EXTINF:225,Artist - Song One\nmusic/one.mp3\n#EXTINF:-1,Other - Song Two\nC:\\Music\\two.flac\n";
-        let playlist = parse_m3u(bytes, Path::new("C:\\List"), "List").unwrap();
+        let root = Path::new("C:\\List");
+        let playlist = parse_m3u(bytes, root, "List").unwrap();
+        let expected = root.join("music/one.mp3");
         assert_eq!(playlist.entries.len(), 2);
         assert_eq!(playlist.entries[0].title, "Song One");
         assert_eq!(playlist.entries[0].duration, Duration::from_secs(225));
         assert_eq!(
             playlist.entries[0].local_path.as_deref(),
-            Some(Path::new("C:\\List\\music\\one.mp3"))
+            Some(expected.as_path())
         );
         assert_eq!(playlist.entries[1].title, "Song Two");
     }
